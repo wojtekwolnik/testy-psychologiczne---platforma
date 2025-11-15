@@ -1,21 +1,30 @@
+
 import React, { useState, useEffect, useContext } from 'react';
+import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { fetchTestById } from '../services/apiService';
-import { type Test, View } from './types';
+import { type Test } from './types';
 import { BrandingContext } from '../contexts/BrandingContext';
 
-interface ClientTestConfirmationPageProps {
-  testId: string;
-  clientCode: string;
-  onNavigate: (view: View, context?: any) => void;
-}
+const ClientTestConfirmationPage: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { branding } = useContext(BrandingContext);
 
-const ClientTestConfirmationPage: React.FC<ClientTestConfirmationPageProps> = ({ testId, clientCode, onNavigate }) => {
+  // Data passed from ClientCodeEntry page
+  const { testId, clientCode } = location.state || {};
+
   const [test, setTest] = useState<Test | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { branding } = useContext(BrandingContext);
 
   useEffect(() => {
+    if (!testId || !clientCode) {
+      // If data is missing, we can't proceed.
+      setError("Brak danych testu. Proszę wrócić do strony głównej i spróbować ponownie.");
+      setIsLoading(false);
+      return;
+    }
+
     const loadTest = async () => {
       try {
         setIsLoading(true);
@@ -31,12 +40,19 @@ const ClientTestConfirmationPage: React.FC<ClientTestConfirmationPageProps> = ({
         setIsLoading(false);
       }
     };
+
     loadTest();
-  }, [testId]);
+  }, [testId, clientCode]);
   
   const handleStart = () => {
-      onNavigate(View.ClientTest, { testId, clientCode });
+      // Navigate to the test-taking view, passing the identifiers in the URL
+      navigate(`/test/${testId}/${clientCode}`);
   };
+
+  // If the page is accessed directly without state, redirect to home
+  if (!testId || !clientCode) {
+    return <Navigate to="/" replace />;
+  }
 
   if (isLoading) {
     return (
@@ -52,24 +68,29 @@ const ClientTestConfirmationPage: React.FC<ClientTestConfirmationPageProps> = ({
   
   const questionCount = test.sections.reduce((acc, section) => acc + section.questions.length, 0);
   
+  // Dynamically replace placeholders in branding messages
   const formattedMessage = branding.clientConfirmationMessage
     .replace(/{testTitle}/g, test.title)
     .replace(/{questionCount}/g, String(questionCount))
     .replace(/{testDescription}/g, test.description);
     
-  const formattedTitle = branding.clientConfirmationTitle
-    .replace(/{testTitle}/g, test.title)
-    .replace(/{questionCount}/g, String(questionCount))
-    .replace(/{testDescription}/g, test.description);
+  const formattedTitle = branding.clientConfirmationTitle.replace(/{testTitle}/g, test.title);
 
   return (
-    <div className="min-h-screen bg-[var(--background-color)] flex items-center justify-center p-4">
-      <div className="bg-[var(--secondary-color)] text-[var(--text-color)] rounded-xl shadow-2xl p-12 text-center max-w-2xl">
-        <h1 className="text-4xl font-bold text-[var(--primary-color)] mb-4" dangerouslySetInnerHTML={{ __html: formattedTitle }}></h1>
-        <div className="text-lg mb-8 prose max-w-none mx-auto" dangerouslySetInnerHTML={{ __html: formattedMessage }}></div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-100 to-slate-200 flex items-center justify-center p-4 transition-all duration-500 text-[var(--text-color)]">
+      <div className="bg-white/70 backdrop-blur-md rounded-2xl shadow-2xl p-8 sm:p-12 text-center max-w-2xl w-full border border-slate-200">
+        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4" dangerouslySetInnerHTML={{ __html: formattedTitle }}></h1>
+        <div className="text-base md:text-lg mb-6 prose max-w-none mx-auto opacity-80" dangerouslySetInnerHTML={{ __html: formattedMessage }}></div>
+        
+        <div className="bg-slate-100 border border-slate-300 rounded-lg p-4 my-6">
+            <p className="text-sm text-slate-600">Twój identyfikator testu to:</p>
+            <p className="text-2xl font-mono font-bold tracking-widest text-slate-800 mt-1">{clientCode}</p>
+            <p className="text-xs text-slate-500 mt-2">Ten identyfikator zostanie użyty do zapisania wyników. Terapeuta użyje go do odnalezienia Twojego testu.</p>
+        </div>
+
         <button
           onClick={handleStart}
-          className="px-8 py-3 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold rounded-lg shadow-md hover:opacity-90 transition-colors"
+          className="w-full max-w-xs mx-auto px-8 py-4 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold text-lg rounded-lg shadow-lg hover:opacity-90 transition-all duration-300 hover:shadow-xl"
         >
           {branding.clientConfirmationButtonText}
         </button>

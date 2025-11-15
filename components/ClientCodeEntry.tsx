@@ -1,14 +1,16 @@
+
 import React, { useState, useContext } from 'react';
-import { View } from './types';
+import { useNavigate } from 'react-router-dom';
 import { getTestIdForCode } from '../services/apiService';
 import { BrandingContext } from '../contexts/BrandingContext';
 import { SpinnerIcon } from './common/Icons';
 
-const LoginPage: React.FC<{ onNavigate: (view: View, context?: any) => void; }> = ({ onNavigate }) => {
+const ClientCodeEntry: React.FC = () => {
   const [clientCode, setClientCode] = useState('');
   const [isClientLoading, setIsClientLoading] = useState(false);
   const [clientError, setClientError] = useState('');
   
+  const navigate = useNavigate();
   const { branding } = useContext(BrandingContext);
 
   const handleStartTest = async (e: React.FormEvent) => {
@@ -22,7 +24,8 @@ const LoginPage: React.FC<{ onNavigate: (view: View, context?: any) => void; }> 
     try {
         const testId = await getTestIdForCode(clientCode);
         if (testId) {
-            onNavigate(View.ClientTestConfirmation, { testId, clientCode });
+            // Navigate to the confirmation/start page with necessary data
+            navigate('/start-test', { state: { testId, clientCode } });
         } else {
             setClientError('Nieprawidłowy lub wygasły kod. Proszę sprawdzić i spróbować ponownie.');
         }
@@ -69,7 +72,7 @@ const LoginPage: React.FC<{ onNavigate: (view: View, context?: any) => void; }> 
             {/* Staff Login Button */}
             <div className="text-center mt-8">
                 <button 
-                onClick={() => onNavigate(View.StaffLogin)} 
+                onClick={() => navigate('/login')} // Updated navigation
                 className="text-[var(--text-color)] opacity-70 hover:opacity-100 font-semibold transition-colors hover:text-[var(--primary-color)]"
                 >
                     Logowanie dla personelu
@@ -86,4 +89,4 @@ const LoginPage: React.FC<{ onNavigate: (view: View, context?: any) => void; }> 
   );
 };
 
-export default LoginPage;
+export default ClientCodeEntry;

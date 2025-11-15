@@ -1,16 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import { fetchUsers, saveUser, deleteUser } from '../services/apiService';
-import type { User, View } from './types';
+import type { User } from './types';
 import { UserRole } from './types';
 import { PlusIcon, EditIcon, TrashIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
 
 
-interface UserManagementProps {
-  onNavigate: (view: View) => void;
-}
-
-const UserManagement: React.FC<UserManagementProps> = ({ onNavigate }) => {
+const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -1,9 +1,12 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { fetchTests, fetchTestVersions } from '../services/apiService';
-import { type Test, View } from './types';
+import { useNavigate } from 'react-router-dom';
+import * as api from '../services/apiService';
+import { type Test } from './types';
 import { EditIcon, PlusIcon, DownloadIcon, UploadIcon, ClockIcon } from './common/Icons';
 
-const AdminDashboard: React.FC<{ onNavigate: (view: View, context?: any) => void; }> = ({ onNavigate }) => {
+const AdminDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [tests, setTests] = useState<Test[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +35,8 @@ const AdminDashboard: React.FC<{ onNavigate: (view: View, context?: any) => void
   const loadTests = async () => {
       try {
         setIsLoading(true);
-        const fetchedTests = await fetchTests(true);
+        // Assuming fetchTests is now part of the namespaced import
+        const fetchedTests = await api.fetchTests(true);
         setTests(fetchedTests);
       } catch (err) {
         setError("Nie udało się załadować testów.");
@@ -43,7 +47,7 @@ const AdminDashboard: React.FC<{ onNavigate: (view: View, context?: any) => void
 
   const handleExport = async (testId: string) => {
     try {
-        const allTests = await fetchTests(false); 
+        const allTests = await api.fetchTests(false); 
         const testToExport = allTests.find(t => t.id === testId);
         if (!testToExport) {
             alert("Nie znaleziono testu do wyeksportowania.");
@@ -68,12 +72,12 @@ const AdminDashboard: React.FC<{ onNavigate: (view: View, context?: any) => void
   };
   
   const handleCsvImportClick = () => {
-    onNavigate(View.TestImporter);
+    navigate('/admin/tests'); // Updated navigation
     setIsCreateMenuOpen(false);
   };
   
   const handleCreateNewClick = () => {
-    onNavigate(View.TestEditor, { testId: null });
+    navigate('/admin/test/new'); // Updated navigation
     setIsCreateMenuOpen(false);
   };
 
@@ -85,7 +89,8 @@ const AdminDashboard: React.FC<{ onNavigate: (view: View, context?: any) => void
     reader.onload = (event) => {
         try {
             const importedTest = JSON.parse(event.target?.result as string);
-            onNavigate(View.TestEditor, { importedTest });
+            // Navigate and pass data via state
+            navigate('/admin/test/new', { state: { importedTest } });
         } catch (err) {
             alert("Błąd podczas przetwarzania pliku JSON. Upewnij się, że ma poprawny format.");
         }
@@ -97,7 +102,7 @@ const AdminDashboard: React.FC<{ onNavigate: (view: View, context?: any) => void
   const handleShowHistory = async (canonicalId: string) => {
     setIsHistoryLoading(true);
     setIsHistoryModalOpen(true);
-    const versions = await fetchTestVersions(canonicalId);
+    const versions = await api.fetchTestVersions(canonicalId);
     setHistoryVersions(versions);
     setIsHistoryLoading(false);
   };
@@ -190,7 +195,7 @@ const AdminDashboard: React.FC<{ onNavigate: (view: View, context?: any) => void
                       <DownloadIcon /> Eksportuj
                     </button>
                     <button
-                      onClick={() => onNavigate(View.TestEditor, { testId: test.id })}
+                      onClick={() => navigate(`/admin/test/edit/${test.id}`)} // Updated navigation
                       className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-700 font-semibold rounded-md hover:bg-slate-200 text-sm"
                     >
                       <EditIcon /> Edytuj
@@ -223,7 +228,7 @@ const AdminDashboard: React.FC<{ onNavigate: (view: View, context?: any) => void
                                 </div>
                                 <div className="flex gap-2">
                                     <button onClick={() => handleExport(v.id)} className="p-2 hover:bg-slate-200 rounded-full" title="Eksportuj tę wersję"><DownloadIcon /></button>
-                                    <button onClick={() => onNavigate(View.TestEditor, { testId: v.id })} className="p-2 hover:bg-slate-200 rounded-full" title="Edytuj tę wersję"><EditIcon /></button>
+                                    <button onClick={() => navigate(`/admin/test/edit/${v.id}`)} className="p-2 hover:bg-slate-200 rounded-full" title="Edytuj tę wersję"><EditIcon /></button>
                                 </div>
                             </div>
                         ))}

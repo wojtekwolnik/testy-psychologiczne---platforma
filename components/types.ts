@@ -1,3 +1,4 @@
+
 export enum UserRole {
   Admin = 'ADMIN',
   Therapist = 'THERAPIST',
@@ -8,7 +9,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  password?: string; // Should only exist in mock data, not passed to client
+  password?: string; 
   role: UserRole.Admin | UserRole.Therapist;
   twoFactorEnabled: boolean;
 }
@@ -48,7 +49,6 @@ export interface ScoringRule {
   points: number;
 }
 
-// A single answer option can now have multiple scoring rules
 export type ScoringMap = Record<string, ScoringRule[]>;
 
 export interface Question {
@@ -72,14 +72,14 @@ export interface Scale {
 }
 
 export interface Test {
-  id: string; // Unique ID for this specific version
-  canonicalId: string; // ID shared across all versions of a test
+  id: string; 
+  canonicalId: string; 
   version: number;
   createdAt: Date;
   title: string;
   description: string;
-  instructions: string; // Editable instructions for the client
-  questionsPerPage: number | null; // For pagination
+  instructions: string; 
+  questionsPerPage: number | null; 
   scales: Scale[];
   sections: Section[];
   defaultTemplateId: string | null;
@@ -87,8 +87,8 @@ export interface Test {
 
 export interface ClientAnswer {
   questionId: string;
-  selectedOptionId?: string; // For single choice
-  selectedOptionIds?: string[]; // For multiple choice
+  selectedOptionId?: string; 
+  selectedOptionIds?: string[]; 
 }
 
 
@@ -101,21 +101,21 @@ export interface CalculatedScaleScore {
 
 export interface TestResult {
   id:string;
-  testId: string; // The specific version ID
+  testId: string; 
   testVersion: number;
   testTitle: string;
   clientIdentifier: string; 
   completedAt: Date;
   answers: ClientAnswer[];
   scores: CalculatedScaleScore[];
-  therapistId: string; // ID of the therapist who generated the code
+  therapistId: string; 
 }
 
 export interface AiSettings {
     enabled: boolean;
     provider: 'gemini' | 'chatgpt';
     apiKey: string;
-    endpoint: string; // Optional custom endpoint
+    endpoint: string; 
     model: string;
     systemPrompt: string;
 }
@@ -139,6 +139,11 @@ export interface EmailSettings {
 export interface BrandingSettings {
   appName: string;
   logoUrl: string | null;
+  // New Visual Properties
+  fontFamily: string;
+  borderRadius: number; // in rem units
+  boxShadow: string;
+
   // Colors
   primaryColor: string;
   secondaryColor: string;
@@ -146,7 +151,7 @@ export interface BrandingSettings {
   backgroundColor: string;
   textColor: string;
   
-  // New Detailed Colors
+  // Detailed Colors
   borderColor: string;
   inputBackgroundColor: string;
   inputTextColor: string;
@@ -182,9 +187,9 @@ export interface BrandingSettings {
 
 export interface AccessCode {
     code: string;
-    testId: string; // The specific version ID
+    testId: string; 
     isUsed: boolean;
-    generatedBy: string; // Therapist User ID
+    generatedBy: string; 
     createdAt: Date;
     expiresAt: Date;
 }
@@ -201,9 +206,7 @@ export interface DetailedAggregatedData {
     testTitle: string;
     completionCount: number;
     scales: Scale[];
-    // For histogram of scores per scale
     scoreDistribution: Record<string, { bin: string; count: number }[]>;
-    // For pie charts of answers per question
     answerFrequency: Record<string, { name: string; value: number }[]>;
 }
 
@@ -219,19 +222,18 @@ export interface PdfTemplate {
     customHeaderText: string;
 }
 
-// New types for Psychometric Analysis
 export interface ScaleReliability {
     scaleId: string;
     scaleName:string;
-    cronbachsAlpha: number | null; // Null if couldn't be calculated
+    cronbachsAlpha: number | null; 
 }
 
 export interface QuestionDiscrimination {
     questionId: string;
     questionText: string;
-    discriminationIndex: number | null; // Null if couldn't be calculated
-    difficultyIndex: number | null; // Null if couldn't be calculated
-    scaleId: string; // The scale this question is being evaluated against
+    discriminationIndex: number | null; 
+    difficultyIndex: number | null; 
+    scaleId: string; 
 }
 
 export interface PsychometricData {
@@ -256,6 +258,6 @@ export interface Notification {
   isRead: boolean;
   context?: {
     view: View;
-    params: any; // e.g., { resultId: '...' }
+    params: any; 
   };
 }

@@ -1,14 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { fetchPdfTemplates, deletePdfTemplate } from '../services/apiService';
-import { View, type PdfTemplate } from './types';
+import { type PdfTemplate } from './types';
 import { PlusIcon, EditIcon, TrashIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
 
-interface TemplateManagerProps {
-  onNavigate: (view: View, context?: any) => void;
-}
-
-const TemplateManager: React.FC<TemplateManagerProps> = ({ onNavigate }) => {
+const TemplateManager: React.FC = () => {
+  const navigate = useNavigate();
   const [templates, setTemplates] = useState<PdfTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +47,7 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({ onNavigate }) => {
           <p className="opacity-80 mt-1">Twórz i edytuj szablony, aby dostosować wygląd generowanych raportów.</p>
         </div>
         <button
-          onClick={() => onNavigate(View.TemplateEditor, { templateId: null })}
+          onClick={() => navigate('/admin/template/new')} // Updated navigation
           className="flex items-center gap-2 px-5 py-3 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold rounded-lg shadow-md hover:opacity-90 transition-colors"
         >
           <PlusIcon />
@@ -83,7 +82,7 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({ onNavigate }) => {
                     </ul>
                   </td>
                   <td className="p-4 flex gap-2">
-                    <button onClick={() => onNavigate(View.TemplateEditor, { templateId: template.id })} className="p-2 opacity-70 hover:opacity-100"><EditIcon/></button>
+                    <button onClick={() => navigate(`/admin/template/edit/${template.id}`)} className="p-2 opacity-70 hover:opacity-100"><EditIcon/></button> // Updated navigation
                     <button onClick={() => setTemplateToDelete(template.id)} className="p-2 text-[var(--error-color)] hover:opacity-80"><TrashIcon/></button>
                   </td>
                 </tr>
@@ -92,7 +91,7 @@ const TemplateManager: React.FC<TemplateManagerProps> = ({ onNavigate }) => {
           </table>
         </div>
       </div>
-       <button onClick={() => onNavigate(View.AdminDashboard)} className="mt-8 px-5 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg hover:bg-slate-300">
+       <button onClick={() => navigate('/admin/dashboard')} className="mt-8 px-5 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg hover:bg-slate-300">
             &larr; Powrót do panelu
         </button>
     </div>

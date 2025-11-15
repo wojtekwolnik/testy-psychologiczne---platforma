@@ -1,20 +1,12 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { fetchTestById, saveTest, fetchPdfTemplates } from '../services/apiService';
 import type { Test, Scale, Question, AnswerOption, ScoringRule, Section, PdfTemplate } from './types';
-import { View } from './types';
 import { PlusIcon, TrashIcon } from './common/Icons';
 import RichTextInput from './common/RichTextInput';
 
-interface TestEditorProps {
-  testId: string | null;
-  onNavigate: (view: View, context?: any) => void;
-  setIsDirty: (isDirty: boolean) => void;
-  setSaveAction: (action: { handler: () => Promise<boolean> } | null) => void;
-  importedTest?: Test; // New prop for imported test data
-}
-
-// This function takes an imported test and sanitizes it by creating new unique IDs
-// for the test, scales, sections, questions, and options to prevent conflicts.
+// This function remains the same, it's good as it is.
 const sanitizeImportedTest = (imported: Test): Test => {
     const scaleIdMap = new Map<string, string>();
     const sanitizedScales = imported.scales.map(s => {
@@ -71,18 +63,20 @@ const sanitizeImportedTest = (imported: Test): Test => {
     };
 };
 
+const TestEditor: React.FC = () => {
+  const navigate = useNavigate();
+  const { testId } = useParams<{ testId: string }>();
+  const location = useLocation();
+  const importedTest = location.state?.importedTest as Test | undefined;
 
-const TestEditor: React.FC<TestEditorProps> = ({ testId, onNavigate, setIsDirty, setSaveAction, importedTest }) => {
   const [test, setTest] = useState<Test>({
     id: `new-${Date.now()}`, canonicalId: `tid-${Date.now()}`, version: 1, title: '', description: '',
     instructions: '', questionsPerPage: null, scales: [], sections: [], defaultTemplateId: null, createdAt: new Date(),
   });
-  const [initialState, setInitialState] = useState<string>('');
   const [templates, setTemplates] = useState<PdfTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
-
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -100,7 +94,6 @@ const TestEditor: React.FC<TestEditorProps> = ({ testId, onNavigate, setIsDirty,
         
         if (initialTest) {
           setTest(initialTest);
-          setInitialState(JSON.stringify(initialTest));
         } else {
             const newTest: Test = {
               id: `new-${Date.now()}`, canonicalId: `tid-${Date.now()}`, version: 1, title: 'Nowy Test',
@@ -112,16 +105,11 @@ const TestEditor: React.FC<TestEditorProps> = ({ testId, onNavigate, setIsDirty,
               createdAt: new Date(),
             };
             setTest(newTest);
-            setInitialState(JSON.stringify(newTest));
         }
         setIsLoading(false);
     };
     loadInitialData();
   }, [testId, importedTest]);
-
-  useEffect(() => {
-      setIsDirty(JSON.stringify(test) !== initialState);
-  }, [test, initialState, setIsDirty]);
   
   const validateTest = () => {
       for (const [sIndex, section] of test.sections.entries()) {
@@ -149,31 +137,23 @@ const TestEditor: React.FC<TestEditorProps> = ({ testId, onNavigate, setIsDirty,
     setIsSaving(true);
     const savedTest = await saveTest(test, asNewVersion);
     setTest(savedTest);
-    setInitialState(JSON.stringify(savedTest));
     setIsSaving(false);
-    setIsDirty(false);
     return true;
-  }, [test, setIsDirty]);
+  }, [test]);
 
   const handleSaveAndExit = useCallback(async (asNewVersion: boolean) => {
       const success = await handleSave(asNewVersion);
       if (success) {
-        onNavigate(View.AdminDashboard);
+        navigate('/admin/dashboard'); // Updated navigation
       }
-  }, [handleSave, onNavigate]);
-
-  useEffect(() => {
-    setSaveAction({ handler: async () => await handleSave(false) });
-    return () => setSaveAction(null);
-  }, [handleSave, setSaveAction]);
-
+  }, [handleSave, navigate]);
 
   const handleTestChange = (field: keyof Test, value: any) => {
     setTest(prev => ({ ...prev, [field]: value }));
   };
 
-  // --- Scale Management ---
-  const addScale = () => {
+  // --- Scale, Section, Question, Option, Scoring Management methods are unchanged ---
+    const addScale = () => {
     const newScale: Scale = { id: `s-${Date.now()}`, name: '', description: '' };
     setTest(prev => ({ ...prev, scales: [...prev.scales, newScale] }));
   };
@@ -287,7 +267,6 @@ const TestEditor: React.FC<TestEditorProps> = ({ testId, onNavigate, setIsDirty,
   const addScoringRule = (sIndex: number, qIndex: number, optionId: string) => {
     const newSections = [...test.sections];
     const question = newSections[sIndex].questions[qIndex];
-    // UX Improvement: Default to the first available scale
     const newRule: ScoringRule = { scaleId: test.scales[0]?.id || '', points: 0 };
     question.scoring[optionId] = [...(question.scoring[optionId] || []), newRule];
     setTest(prev => ({ ...prev, sections: newSections }));
@@ -446,7 +425,7 @@ const TestEditor: React.FC<TestEditorProps> = ({ testId, onNavigate, setIsDirty,
       )}
 
       <div className="flex justify-end gap-4 mt-8">
-        <button onClick={() => onNavigate(View.AdminDashboard)} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg">Anuluj</button>
+        <button onClick={() => navigate('/admin/dashboard')} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg">Anuluj</button>
         {isEditingExistingTest ? (
           <>
             <button onClick={() => handleSaveAndExit(false)} disabled={isSaving} className="px-6 py-2 bg-slate-600 text-white font-semibold rounded-lg disabled:bg-slate-400">

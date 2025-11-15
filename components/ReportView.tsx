@@ -1,12 +1,17 @@
+
 import React, { useState, useEffect, useMemo, useContext } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { BarChart, Bar, PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { fetchResultById, fetchTestById, fetchPdfTemplates, getAiInterpretation } from '../services/apiService';
 import type { TestResult, Test, ClientAnswer, PdfTemplate } from './types';
-import { DownloadIcon, SparklesIcon } from './common/Icons';
+import { DownloadIcon, SparklesIcon, ArrowLeftIcon } from './common/Icons';
 import { BrandingContext } from '../contexts/BrandingContext';
-import RichTextInput from './common/RichTextInput'; // Although not used for input, its tag logic could be useful
+import RichTextInput from './common/RichTextInput';
 
-const ReportView: React.FC<{ resultId: string }> = ({ resultId }) => {
+const ReportView: React.FC = () => {
+  const { resultId } = useParams<{ resultId: string }>();
+  const navigate = useNavigate();
+  
   const [result, setResult] = useState<TestResult | null>(null);
   const [test, setTest] = useState<Test | null>(null);
   const [allTemplates, setAllTemplates] = useState<PdfTemplate[]>([]);
@@ -24,6 +29,11 @@ const ReportView: React.FC<{ resultId: string }> = ({ resultId }) => {
   }, [allTemplates, selectedTemplateId]);
 
   useEffect(() => {
+    if (!resultId) {
+        setError('Nie podano ID wyniku w adresie URL.');
+        setIsLoading(false);
+        return;
+    }
     const loadData = async () => {
       try {
         setIsLoading(true);
@@ -56,7 +66,6 @@ const ReportView: React.FC<{ resultId: string }> = ({ resultId }) => {
 
         setAllTemplates([systemDefaultTemplate, ...fetchedTemplates]);
 
-        // Set the default template for the test, or the system default if none is assigned
         setSelectedTemplateId(fetchedTest.defaultTemplateId || 'sys-default');
 
       } catch (err) {
@@ -109,7 +118,7 @@ const ReportView: React.FC<{ resultId: string }> = ({ resultId }) => {
 
   if (isLoading) return <div className="p-8 text-center">Ładowanie raportu...</div>;
   if (error) return <div className="p-8 text-center text-[var(--error-color)]">{error}</div>;
-  if (!result || !test || !template) return null;
+  if (!result || !test || !template) return <div className="p-8 text-center">Nie można wyświetlić raportu. Brak danych.</div>;
   
   const allQuestions = test.sections.flatMap(s => s.questions);
   const getAnswerForQuestion = (qId: string): ClientAnswer | undefined => result.answers.find(a => a.questionId === qId);
@@ -126,6 +135,12 @@ const ReportView: React.FC<{ resultId: string }> = ({ resultId }) => {
   return (
     <>
     <div className="p-4 sm:p-8 bg-[var(--background-color)] min-h-screen text-[var(--text-color)]">
+       <div className="max-w-5xl mx-auto mb-8 hide-on-pdf">
+         <button onClick={() => navigate(-1)} className="flex items-center gap-2 px-4 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg hover:bg-slate-300 transition-colors">
+            <ArrowLeftIcon />
+            Powrót
+        </button>
+      </div>
        <div className="max-w-5xl mx-auto" id="report-content">
         <div className="bg-[var(--secondary-color)] rounded-xl shadow-lg p-8 space-y-8">
             {/* Report Header */}

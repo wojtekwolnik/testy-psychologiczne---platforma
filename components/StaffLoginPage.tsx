@@ -1,14 +1,14 @@
+
 import React, { useState, useContext } from 'react';
-import { View } from './types';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext'; // Assuming this is the correct path
 import { BrandingContext } from '../contexts/BrandingContext';
 
-interface StaffLoginPageProps {
-  onLogin: (email: string, password: string) => Promise<string | null>;
-  onNavigate: (view: View) => void;
-}
-
-export const StaffLoginPage: React.FC<StaffLoginPageProps> = ({ onLogin, onNavigate }) => {
+export const StaffLoginPage: React.FC = () => {
   const { branding } = useContext(BrandingContext);
+  const auth = useAuth();
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -22,11 +22,12 @@ export const StaffLoginPage: React.FC<StaffLoginPageProps> = ({ onLogin, onNavig
     }
     setIsLoading(true);
     setError(null);
-    const loginError = await onLogin(email, password);
+    const loginError = await auth.login(email, password);
     if (loginError) {
         setError(loginError);
-    }
-    setIsLoading(false);
+        setIsLoading(false);
+    } 
+    // On success, the AuthProvider will automatically redirect, so no navigation here.
   }
 
   return (
@@ -81,9 +82,10 @@ export const StaffLoginPage: React.FC<StaffLoginPageProps> = ({ onLogin, onNavig
             </form>
         </main>
         
-        <button onClick={() => onNavigate(View.ClientCodeEntry)} className="mt-8 opacity-80 hover:text-[var(--primary-color)] font-semibold transition-colors">
+        <button onClick={() => navigate('/')} className="mt-8 opacity-80 hover:text-[var(--primary-color)] font-semibold transition-colors">
             &larr; Powrót do strony klienta
         </button>
+    </div>
     </div>
   );
 };

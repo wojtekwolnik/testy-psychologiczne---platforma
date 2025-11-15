@@ -1,16 +1,14 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { fetchPdfTemplateById, savePdfTemplate } from '../services/apiService';
-import { View, type PdfTemplate } from './types';
+import { type PdfTemplate } from './types';
 import RichTextInput from './common/RichTextInput';
 
-interface TemplateEditorProps {
-  templateId: string | null;
-  onNavigate: (view: View) => void;
-  setIsDirty: (isDirty: boolean) => void;
-  setSaveAction: (action: { handler: () => Promise<boolean> } | null) => void;
-}
+const TemplateEditor: React.FC = () => {
+  const { templateId } = useParams<{ templateId: string }>();
+  const navigate = useNavigate();
 
-const TemplateEditor: React.FC<TemplateEditorProps> = ({ templateId, onNavigate, setIsDirty, setSaveAction }) => {
   const [template, setTemplate] = useState<PdfTemplate>({
     id: `tpl-${Date.now()}`,
     name: '',
@@ -22,7 +20,6 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ templateId, onNavigate,
     includeScoresTable: true,
     customHeaderText: '',
   });
-  const [initialState, setInitialState] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -33,12 +30,11 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ templateId, onNavigate,
         const fetchedTemplate = await fetchPdfTemplateById(templateId);
         if (fetchedTemplate) {
           setTemplate(fetchedTemplate);
-          setInitialState(JSON.stringify(fetchedTemplate));
         }
       } else {
          const newTemplate = {
             id: `tpl-${Date.now()}`,
-            name: '',
+            name: 'Nowy szablon',
             includeBarChart: true,
             includePieChart: true,
             includeDetailedAnswers: true,
@@ -48,48 +44,22 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ templateId, onNavigate,
             customHeaderText: '',
         };
         setTemplate(newTemplate);
-        setInitialState(JSON.stringify(newTemplate));
       }
       setIsLoading(false);
     };
     loadTemplate();
   }, [templateId]);
   
-  useEffect(() => {
-    setIsDirty(JSON.stringify(template) !== initialState);
-  }, [template, initialState, setIsDirty]);
-
-  const handleSave = useCallback(async () => {
-      if (!template.name) {
-          alert("Nazwa szablonu jest wymagana.");
-          return false;
-      }
-      setIsSaving(true);
-      await savePdfTemplate(template);
-      setIsSaving(false);
-      setIsDirty(false);
-      // After saving, update the initial state to prevent the dirty flag from being true
-      setInitialState(JSON.stringify(template));
-      return true;
-  }, [template, setIsDirty]);
-  
   const handleSaveAndExit = useCallback(async () => {
-      // Check for name before trying to save and exit.
       if (!template.name) {
           alert("Nazwa szablonu jest wymagana.");
           return;
       }
-      const success = await handleSave();
-      if (success) {
-        onNavigate(View.TemplateManager);
-      }
-  }, [handleSave, onNavigate, template.name]);
-
-  useEffect(() => {
-    setSaveAction({ handler: handleSave });
-    return () => setSaveAction(null);
-  }, [handleSave, setSaveAction]);
-
+      setIsSaving(true);
+      await savePdfTemplate(template);
+      setIsSaving(false);
+      navigate('/admin/templates'); // Navigate back after saving
+  }, [template, navigate]);
 
   const handleToggle = (field: keyof Omit<PdfTemplate, 'id' | 'name' | 'customHeaderText'>) => {
     setTemplate(prev => ({ ...prev, [field]: !prev[field] }));
@@ -174,7 +144,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ templateId, onNavigate,
       </div>
 
        <div className="flex justify-end gap-4 mt-8">
-        <button onClick={() => onNavigate(View.TemplateManager)} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg">Anuluj</button>
+        <button onClick={() => navigate('/admin/templates')} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg">Anuluj</button>
         <button onClick={handleSaveAndExit} disabled={isSaving} className="px-6 py-2 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold rounded-lg disabled:bg-slate-400">
             {isSaving ? 'Zapisywanie...' : 'Zapisz szablon'}
         </button>

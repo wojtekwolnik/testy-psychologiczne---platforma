@@ -1,0 +1,129 @@
+
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ENUMS
+
+enum UserRole {
+  ADMIN
+  THERAPIST
+}
+
+// MODELS
+
+// Model for user accounts (Admins and Therapists)
+model User {
+  id               String        @id @default(cuid())
+  name             String
+  email            String        @unique
+  passwordHash     String
+  role             UserRole
+  twoFactorEnabled Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  accessCodes      AccessCode[]
+  testResults      TestResult[]
+  notifications    Notification[]
+}
+
+// Model for a Test blueprint. Tests are versioned.
+model Test {
+  id                String        @id @default(cuid())
+  canonicalId       String        // ID shared across all versions of a test
+  version           Int
+  title             String
+  description       String
+  instructions      String
+  questionsPerPage  Int?
+  defaultTemplateId String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // JSON fields to hold complex, nested data structures
+  scales            Json
+  sections          Json
+
+  accessCodes       AccessCode[]
+  results           TestResult[]
+  
+  defaultTemplate   PdfTemplate? @relation(fields: [defaultTemplateId], references: [id])
+
+  @@unique([canonicalId, version]) // Ensures each version of a test is unique
+}
+
+// Model for single-use access codes for clients
+model AccessCode {
+  code        String   @id @default(cuid())
+  isUsed      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime
+
+  testId      String
+  test        Test     @relation(fields: [testId], references: [id])
+
+  generatedById String
+  generatedBy   User     @relation(fields: [generatedById], references: [id])
+}
+
+// Model for storing the results of a completed test
+model TestResult {
+  id               String   @id @default(cuid())
+  clientIdentifier String   // The access code used
+  completedAt      DateTime @default(now())
+
+  // JSON fields to store the specific state of the test and answers
+  testTitle        String
+  testVersion      Int
+  answers          Json
+  scores           Json
+
+  testId           String
+  test             Test     @relation(fields: [testId], references: [id])
+
+  therapistId      String
+  therapist        User     @relation(fields: [therapistId], references: [id])
+}
+
+// Model for PDF report templates
+model PdfTemplate {
+  id                     String  @id @default(cuid())
+  name                   String
+  includeBarChart        Boolean @default(true)
+  includePieChart        Boolean @default(true)
+  includeDetailedAnswers Boolean @default(true)
+  includeHeader          Boolean @default(true)
+  includeClientInfo      Boolean @default(true)
+  includeScoresTable     Boolean @default(true)
+  customHeaderText       String  @default("Poufny Raport Psychologiczny")
+
+  tests                  Test[]
+}
+
+// Model for user notifications
+model Notification {
+  id        String   @id @default(cuid())
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  context   Json?    // To store context like { "view": "ReportView", "params": { "resultId": "..." } }
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+// A simple model to store key-value settings for the application
+// This will hold branding, AI, and email settings as a single JSON object
+model AppSettings {
+  id      String @id @default("singleton") // Ensures only one row of settings exists
+  content Json
+}

@@ -1,14 +1,13 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { fetchResults, fetchTests, generateAccessCode, fetchActiveCodes, deleteResult } from '../services/apiService';
-import { type TestResult, type Test, View, type AccessCode } from './types';
+import { type TestResult, type Test, type AccessCode } from './types';
 import { ChartBarIcon, TrashIcon, PlusIcon, ClipboardCopyIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
 
-interface TherapistDashboardProps {
-  onNavigate: (view: View, context?: any) => void;
-}
-
-const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNavigate }) => {
+const TherapistDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [results, setResults] = useState<TestResult[]>([]);
   const [tests, setTests] = useState<Test[]>([]);
   const [activeCodes, setActiveCodes] = useState<AccessCode[]>([]);
@@ -25,12 +24,10 @@ const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNavigate }) =
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
 
-
   const THERAPIST_ID = 'user-2'; // Hardcoded therapist ID for demo
 
   useEffect(() => {
     loadData();
-    // Set default expiry date to 7 days from now
     const defaultExpiry = new Date();
     defaultExpiry.setDate(defaultExpiry.getDate() + 7);
     setExpiryDate(defaultExpiry.toISOString().split('T')[0]);
@@ -41,7 +38,7 @@ const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNavigate }) =
       setIsLoading(true);
       const [fetchedResults, fetchedTests, fetchedCodes] = await Promise.all([
         fetchResults(THERAPIST_ID),
-        fetchTests(true), // Fetch only latest versions
+        fetchTests(true), 
         fetchActiveCodes(THERAPIST_ID)
       ]);
       
@@ -73,7 +70,6 @@ const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNavigate }) =
 
   const handleGenerateCode = async () => {
     if (!selectedTest || !expiryDate) return;
-    // Ensure the date is set to the end of the day for valid comparison
     const expiry = new Date(expiryDate);
     expiry.setHours(23, 59, 59, 999);
     
@@ -268,7 +264,7 @@ const TherapistDashboard: React.FC<TherapistDashboardProps> = ({ onNavigate }) =
                         <td className={`p-4 ${urgencyClass}`}>{daysLeft > 0 ? `${daysLeft} dni` : 'Dziś'}</td>
                         <td className="p-4 flex items-center gap-2">
                             <button
-                                onClick={() => onNavigate(View.ReportView, { resultId: result.id })}
+                                onClick={() => navigate(`/report/${result.id}`)} // Updated navigation
                                 className="flex items-center gap-2 px-3 py-1.5 bg-[var(--accent-color)]/20 text-[var(--accent-color)] font-semibold rounded-md hover:bg-[var(--accent-color)]/30 transition-colors text-sm"
                             >
                                 <ChartBarIcon />

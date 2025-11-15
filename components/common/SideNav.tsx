@@ -1,47 +1,50 @@
-import React, { useContext, useState, useEffect } from 'react';
-import { UserRole, View, User, Notification } from '../types';
+
+import React, { useContext, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { UserRole, User, Notification } from '../types';
 import { ClipboardListIcon, UserGroupIcon, CogIcon, UserManagementIcon, BrandingIcon, ChartPieIcon, LogoutIcon, DocumentationIcon, SparklesIcon, HeartIcon, BellIcon, EnvelopeIcon } from './Icons';
 import { BrandingContext } from '../../contexts/BrandingContext';
 import { markNotificationsAsRead } from '../../services/apiService';
-
 
 interface SideNavProps {
     user: User;
     notifications: Notification[];
     setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
-    onNavigate: (view: View, context?: any) => void;
     onLogout: () => void;
 }
 
-const NavLink: React.FC<{ icon: React.ReactNode, label: string, onClick: () => void, children?: React.ReactNode }> = ({ icon, label, onClick, children }) => (
-    <div className="relative">
-        <button onClick={onClick} className="w-full flex items-center gap-3 px-4 py-3 text-slate-200 hover:bg-slate-700 rounded-md transition-colors text-left">
-            {icon}
-            <span className="font-medium">{label}</span>
-        </button>
-        {children}
-    </div>
+// NavLink is now a wrapper around React Router's Link component
+const NavLink: React.FC<{ icon: React.ReactNode, label: string, to: string }> = ({ icon, label, to }) => (
+    <Link to={to} className="w-full flex items-center gap-3 px-4 py-3 text-slate-200 hover:bg-slate-700 rounded-md transition-colors text-left">
+        {icon}
+        <span className="font-medium">{label}</span>
+    </Link>
 );
 
-const NotificationBell: React.FC<Omit<SideNavProps, 'onLogout'>> = ({ user, notifications, setNotifications, onNavigate }) => {
+const NotificationBell: React.FC<Pick<SideNavProps, 'user' | 'notifications' | 'setNotifications'> & { onNavigate: (path: string, state?: any) => void }> = ({ user, notifications, setNotifications, onNavigate }) => {
     const [isOpen, setIsOpen] = useState(false);
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
     const handleToggle = () => {
         setIsOpen(!isOpen);
         if (!isOpen && unreadCount > 0) {
-            // Mark all as read when opening
             const unreadIds = notifications.filter(n => !n.isRead).map(n => n.id);
-            markNotificationsAsRead(user.id, unreadIds);
-            const newNotifications = notifications.map(n => ({...n, isRead: true }));
-            setNotifications(newNotifications);
+            markNotificationsAsRead(user.id, unreadIds).then(() => {
+                const newNotifications = notifications.map(n => ({ ...n, isRead: true }));
+                setNotifications(newNotifications);
+            });
         }
     };
     
     const handleNotificationClick = (notification: Notification) => {
         setIsOpen(false);
-        if (notification.context) {
-            onNavigate(notification.context.view, notification.context.params);
+        if (notification.context && notification.context.view) { // Legacy context support
+            // This part needs a robust mapping from old View enum to new URL paths
+            // For now, we will handle a specific case, e.g., ReportView
+            const { view, params } = notification.context;
+            if (view === 'ReportView' && params.resultId) {
+                onNavigate(`/report/${params.resultId}`);
+            } // Add other mappings here as needed
         }
     };
 
@@ -75,24 +78,26 @@ const NotificationBell: React.FC<Omit<SideNavProps, 'onLogout'>> = ({ user, noti
 };
 
 
-const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications, onNavigate, onLogout }) => {
+const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications, onLogout }) => {
     const { branding } = useContext(BrandingContext);
+    const navigate = useNavigate();
 
+    // Mapping from abstract view to concrete URL path
     const adminLinks = [
-        { view: View.AdminDashboard, label: 'Panel Główny', icon: <CogIcon className="h-5 w-5"/> },
-        { view: View.UserManagement, label: 'Użytkownicy', icon: <UserManagementIcon /> },
-        { view: View.Branding, label: 'Branding', icon: <BrandingIcon /> },
-        { view: View.EmailSettings, label: 'Ustawienia E-mail', icon: <EnvelopeIcon /> },
-        { view: View.TemplateManager, label: 'Szablony PDF', icon: <ClipboardListIcon className="h-5 w-5" /> },
-        { view: View.AggregatedData, label: 'Dane Zbiorcze', icon: <ChartPieIcon /> },
-        { view: View.Documentation, label: 'Dokumentacja', icon: <DocumentationIcon /> },
-        { view: View.AiSettings, label: 'Ustawienia AI', icon: <SparklesIcon className="h-6 w-6" /> },
-        { view: View.HealthDashboard, label: 'Stan Systemu', icon: <HeartIcon /> },
+        { to: '/admin/dashboard', label: 'Panel Główny', icon: <CogIcon className="h-5 w-5"/> },
+        { to: '/admin/users', label: 'Użytkownicy', icon: <UserManagementIcon /> },
+        { to: '/admin/branding', label: 'Branding', icon: <BrandingIcon /> },
+        { to: '/admin/settings/email', label: 'Ustawienia E-mail', icon: <EnvelopeIcon /> },
+        { to: '/admin/templates', label: 'Szablony PDF', icon: <ClipboardListIcon className="h-5 w-5" /> },
+        { to: '/admin/data', label: 'Dane Zbiorcze', icon: <ChartPieIcon /> },
+        { to: '/admin/docs', label: 'Dokumentacja', icon: <DocumentationIcon /> },
+        { to: '/admin/settings/ai', label: 'Ustawienia AI', icon: <SparklesIcon className="h-6 w-6" /> },
+        { to: '/admin/health', label: 'Stan Systemu', icon: <HeartIcon /> },
     ];
     
     const therapistLinks = [
-         { view: View.TherapistDashboard, label: 'Panel Główny', icon: <UserGroupIcon className="h-5 w-5"/> },
-         { view: View.TherapistDocumentation, label: 'Instrukcja', icon: <DocumentationIcon /> },
+         { to: '/therapist/dashboard', label: 'Panel Główny', icon: <UserGroupIcon className="h-5 w-5"/> },
+         { to: '/therapist-docs', label: 'Instrukcja', icon: <DocumentationIcon /> },
     ];
 
     const links = user.role === UserRole.Admin ? adminLinks : therapistLinks;
@@ -106,26 +111,33 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
                 </div>
                 {user.role === UserRole.Therapist && (
                    <div className="flex-shrink-0">
-                     <NotificationBell user={user} notifications={notifications} setNotifications={setNotifications} onNavigate={onNavigate} />
+                     <NotificationBell 
+                        user={user} 
+                        notifications={notifications} 
+                        setNotifications={setNotifications} 
+                        onNavigate={(path, state) => navigate(path, { state })} // Pass navigate function
+                     />
                    </div>
                 )}
             </div>
             <div className="flex-grow space-y-2">
                 {links.map(link => (
                     <NavLink
-                        key={link.view}
+                        key={link.to}
                         label={link.label}
                         icon={link.icon}
-                        onClick={() => onNavigate(link.view)}
+                        to={link.to} // Use the `to` prop for the Link component
                     />
                 ))}
             </div>
              <div className="mt-auto">
-                <NavLink
-                    label="Wyloguj"
-                    icon={<LogoutIcon />}
+                <button
                     onClick={onLogout}
-                />
+                    className="w-full flex items-center gap-3 px-4 py-3 text-slate-200 hover:bg-slate-700 rounded-md transition-colors text-left"
+                >
+                    <LogoutIcon />
+                    <span className="font-medium">Wyloguj</span>
+                </button>
             </div>
         </nav>
     );
