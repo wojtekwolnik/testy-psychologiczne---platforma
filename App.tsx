@@ -1,46 +1,53 @@
-
-import React, { useState, useEffect, ReactElement } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet, useNavigate } from 'react-router-dom';
 
-// --- Import Components ---
-import ClientCodeEntry from './components/ClientCodeEntry';
-import { StaffLoginPage } from './components/StaffLoginPage';
-import AdminDashboard from './components/AdminDashboard';
-import TherapistDashboard from './components/TherapistDashboard';
-import ClientTestView, { ClientThankYou } from './components/ClientTestView';
-import ClientTestConfirmationPage from './components/ClientTestConfirmationPage';
-import ReportView from './components/ReportView';
-import TestEditor from './components/TestEditor';
-import TwoFactorAuthPage from './components/TwoFactorAuthPage';
-import UserManagement from './components/UserManagement';
-import BrandingSettings from './components/BrandingSettings';
-import AggregatedDataView from './components/AggregatedDataView';
-import BrandingStyles from './components/BrandingStyles';
-import TemplateManager from './components/TemplateManager';
-import TemplateEditor from './components/TemplateEditor';
-import TestImporter from './components/TestImporter';
-import DocumentationPage from './components/DocumentationPage';
-import TherapistDocumentationPage from './components/TherapistDocumentationPage';
-import AiSettingsPage from './components/AiSettingsPage';
-import HealthDashboardPage from './components/HealthDashboardPage';
-import SideNav from './components/common/SideNav';
-import ToastContainer from './components/common/ToastContainer';
-import EmailSettingsPage from './components/EmailSettingsPage';
-import SetupWizard from './components/SetupWizard';
-
-// --- Import API & Types ---
+// --- Import Contexts & Auth ---
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { UserRole, Notification } from './components/types';
+
+// --- Import Static Components (essential for initial layout) ---
+import SideNav from './components/common/SideNav';
+import ToastContainer from './components/common/ToastContainer';
+import BrandingStyles from './components/BrandingStyles';
+
+// --- Lazy Load Page Components ---
+const SetupWizard = React.lazy(() => import('./components/SetupWizard'));
+const ClientCodeEntry = React.lazy(() => import('./components/ClientCodeEntry'));
+const StaffLoginPage = React.lazy(() => import('./components/StaffLoginPage').then(module => ({ default: module.StaffLoginPage })) );
+const AdminDashboard = React.lazy(() => import('./components/AdminDashboard'));
+const TherapistDashboard = React.lazy(() => import('./components/TherapistDashboard'));
+// Corrected import for the DEFAULT export
+const ClientTestView = React.lazy(() => import('./components/ClientTestView')); 
+// Correct import for the NAMED export
+const ClientThankYou = React.lazy(() => import('./components/ClientTestView').then(module => ({ default: module.ClientThankYou })) );
+const ClientTestConfirmationPage = React.lazy(() => import('./components/ClientTestConfirmationPage'));
+const ReportView = React.lazy(() => import('./components/ReportView'));
+const TestEditor = React.lazy(() => import('./components/TestEditor'));
+const TwoFactorAuthPage = React.lazy(() => import('./components/TwoFactorAuthPage'));
+const UserManagement = React.lazy(() => import('./components/UserManagement'));
+const BrandingSettings = React.lazy(() => import('./components/BrandingSettings'));
+const AggregatedDataView = React.lazy(() => import('./components/AggregatedDataView'));
+const TemplateManager = React.lazy(() => import('./components/TemplateManager'));
+const TemplateEditor = React.lazy(() => import('./components/TemplateEditor'));
+const TestImporter = React.lazy(() => import('./components/TestImporter'));
+const DocumentationPage = React.lazy(() => import('./components/DocumentationPage'));
+const TherapistDocumentationPage = React.lazy(() => import('./components/TherapistDocumentationPage'));
+const AiSettingsPage = React.lazy(() => import('./components/AiSettingsPage'));
+const HealthDashboardPage = React.lazy(() => import('./components/HealthDashboardPage'));
+const EmailSettingsPage = React.lazy(() => import('./components/EmailSettingsPage'));
+
+// --- Loading Spinner Fallback ---
+const LoadingFallback = () => (
+    <div className="flex justify-center items-center h-screen w-full">
+        <div className="animate-spin rounded-full h-24 w-24 border-b-2 border-indigo-600"></div>
+    </div>
+);
 
 // --- Type Definitions ---
 interface SetupStatus {
   needsSetup: boolean;
 }
-
-// Generic type for the save action passed from child components
 type SaveAction = { handler: () => Promise<boolean> } | null;
-
-// This context provides layout-level state and actions to nested routes.
 export type StaffLayoutContext = {
   onNavigate: (path: string, state?: any) => void;
   setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
@@ -55,31 +62,15 @@ const SetupChecker = () => {
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const check = async () => {
-      try {
-        const response = await fetch('/api/setup/status');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data: SetupStatus = await response.json();
-        setNeedsSetup(data.needsSetup);
-      } catch (error) {
-        console.error("Error checking setup status:", error);
-        setNeedsSetup(null); // Keep loading state on error
-      }
-    };
-    check();
+    fetch('/api/setup/status').then(res => res.json()).then((data: SetupStatus) => {
+      setNeedsSetup(data.needsSetup);
+    }).catch(err => {
+      console.error("Error checking setup status:", err);
+      setNeedsSetup(null);
+    });
   }, []);
 
-  if (needsSetup === null) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-slate-100">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
-        <p className='ml-4 text-slate-700'>Weryfikacja konfiguracji aplikacji...</p>
-      </div>
-    );
-  }
-
+  if (needsSetup === null) return <LoadingFallback />;
   return needsSetup ? <Navigate to="/setup" replace /> : <Outlet />;
 };
 
@@ -87,38 +78,24 @@ const SetupChecker = () => {
 const StaffLayout = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isDirty, setIsDirty] = useState(false);
   const [saveAction, setSaveAction] = useState<SaveAction>(null);
 
   if (!user) return <Navigate to="/login" replace />;
 
-  const handleNavigate = (path: string, state?: any) => {
-    navigate(path, { state });
-  };
-  
-  // The context object that will be passed down to all nested components
   const context: StaffLayoutContext = {
-    onNavigate: handleNavigate,
-    setNotifications,
-    setIsDirty,
-    setSaveAction,
-    isDirty,
-    saveAction
+    onNavigate: (path: string, state?: any) => navigate(path, { state }),
+    setNotifications, setIsDirty, setSaveAction, isDirty, saveAction
   };
 
   return (
     <div className="flex h-screen bg-[var(--background-color)]">
-      <SideNav 
-        user={user} 
-        onLogout={logout} 
-        notifications={notifications} 
-        setNotifications={setNotifications}
-      />
+      <SideNav user={user} onLogout={logout} notifications={notifications} setNotifications={setNotifications} />
       <main className="flex-1 overflow-y-auto">
-        {/* Outlet now receives the context, making it available to all child routes */}
-        <Outlet context={context} />
+        <Suspense fallback={<LoadingFallback />}>
+            <Outlet context={context} />
+        </Suspense>
       </main>
     </div>
   );
@@ -126,29 +103,21 @@ const StaffLayout = () => {
 
 // --- Protected Route for Staff Roles ---
 type ProtectedRouteProps = { roles: UserRole[] };
-
 const ProtectedRoute = ({ roles }: ProtectedRouteProps) => {
   const { user, isLoading } = useAuth();
   const location = useLocation();
 
-  if (isLoading) return <div>Weryfikacja sesji...</div>;
-
+  if (isLoading) return <LoadingFallback />;
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
-
   if (!roles.includes(user.role)) {
     const defaultPath = user.role === UserRole.Admin ? '/admin/dashboard' : '/therapist/dashboard';
     return <Navigate to={defaultPath} replace />;
   }
-
   return <Outlet />;
 };
 
 // --- Main App Router ---
-const AppRouter = () => {
-  const handleVerify = () => console.log("Verify action triggered");
-  const handleBack = () => console.log("Back action triggered");
-
-  return (
+const AppRouter = () => (
     <Routes>
       <Route path="/setup" element={<SetupWizard />} />
       <Route element={<SetupChecker />}>
@@ -157,7 +126,7 @@ const AppRouter = () => {
         <Route path="/test/:testId/:clientCode" element={<ClientTestView />} />
         <Route path="/thank-you" element={<ClientThankYou />} />
         <Route path="/login" element={<StaffLoginPage />} />
-        <Route path="/2fa" element={<TwoFactorAuthPage onVerify={handleVerify} onBack={handleBack} />} />
+        <Route path="/2fa" element={<TwoFactorAuthPage onVerify={() => {}} onBack={() => {}} />} />
 
         <Route element={<StaffLayout />}>
           <Route element={<ProtectedRoute roles={[UserRole.Admin]} />}>
@@ -190,18 +159,19 @@ const AppRouter = () => {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
-  );
-};
+);
 
 // --- Main App Component ---
 const App = () => (
   <BrowserRouter>
     <AuthProvider>
-      <div className="min-h-screen" style={{ backgroundColor: 'var(--background-color)', color: 'var(--text-color)' }}>
-        <BrandingStyles />
-        <ToastContainer />
-        <AppRouter />
-      </div>
+        <div className="min-h-screen" style={{ backgroundColor: 'var(--background-color)', color: 'var(--text-color)' }}>
+            <BrandingStyles />
+            <ToastContainer />
+            <Suspense fallback={<LoadingFallback />}>
+                <AppRouter />
+            </Suspense>
+        </div>
     </AuthProvider>
   </BrowserRouter>
 );

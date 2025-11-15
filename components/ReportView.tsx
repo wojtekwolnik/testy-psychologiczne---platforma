@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { PDFDocument } from 'pdf-lib';
 import { fetchResultById, fetchTestById, fetchPdfTemplates, getAiInterpretation } from '../services/apiClient';
 import type { TestResult, Test, ClientAnswer, PdfTemplate } from './types';
 import { DownloadIcon, SparklesIcon, ChevronLeftIcon } from './common/Icons';
 import { BrandingContext } from '../contexts/BrandingContext';
 import RichTextInput from './common/RichTextInput';
+
+// The heavy PDF generation logic is no longer imported statically.
 
 const ReportView: React.FC = () => {
     const { resultId } = useParams<{ resultId: string }>();
@@ -63,8 +64,12 @@ const ReportView: React.FC = () => {
 
         setIsGenerating(true);
         try {
+            // Dynamically import the PDF generator only when needed
+            const { generatePdf } = await import('./pdfGenerator');
+            
             const templateToUse = pdfTemplates.find(t => t.id === selectedTemplate);
             const pdfBytes = await generatePdf(result, test, branding, templateToUse, customInterpretation);
+            
             const blob = new Blob([pdfBytes], { type: 'application/pdf' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
@@ -86,7 +91,7 @@ const ReportView: React.FC = () => {
         setAiInterpretation(null);
         try {
             const interpretation = await getAiInterpretation(test, result);
-            setAiInterpretation(interpretation.interpretation); // Assuming the API returns { interpretation: "..." }
+            setAiInterpretation(interpretation.interpretation);
         } catch (error) {
             console.error('Błąd pobierania interpretacji AI:', error);
             setError("Nie udało się uzyskać interpretacji od AI.");
@@ -212,62 +217,5 @@ const ReportView: React.FC = () => {
         </div>
     );
 };
-
-// Mock PDF Generation Logic
-async function generatePdf(result: TestResult, test: Test, branding: any, template: PdfTemplate | undefined, customInterpretation: string): Promise<Uint8Array> {
-  const pdfDoc = await PDFDocument.create();
-  let page = pdfDoc.addPage();
-  const { width, height } = page.getSize();
-  let y = height - 50;
-
-  // Simple title
-  page.drawText(`${branding.appName || 'Test'} - Raport Wyników`, { x: 50, y, size: 24 });
-  y -= 40;
-
-  if (template && template.body) {
-    // This is a simplified placeholder. A real implementation would need a complex parser
-    // to replace placeholders like {{clientName}} with actual data.
-    let body = template.body;
-    body = body.replace(/{{clientName}}/g, result.clientName);
-    body = body.replace(/{{testDate}}/g, new Date(result.completedAt).toLocaleDateString());
-    body = body.replace(/{{testTitle}}/g, test.title);
-    
-    // Naive replacement for scores
-    Object.entries(result.scores).forEach(([key, value]) => {
-        const scoreRegex = new RegExp(`{{scores.${key}}}`, 'g');
-        body = body.replace(scoreRegex, String(value));
-    });
-
-    body = body.replace(/{{therapistInterpretation}}/g, customInterpretation);
-
-
-    // This simplified version just draws the text. A real version would handle HTML -> PDF.
-    const lines = body.split('\n');
-    for (const line of lines) {
-        page.drawText(line, { x: 50, y, size: 12 });
-        y -= 15;
-        if (y < 50) {
-            page = pdfDoc.addPage();
-            y = height - 50;
-        }
-    }
-  } else {
-    // Default fallback PDF content
-    page.drawText(`Pacjent: ${result.clientName}`, { x: 50, y, size: 12 });
-    y -= 20;
-    page.drawText(`Data: ${new Date(result.completedAt).toLocaleDateString()}`, { x: 50, y, size: 12 });
-    y -= 40;
-
-    page.drawText('Wyniki:', { x: 50, y, size: 16 });
-    y -= 25;
-
-    for (const [key, value] of Object.entries(result.scores)) {
-        page.drawText(`${key}: ${value}`, { x: 70, y, size: 12 });
-        y -= 20;
-    }
-  }
-
-  return pdfDoc.save();
-}
 
 export default ReportView;
