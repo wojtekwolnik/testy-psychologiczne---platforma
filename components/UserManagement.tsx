@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { fetchUsers, saveUser, deleteUser } from '../services/apiService';
+import { fetchUsers, saveUser, deleteUser } from '../services/apiClient';
 import type { User } from './types';
 import { UserRole } from './types';
 import { PlusIcon, EditIcon, TrashIcon } from './common/Icons';

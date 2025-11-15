@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchPdfTemplates, deletePdfTemplate } from '../services/apiService';
+import { fetchPdfTemplates, deletePdfTemplate } from '../services/apiClient';
 import { type PdfTemplate } from './types';
 import { PlusIcon, EditIcon, TrashIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';

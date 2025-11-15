@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchPdfTemplateById, savePdfTemplate } from '../services/apiService';
+import { fetchPdfTemplateById, savePdfTemplate } from '../services/apiClient';
 import { type PdfTemplate } from './types';
 import RichTextInput from './common/RichTextInput';
 

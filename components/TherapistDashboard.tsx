@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchResults, fetchTests, generateAccessCode, fetchActiveCodes, deleteResult } from '../services/apiService';
+import { fetchResults, fetchTests, generateAccessCode, fetchActiveCodes, deleteResult } from '../services/apiClient';
 import { type TestResult, type Test, type AccessCode } from './types';
 import { ChartBarIcon, TrashIcon, PlusIcon, ClipboardCopyIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
