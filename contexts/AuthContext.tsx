@@ -1,28 +1,53 @@
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { User, UserRole } from '../components/types';
 
-// This is a mock authentication context to allow the application to build for preview purposes.
-// It simulates a logged-in admin user.
+// A more realistic AuthContext that holds user state and provides login/logout functions.
 
 interface AuthContextValue {
   user: User | null;
   isLoading: boolean;
+  login: (user: User) => void;
+  logout: () => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const mockAdmin: User = {
-    id: 'mock-admin-id',
-    name: 'Admin Preview',
-    email: 'admin@preview.com',
-    role: UserRole.Admin,
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // In a real app, you'd fetch the user profile from an API
+    // For now, we simulate an async check and default to a logged-out state.
+    setTimeout(() => {
+        // To simulate being logged in for development, you can uncomment the following lines:
+        /*
+        setUser({
+            id: 'mock-admin-id',
+            name: 'Admin User',
+            email: 'admin@example.com',
+            role: UserRole.Admin,
+        });
+        */
+        setIsLoading(false);
+    }, 500);
+  }, []);
+
+  const login = (newUser: User) => {
+    setUser(newUser);
+  };
+
+  const logout = () => {
+    // In a real app, you would also clear any tokens from localStorage/cookies
+    setUser(null);
   };
 
   const value: AuthContextValue = {
-    user: mockAdmin,
-    isLoading: false,
+    user,
+    isLoading,
+    login,
+    logout,
   };
 
   return (

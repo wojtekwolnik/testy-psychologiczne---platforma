@@ -1,15 +1,12 @@
 import React, { useContext, useState, useEffect, useCallback } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { BrandingContext } from '../contexts/BrandingContext';
-import { type AiSettings, View } from './types';
+import { type AiSettings } from './types';
+import { type StaffLayoutContext } from '../App';
 import { useToast } from '../contexts/ToastContext';
 
-interface AiSettingsPageProps {
-  onNavigate: (view: View) => void;
-  setIsDirty: (isDirty: boolean) => void;
-  setSaveAction: (action: { handler: () => Promise<boolean> } | null) => void;
-}
-
-const AiSettingsPage: React.FC<AiSettingsPageProps> = ({ onNavigate, setIsDirty, setSaveAction }) => {
+const AiSettingsPage = () => {
+  const { onNavigate, setIsDirty, setSaveAction } = useOutletContext<StaffLayoutContext>();
   const { branding, setBranding } = useContext(BrandingContext);
   const [localSettings, setLocalSettings] = useState<AiSettings>(branding.aiSettings);
   const [isSaving, setIsSaving] = useState(false);
@@ -17,7 +14,6 @@ const AiSettingsPage: React.FC<AiSettingsPageProps> = ({ onNavigate, setIsDirty,
   const { showToast } = useToast();
 
   useEffect(() => {
-    // Deep copy for initial state comparison
     const stringState = JSON.stringify(branding.aiSettings);
     setInitialState(stringState);
     setLocalSettings(JSON.parse(stringState));
@@ -30,6 +26,7 @@ const AiSettingsPage: React.FC<AiSettingsPageProps> = ({ onNavigate, setIsDirty,
   const handleSave = useCallback(async () => {
       setIsSaving(true);
       setBranding({ ...branding, aiSettings: localSettings });
+      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 300)); 
       setInitialState(JSON.stringify(localSettings));
       setIsSaving(false);
@@ -115,7 +112,7 @@ const AiSettingsPage: React.FC<AiSettingsPageProps> = ({ onNavigate, setIsDirty,
       </div>
 
        <div className="flex justify-end gap-4 mt-8">
-        <button onClick={() => onNavigate(View.AdminDashboard)} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg">Anuluj</button>
+        <button onClick={() => onNavigate('/admin/dashboard')} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg">Anuluj</button>
         <button onClick={handleSave} disabled={isSaving} className="px-6 py-2 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold rounded-lg disabled:bg-slate-400">
             {isSaving ? 'Zapisywanie...' : 'Zapisz ustawienia AI'}
         </button>

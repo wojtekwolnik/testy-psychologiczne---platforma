@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
+import React, { useState, useEffect, ReactElement } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet, useNavigate } from 'react-router-dom';
 
 // --- Import Components ---
 import ClientCodeEntry from './components/ClientCodeEntry';
@@ -29,12 +29,29 @@ import EmailSettingsPage from './components/EmailSettingsPage';
 import SetupWizard from './components/SetupWizard';
 
 // --- Import API & Types ---
-// Removed: import { checkSetupStatus } from './services/apiService';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { UserRole } from './components/types';
+import { UserRole, Notification } from './components/types';
+
+// --- Type Definitions ---
+interface SetupStatus {
+  needsSetup: boolean;
+}
+
+// Generic type for the save action passed from child components
+type SaveAction = { handler: () => Promise<boolean> } | null;
+
+// This context provides layout-level state and actions to nested routes.
+export type StaffLayoutContext = {
+  onNavigate: (path: string, state?: any) => void;
+  setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
+  setIsDirty: React.Dispatch<React.SetStateAction<boolean>>;
+  setSaveAction: React.Dispatch<React.SetStateAction<SaveAction>>;
+  isDirty: boolean;
+  saveAction: SaveAction;
+};
 
 // --- Setup Check Component ---
-const SetupChecker: React.FC = () => {
+const SetupChecker = () => {
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -44,18 +61,15 @@ const SetupChecker: React.FC = () => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        const data = await response.json();
+        const data: SetupStatus = await response.json();
         setNeedsSetup(data.needsSetup);
       } catch (error) {
         console.error("Error checking setup status:", error);
-        // If the check fails, we shouldn't assume setup is complete.
-        // Let's keep the loading state to prevent access to a broken app.
-        setNeedsSetup(null);
+        setNeedsSetup(null); // Keep loading state on error
       }
     };
-
     check();
-  }, []); // Run only once on initial app load
+  }, []);
 
   if (needsSetup === null) {
     return (
@@ -66,38 +80,60 @@ const SetupChecker: React.FC = () => {
     );
   }
 
-  if (needsSetup) {
-    return <Navigate to="/setup" replace />;
-  }
-
-  return <Outlet />;
+  return needsSetup ? <Navigate to="/setup" replace /> : <Outlet />;
 };
 
-// --- Staff Layout Component ---
+// --- Staff Layout using Outlet Context ---
 const StaffLayout = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [isDirty, setIsDirty] = useState(false);
+  const [saveAction, setSaveAction] = useState<SaveAction>(null);
+
   if (!user) return <Navigate to="/login" replace />;
+
+  const handleNavigate = (path: string, state?: any) => {
+    navigate(path, { state });
+  };
+  
+  // The context object that will be passed down to all nested components
+  const context: StaffLayoutContext = {
+    onNavigate: handleNavigate,
+    setNotifications,
+    setIsDirty,
+    setSaveAction,
+    isDirty,
+    saveAction
+  };
 
   return (
     <div className="flex h-screen bg-[var(--background-color)]">
-      <SideNav user={user} />
+      <SideNav 
+        user={user} 
+        onLogout={logout} 
+        notifications={notifications} 
+        setNotifications={setNotifications}
+      />
       <main className="flex-1 overflow-y-auto">
-        <Outlet />
+        {/* Outlet now receives the context, making it available to all child routes */}
+        <Outlet context={context} />
       </main>
     </div>
   );
 };
 
 // --- Protected Route for Staff Roles ---
-const ProtectedRoute = ({ roles }: { roles: UserRole[] }) => {
+type ProtectedRouteProps = { roles: UserRole[] };
+
+const ProtectedRoute = ({ roles }: ProtectedRouteProps) => {
   const { user, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) return <div>Weryfikacja sesji...</div>;
 
-  if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
+  if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
 
   if (!roles.includes(user.role)) {
     const defaultPath = user.role === UserRole.Admin ? '/admin/dashboard' : '/therapist/dashboard';
@@ -108,21 +144,21 @@ const ProtectedRoute = ({ roles }: { roles: UserRole[] }) => {
 };
 
 // --- Main App Router ---
-const AppRouter: React.FC = () => {
+const AppRouter = () => {
+  const handleVerify = () => console.log("Verify action triggered");
+  const handleBack = () => console.log("Back action triggered");
+
   return (
     <Routes>
-      {/* The SetupWizard route is placed outside the checker to avoid loops */}
       <Route path="/setup" element={<SetupWizard />} />
-      
-      {/* All other routes are wrapped by the SetupChecker */}
       <Route element={<SetupChecker />}>
         <Route path="/" element={<ClientCodeEntry />} />
         <Route path="/start-test" element={<ClientTestConfirmationPage />} />
         <Route path="/test/:testId/:clientCode" element={<ClientTestView />} />
         <Route path="/thank-you" element={<ClientThankYou />} />
         <Route path="/login" element={<StaffLoginPage />} />
-        <Route path="/2fa" element={<TwoFactorAuthPage />} />
-        
+        <Route path="/2fa" element={<TwoFactorAuthPage onVerify={handleVerify} onBack={handleBack} />} />
+
         <Route element={<StaffLayout />}>
           <Route element={<ProtectedRoute roles={[UserRole.Admin]} />}>
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
@@ -151,7 +187,6 @@ const AppRouter: React.FC = () => {
             <Route path="/therapist-docs" element={<TherapistDocumentationPage />} />
           </Route>
         </Route>
-        
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
@@ -159,18 +194,16 @@ const AppRouter: React.FC = () => {
 };
 
 // --- Main App Component ---
-const App: React.FC = () => {
-  return (
-    <BrowserRouter>
-      <AuthProvider>
-        <div className="min-h-screen" style={{ backgroundColor: 'var(--background-color)', color: 'var(--text-color)' }}>
-          <BrandingStyles />
-          <ToastContainer />
-          <AppRouter />
-        </div>
-      </AuthProvider>
-    </BrowserRouter>
-  );
-};
+const App = () => (
+  <BrowserRouter>
+    <AuthProvider>
+      <div className="min-h-screen" style={{ backgroundColor: 'var(--background-color)', color: 'var(--text-color)' }}>
+        <BrandingStyles />
+        <ToastContainer />
+        <AppRouter />
+      </div>
+    </AuthProvider>
+  </BrowserRouter>
+);
 
 export default App;

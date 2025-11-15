@@ -1,16 +1,13 @@
 import React, { useContext, useState, useEffect, useCallback } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { BrandingContext } from '../contexts/BrandingContext';
-import { type EmailSettings, View } from './types';
+import { type EmailSettings } from './types';
+import { type StaffLayoutContext } from '../App';
 import RichTextInput from './common/RichTextInput';
 import { useToast } from '../contexts/ToastContext';
 
-interface EmailSettingsPageProps {
-  onNavigate: (view: View) => void;
-  setIsDirty: (isDirty: boolean) => void;
-  setSaveAction: (action: { handler: () => Promise<boolean> } | null) => void;
-}
-
-const EmailSettingsPage: React.FC<EmailSettingsPageProps> = ({ onNavigate, setIsDirty, setSaveAction }) => {
+const EmailSettingsPage = () => {
+  const { onNavigate, setIsDirty, setSaveAction } = useOutletContext<StaffLayoutContext>();
   const { branding, setBranding } = useContext(BrandingContext);
   const [localSettings, setLocalSettings] = useState<EmailSettings>(branding.emailSettings);
   const [isSaving, setIsSaving] = useState(false);
@@ -116,7 +113,7 @@ const EmailSettingsPage: React.FC<EmailSettingsPageProps> = ({ onNavigate, setIs
       </div>
 
       <div className="flex justify-end gap-4 mt-8">
-        <button onClick={() => onNavigate(View.AdminDashboard)} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg">Anuluj</button>
+        <button onClick={() => onNavigate('/admin/dashboard')} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg">Anuluj</button>
         <button onClick={handleSave} disabled={isSaving} className="px-6 py-2 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold rounded-lg disabled:bg-slate-400">
           {isSaving ? 'Zapisywanie...' : 'Zapisz ustawienia'}
         </button>

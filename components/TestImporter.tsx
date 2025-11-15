@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
+import { type StaffLayoutContext } from '../App'; // This will be fixed later
 import { View, type Test, type Section, type Question, type Scale } from './types';
 import { UploadIcon, ChevronLeftIcon } from './common/Icons';
 
@@ -9,7 +11,6 @@ const parseCsv = (csvText: string): string[][] => {
   let inQuotes = false;
   let lineNumber = 1;
 
-  // Normalize newlines to \n for easier parsing and reliable line counting
   const normalizedText = csvText.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
   for (let i = 0; i < normalizedText.length; i++) {
@@ -17,12 +18,11 @@ const parseCsv = (csvText: string): string[][] => {
 
     if (inQuotes) {
       if (char === '"') {
-        // Check for an escaped quote ("")
         if (i + 1 < normalizedText.length && normalizedText[i + 1] === '"') {
           currentField += '"';
-          i++; // Skip the next quote as it's part of the current one
+          i++;
         } else {
-          inQuotes = false; // End of quoted field
+          inQuotes = false;
         }
       } else {
         currentField += char;
@@ -30,13 +30,10 @@ const parseCsv = (csvText: string): string[][] => {
     } else {
       switch (char) {
         case '"':
-          // A quote should only start a quoted field if it's at the beginning of a field.
-          // We are lenient here and allow it if the field is just whitespace.
           if (currentField.trim() === '') {
-            currentField = ''; // Clear any whitespace before the quote
+            currentField = '';
             inQuotes = true;
           } else {
-             // Treat quote as a literal character if field is not empty (technically a format error)
              currentField += char;
           }
           break;
@@ -58,18 +55,15 @@ const parseCsv = (csvText: string): string[][] => {
     }
   }
 
-  // After the loop, check for unterminated quotes
   if (inQuotes) {
-    throw new Error(`Błąd formatu CSV w linii ${lineNumber}: Niezamknięty cudzysłów. Upewnij się, że każdy cudzysłów otwierający (") ma swoje zamknięcie.`);
+    throw new Error(`Błąd formatu CSV w linii ${lineNumber}: Niezamknięty cudzysłów.`);
   }
   
-  // Push the last field and row if the file doesn't end with a newline
   if (currentField || currentRow.length > 0) {
     currentRow.push(currentField.trim());
     rows.push(currentRow);
   }
 
-  // Remove completely empty rows that might have been parsed from multiple newlines
   return rows.filter(row => row.length > 1 || (row.length === 1 && row[0] !== ''));
 };
 
@@ -88,7 +82,6 @@ const buildTestFromData = (data: string[][], title: string, description: string)
     const headers = data[0] || [];
     const scaleColumns: { nameIndex: number, pointsIndex: number }[] = [];
     
-    // Gracefully handle CSVs without scale information
     const hasScaleData = headers.some(h => h.startsWith('scale_name_'));
 
     if (hasScaleData) {
@@ -144,7 +137,6 @@ const buildTestFromData = (data: string[][], title: string, description: string)
                         if (!currentQuestion!.scoring[newOption.id]) {
                             currentQuestion!.scoring[newOption.id] = [];
                         }
-                        // Temporarily store the scale's NAME. The editor's sanitize function will map it to a new final ID.
                         currentQuestion!.scoring[newOption.id].push({ scaleId: scale.name, points: points });
                     }
                 });
@@ -152,17 +144,11 @@ const buildTestFromData = (data: string[][], title: string, description: string)
         }
     }
     
-    // The imported test object is now structurally correct, but IDs are temporary and references
-    // in scoring rules use scale names. The `sanitizeImportedTest` function in the editor component
-    // is responsible for creating final, unique IDs and resolving these name-based references.
     return newTest;
 }
 
-interface TestImporterProps {
-  onNavigate: (view: View, context?: any) => void;
-}
-
-const TestImporter: React.FC<TestImporterProps> = ({ onNavigate }) => {
+const TestImporter = () => {
+    const { onNavigate } = useOutletContext<StaffLayoutContext>();
     const [fileName, setFileName] = useState<string | null>(null);
     const [csvData, setCsvData] = useState<string[][] | null>(null);
     const [testTitle, setTestTitle] = useState('');
@@ -204,7 +190,8 @@ const TestImporter: React.FC<TestImporterProps> = ({ onNavigate }) => {
         }
         try {
             const newTest = buildTestFromData(csvData, testTitle, testDescription);
-            onNavigate(View.TestEditor, { importedTest: newTest });
+            // Navigate to the editor with the new test data in state
+            onNavigate('/admin/test/new', { state: { importedTest: newTest } });
         } catch (err: any) {
             setError(`Błąd tworzenia testu: ${err.message}`);
         }
@@ -213,7 +200,7 @@ const TestImporter: React.FC<TestImporterProps> = ({ onNavigate }) => {
   return (
     <div className="p-8 max-w-4xl mx-auto">
         <div className="flex items-center mb-8">
-            <button onClick={() => onNavigate(View.AdminDashboard)} className="p-2 mr-4 bg-[var(--secondary-color)] rounded-full shadow hover:bg-slate-200">
+            <button onClick={() => onNavigate('/admin/dashboard')} className="p-2 mr-4 bg-[var(--secondary-color)] rounded-full shadow hover:bg-slate-200">
                 <ChevronLeftIcon />
             </button>
             <div>
