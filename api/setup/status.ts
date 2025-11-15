@@ -1,22 +1,10 @@
-
-import { getSetupStatus } from '../../services/apiService';
+import { getSetupStatus } from '../../services/apiClient';
 
 export async function GET() {
-  try {
-    const { needsSetup } = await getSetupStatus();
-    return new Response(JSON.stringify({ needsSetup }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-  } catch (error) {
-    console.error('[API /api/setup/status] Error:', error);
-    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-  }
+    try {
+        // ZAWSZE zwracaj, że konfiguracja jest potrzebna
+        return new Response(JSON.stringify({ needsSetup: true }), { headers: { 'Content-Type': 'application/json' } });
+    } catch (error) {
+        return new Response(JSON.stringify({ error: 'Failed to get setup status' }), { status: 500 });
+    }
 }

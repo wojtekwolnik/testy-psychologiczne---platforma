@@ -36,14 +36,8 @@ import { UserRole } from './components/types';
 // --- Setup Check Component ---
 const SetupChecker: React.FC = () => {
   const [needsSetup, setNeedsSetup] = useState<boolean | null>(null);
-  const location = useLocation();
 
   useEffect(() => {
-    if (location.pathname === '/setup') {
-      setNeedsSetup(false);
-      return;
-    }
-
     const check = async () => {
       try {
         const response = await fetch('/api/setup/status');
@@ -54,12 +48,14 @@ const SetupChecker: React.FC = () => {
         setNeedsSetup(data.needsSetup);
       } catch (error) {
         console.error("Error checking setup status:", error);
-        setNeedsSetup(false);
+        // If the check fails, we shouldn't assume setup is complete.
+        // Let's keep the loading state to prevent access to a broken app.
+        setNeedsSetup(null);
       }
     };
 
     check();
-  }, [location.pathname]);
+  }, []); // Run only once on initial app load
 
   if (needsSetup === null) {
     return (
@@ -115,7 +111,10 @@ const ProtectedRoute = ({ roles }: { roles: UserRole[] }) => {
 const AppRouter: React.FC = () => {
   return (
     <Routes>
+      {/* The SetupWizard route is placed outside the checker to avoid loops */}
       <Route path="/setup" element={<SetupWizard />} />
+      
+      {/* All other routes are wrapped by the SetupChecker */}
       <Route element={<SetupChecker />}>
         <Route path="/" element={<ClientCodeEntry />} />
         <Route path="/start-test" element={<ClientTestConfirmationPage />} />
@@ -123,6 +122,7 @@ const AppRouter: React.FC = () => {
         <Route path="/thank-you" element={<ClientThankYou />} />
         <Route path="/login" element={<StaffLoginPage />} />
         <Route path="/2fa" element={<TwoFactorAuthPage />} />
+        
         <Route element={<StaffLayout />}>
           <Route element={<ProtectedRoute roles={[UserRole.Admin]} />}>
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
@@ -151,6 +151,7 @@ const AppRouter: React.FC = () => {
             <Route path="/therapist-docs" element={<TherapistDocumentationPage />} />
           </Route>
         </Route>
+        
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

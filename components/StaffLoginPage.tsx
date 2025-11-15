@@ -1,7 +1,7 @@
 
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext'; // Assuming this is the correct path
+import { useAuth } from '../contexts/AuthContext';
 import { BrandingContext } from '../contexts/BrandingContext';
 
 export const StaffLoginPage: React.FC = () => {
@@ -11,7 +11,7 @@ export const StaffLoginPage: React.FC = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  // Usunięto lokalny stan `isLoading`, będziemy używać `auth.isLoading` z kontekstu.
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -20,15 +20,17 @@ export const StaffLoginPage: React.FC = () => {
         setError('Proszę wypełnić wszystkie pola.');
         return;
     }
-    setIsLoading(true);
     setError(null);
-    const loginError = await auth.login(email, password);
-    if (loginError) {
-        setError(loginError);
-        setIsLoading(false);
-    } 
-    // On success, the AuthProvider will automatically redirect, so no navigation here.
-  }
+    try {
+      // Nie potrzebujemy już setIsLoading(true), ponieważ kontekst będzie tym zarządzał
+      await auth.login(email, password);
+      // Nawigacja w przypadku sukcesu jest obsługiwana przez AuthProvider, więc tu nic więcej nie robimy.
+    } catch (err: any) {
+      // Łapiemy błąd rzucony przez funkcję login
+      setError(err.message || 'Wystąpił nieznany błąd.');
+      // Nie potrzebujemy setIsLoading(false), kontekst powinien to obsłużyć
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--background-color)] p-4 text-[var(--text-color)]">
@@ -70,14 +72,14 @@ export const StaffLoginPage: React.FC = () => {
                     />
                 </div>
 
-                {error && <p className="text-[var(--error-color)] text-sm text-center">{error}</p>}
+                {error && <p role="alert" className="text-[var(--error-color)] text-sm text-center">{error}</p>}
 
                 <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={auth.isLoading} // Używamy stanu `isLoading` z kontekstu
                     className="w-full px-8 py-3 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold rounded-lg shadow-md hover:opacity-90 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors duration-300"
                 >
-                    {isLoading ? "Logowanie..." : "Zaloguj się"}
+                    {auth.isLoading ? "Logowanie..." : "Zaloguj się"}
                 </button>
             </form>
         </main>

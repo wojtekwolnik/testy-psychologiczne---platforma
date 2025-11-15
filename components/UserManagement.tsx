@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { fetchUsers, saveUser, deleteUser } from '../services/apiClient';
+import { getAllUsers, saveUser, deleteUser } from '../services/apiClient';
 import type { User } from './types';
 import { UserRole } from './types';
 import { PlusIcon, EditIcon, TrashIcon } from './common/Icons';
@@ -12,168 +12,169 @@ const UserManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<Partial<User> | null>(null);
-  const [userToDelete, setUserToDelete] = useState<string | null>(null);
-  const [modalError, setModalError] = useState('');
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   useEffect(() => {
-    loadUsers();
+    fetchUsers();
   }, []);
-  
-  const loadUsers = async () => {
+
+  const fetchUsers = async () => {
     try {
-        setIsLoading(true);
-        const fetchedUsers = await fetchUsers();
-        setUsers(fetchedUsers);
-    } catch(err) {
-        setError("Nie udało się załadować użytkowników.");
+      setIsLoading(true);
+      const fetchedUsers = await getAllUsers();
+      setUsers(fetchedUsers);
+    } catch (err) {
+      setError("Nie udało się załadować użytkowników.");
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleOpenModal = (user: Partial<User> | null = null) => {
-    setCurrentUser(user || { role: UserRole.Therapist, twoFactorEnabled: true });
-    setModalError('');
+  const handleSave = async (user: User) => {
+    try {
+      const saved = await saveUser(user);
+      if (selectedUser) {
+        setUsers(users.map(u => u.id === saved.id ? saved : u));
+      } else {
+        setUsers([...users, saved]);
+      }
+      setIsModalOpen(false);
+      setSelectedUser(null);
+    } catch (err) {
+      setError("Nie udało się zapisać użytkownika.");
+    }
+  };
+  
+  const handleDelete = async (userId: string) => {
+      try {
+        await deleteUser(userId);
+        setUsers(users.filter(u => u.id !== userId));
+        setIsDeleteModalOpen(false);
+        setSelectedUser(null);
+      } catch (err) {
+        setError("Nie udało się usunąć użytkownika.");
+      }
+  };
+
+  const openAddModal = () => {
+    setSelectedUser(null);
     setIsModalOpen(true);
   };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setCurrentUser(null);
+  
+  const openEditModal = (user: User) => {
+    setSelectedUser(user);
+    setIsModalOpen(true);
+  };
+  
+  const openDeleteModal = (user: User) => {
+    setSelectedUser(user);
+    setIsDeleteModalOpen(true);
   };
 
-  const handleSaveUser = async () => {
-    setModalError('');
-    if (!currentUser || !currentUser.name || !currentUser.email || !currentUser.role) {
-        setModalError('Wszystkie pola są wymagane.');
-        return;
-    }
-    
-    // Validate password for new user
-    if (!currentUser.id && (!currentUser.password || currentUser.password.length < 6)) {
-        setModalError('Hasło jest wymagane dla nowego użytkownika i musi mieć co najmniej 6 znaków.');
-        return;
-    }
 
-    // Validate password for existing user, only if it's being changed
-    if (currentUser.id && currentUser.password && currentUser.password.length > 0 && currentUser.password.length < 6) {
-        setModalError('Nowe hasło musi mieć co najmniej 6 znaków.');
-        return;
-    }
-
-
-    const userToSave: User = {
-        id: currentUser.id || `user-${Date.now()}`,
-        name: currentUser.name,
-        email: currentUser.email,
-        role: currentUser.role,
-        twoFactorEnabled: currentUser.twoFactorEnabled || false,
-        password: currentUser.password, // Pass password only if it's set
-    };
-    await saveUser(userToSave);
-    handleCloseModal();
-    loadUsers();
-  };
-
-  const confirmDeleteUser = async (userId: string) => {
-    await deleteUser(userId);
-    loadUsers();
-  }
+  if (isLoading) return <div>Ładowanie...</div>;
+  if (error) return <div className="text-red-500">{error}</div>;
 
   return (
-    <>
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-4xl font-bold">Zarządzanie użytkownikami</h1>
-          <p className="opacity-80 mt-1">Dodawaj, edytuj i usuwaj konta w systemie.</p>
-        </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="flex items-center gap-2 px-5 py-3 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold rounded-lg shadow-md hover:opacity-90 transition-colors"
-        >
-          <PlusIcon />
-          Dodaj użytkownika
+    <div className="p-8 max-w-6xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-4xl font-bold">Zarządzanie Użytkownikami</h1>
+        <button onClick={openAddModal} className="px-5 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 flex items-center gap-2">
+            <PlusIcon />
+            Dodaj Użytkownika
         </button>
       </div>
-
-      <div className="bg-[var(--secondary-color)] rounded-xl shadow-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-[var(--background-color)] text-sm font-semibold opacity-70">
-              <tr className="text-[var(--text-color)]">
-                <th className="p-4">Imię i Nazwisko</th>
-                <th className="p-4">Email</th>
-                <th className="p-4">Rola</th>
-                <th className="p-4">2FA Aktywne</th>
-                <th className="p-4">Akcje</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (<tr><td colSpan={5} className="p-8 text-center">Ładowanie...</td></tr>) 
-              : error ? (<tr><td colSpan={5} className="p-8 text-center text-[var(--error-color)]">{error}</td></tr>)
-              : users.map(user => (
-                <tr key={user.id} className="border-b border-[var(--border-color)] hover:bg-[var(--background-color)]">
-                  <td className="p-4 font-medium">{user.name}</td>
-                  <td className="p-4">{user.email}</td>
-                  <td className="p-4"><span className={`px-2 py-1 text-xs font-semibold rounded-full ${user.role === UserRole.Admin ? 'bg-[var(--admin-background-color)] text-[var(--admin-color)]' : 'bg-[var(--therapist-background-color)] text-[var(--therapist-color)]'}`}>{user.role}</span></td>
-                  <td className="p-4"><span className={`font-bold ${user.twoFactorEnabled ? 'text-[var(--success-color)]' : 'text-[var(--error-color)]'}`}>{user.twoFactorEnabled ? 'Tak' : 'Nie'}</span></td>
-                  <td className="p-4 flex gap-2">
-                    <button onClick={() => handleOpenModal(user)} className="p-2 opacity-70 hover:opacity-100"><EditIcon/></button>
-                    <button onClick={() => setUserToDelete(user.id)} className="p-2 text-[var(--error-color)] hover:opacity-80"><TrashIcon/></button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
       
-      {isModalOpen && currentUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-[var(--secondary-color)] rounded-lg shadow-xl p-8 w-full max-w-md text-[var(--text-color)]">
-                <h2 className="text-2xl font-bold mb-6">{currentUser.id ? 'Edytuj użytkownika' : 'Dodaj użytkownika'}</h2>
-                <div className="space-y-4">
-                    <input type="text" placeholder="Imię i Nazwisko" value={currentUser.name || ''} onChange={e => setCurrentUser({...currentUser, name: e.target.value})} className="w-full p-2 border rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)] border-[var(--border-color)]" />
-                    <input type="email" placeholder="Adres email" value={currentUser.email || ''} onChange={e => setCurrentUser({...currentUser, email: e.target.value})} className="w-full p-2 border rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)] border-[var(--border-color)]" />
-                    <input 
-                      type="password" 
-                      placeholder={currentUser.id ? "Nowe hasło (zostaw puste, aby nie zmieniać)" : "Hasło (min. 6 znaków)"} 
-                      onChange={e => setCurrentUser({...currentUser, password: e.target.value})} 
-                      className="w-full p-2 border rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)] border-[var(--border-color)]" 
-                    />
-                    <select value={currentUser.role} onChange={e => setCurrentUser({...currentUser, role: e.target.value as UserRole.Admin | UserRole.Therapist})} className="w-full p-2 border rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)] border-[var(--border-color)]">
-                        <option value={UserRole.Therapist}>Terapeuta</option>
-                        <option value={UserRole.Admin}>Administrator</option>
-                    </select>
-                    <label className="flex items-center gap-2">
-                        <input type="checkbox" checked={currentUser.twoFactorEnabled || false} onChange={e => setCurrentUser({...currentUser, twoFactorEnabled: e.target.checked})} className="h-4 w-4 rounded text-[var(--primary-color)] focus:ring-[var(--primary-color)]" />
-                        <span>Wymagaj uwierzytelniania dwuskładnikowego (2FA)</span>
-                    </label>
-                </div>
-                {modalError && <p className="text-[var(--error-color)] text-sm mt-4">{modalError}</p>}
-                <div className="flex justify-end gap-4 mt-8">
-                    <button onClick={handleCloseModal} className="px-4 py-2 bg-slate-200 text-slate-800 rounded-lg">Anuluj</button>
-                    <button onClick={handleSaveUser} className="px-4 py-2 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] rounded-lg">Zapisz</button>
-                </div>
-            </div>
-        </div>
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="p-4 text-left font-semibold text-gray-600">Nazwa</th>
+              <th className="p-4 text-left font-semibold text-gray-600">Email</th>
+              <th className="p-4 text-left font-semibold text-gray-600">Rola</th>
+              <th className="p-4 text-left font-semibold text-gray-600">Akcje</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {users.map(user => (
+              <tr key={user.id}>
+                <td className="p-4">{user.fullName}</td>
+                <td className="p-4">{user.email}</td>
+                <td className="p-4"><span className={`px-2 py-1 text-xs font-semibold rounded-full ${user.role === 'ADMIN' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>{user.role}</span></td>
+                <td className="p-4">
+                  <button onClick={() => openEditModal(user)} className="p-2 text-gray-500 hover:text-blue-600"><EditIcon /></button>
+                  <button onClick={() => openDeleteModal(user)} className="p-2 text-gray-500 hover:text-red-600"><TrashIcon /></button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {isModalOpen && <UserFormModal user={selectedUser} onSave={handleSave} onClose={() => setIsModalOpen(false)} />}
+      
+      {isDeleteModalOpen && selectedUser && (
+        <ActionConfirmModal
+          title="Potwierdź usunięcie"
+          message={`Czy na pewno chcesz usunąć użytkownika ${selectedUser.fullName}? Tej akcji nie można cofnąć.`}
+          onConfirm={() => handleDelete(selectedUser.id)}
+          onCancel={() => setIsDeleteModalOpen(false)}
+        />
       )}
     </div>
-    <ActionConfirmModal 
-      isOpen={!!userToDelete}
-      onCancel={() => setUserToDelete(null)}
-      onConfirm={() => {
-        if(userToDelete) confirmDeleteUser(userToDelete);
-        setUserToDelete(null);
-      }}
-      title="Potwierdź usunięcie użytkownika"
-      message="Czy na pewno chcesz trwale usunąć tego użytkownika? Tej operacji nie można cofnąć."
-      confirmText="Usuń"
-    />
-    </>
   );
+};
+
+const UserFormModal: React.FC<{ user: User | null; onSave: (user: User) => void; onClose: () => void; }> = ({ user, onSave, onClose }) => {
+    const [formData, setFormData] = useState<Partial<User>>({
+        fullName: user?.fullName || '',
+        email: user?.email || '',
+        role: user?.role || UserRole.Therapist,
+    });
+    
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        // Simple validation
+        if (!formData.fullName || !formData.email) {
+            alert("Proszę wypełnić wszystkie pola.");
+            return;
+        }
+        onSave(formData as User);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
+                <h2 className="text-2xl font-bold mb-6">{user ? 'Edytuj Użytkownika' : 'Dodaj Użytkownika'}</h2>
+                <form onSubmit={handleSubmit}>
+                    <div className="mb-4">
+                        <label className="block text-gray-700 font-semibold mb-2">Imię i Nazwisko</label>
+                        <input type="text" name="fullName" value={formData.fullName} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                    </div>
+                    <div className="mb-4">
+                        <label className="block text-gray-700 font-semibold mb-2">Adres E-mail</label>
+                        <input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+                    </div>
+                     <div className="mb-6">
+                        <label className="block text-gray-700 font-semibold mb-2">Rola</label>
+                        <select name="role" value={formData.role} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value={UserRole.Admin}>Administrator</option>
+                            <option value={UserRole.Therapist}>Terapeuta</option>
+                        </select>
+                    </div>
+                    <div className="flex justify-end gap-4">
+                        <button type="button" onClick={onClose} className="px-5 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300">Anuluj</button>
+                        <button type="submit" className="px-5 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700">Zapisz</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
 };
 
 export default UserManagement;
