@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import * as api from '../services/apiClient';
+import { fetchTests, fetchTestVersions } from '../services/apiClient';
 import { type Test } from './types';
 import { EditIcon, PlusIcon, DownloadIcon, UploadIcon, ClockIcon } from './common/Icons';
 
@@ -36,7 +36,7 @@ const AdminDashboard: React.FC = () => {
       try {
         setIsLoading(true);
         // Assuming fetchTests is now part of the namespaced import
-        const fetchedTests = await api.fetchTests(true);
+        const fetchedTests = await fetchTests(true);
         setTests(fetchedTests);
       } catch (err) {
         setError("Nie udało się załadować testów.");
@@ -47,7 +47,7 @@ const AdminDashboard: React.FC = () => {
 
   const handleExport = async (testId: string) => {
     try {
-        const allTests = await api.fetchTests(false); 
+        const allTests = await fetchTests(false); 
         const testToExport = allTests.find(t => t.id === testId);
         if (!testToExport) {
             alert("Nie znaleziono testu do wyeksportowania.");
@@ -102,7 +102,7 @@ const AdminDashboard: React.FC = () => {
   const handleShowHistory = async (canonicalId: string) => {
     setIsHistoryLoading(true);
     setIsHistoryModalOpen(true);
-    const versions = await api.fetchTestVersions(canonicalId);
+    const versions = await fetchTestVersions(canonicalId);
     setHistoryVersions(versions);
     setIsHistoryLoading(false);
   };
@@ -215,8 +215,7 @@ const AdminDashboard: React.FC = () => {
                 <h2 className="text-2xl font-bold mb-4">Historia Wersji Testu</h2>
                 <div className="flex-grow overflow-y-auto pr-2">
                     {isHistoryLoading ? (
-                        <p>Ładowanie historii...</p>
-                    ) : (
+                        <p>Ładowanie historii...</p>                    ) : (
                         <div className="space-y-3">
                         {historyVersions.map(v => (
                             <div key={v.id} className="bg-[var(--background-color)] p-3 rounded-lg flex justify-between items-center">
