@@ -1,0 +1,5 @@
+{
+  "name": "PsycheForm - Platforma do Testów Psychologicznych Online",
+  "description": "Aplikacja do tworzenia, przeprowadzania i analizy testów psychologicznych. Posiada panel administratora do projektowania testów, zarządzania użytkownikami i brandingiem, panel terapeuty do przeglądania wizualnych raportów z podsumowaniami AI oraz interfejs dla klienta oparty na kodach dostępu. Bezpieczeństwo danych jest priorytetem, z opcją 2FA i automatycznym usuwaniem wyników po 60 dniach.",
+  "requestFramePermissions": []
+}
