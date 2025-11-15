@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { BarChart, Bar, PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, CartesianGrid, XAxis, YAxis } from 'recharts';
-import { fetchResultById, fetchTestById, fetchPdfTemplates, getAiInterpretation } from '../services/apiService';
+import { fetchResultById, fetchTestById, fetchPdfTemplates, getAiInterpretation } from '../services/apiClient';
 import type { TestResult, Test, ClientAnswer, PdfTemplate } from './types';
 import { DownloadIcon, SparklesIcon, ArrowLeftIcon } from './common/Icons';
 import { BrandingContext } from '../contexts/BrandingContext';

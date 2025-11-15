@@ -1,3 +1,4 @@
+
 import React, { useState, useContext, useCallback, useEffect } from 'react';
 import LoginPage from './components/LoginPage';
 import { StaffLoginPage } from './components/StaffLoginPage';
@@ -25,7 +26,7 @@ import ActionConfirmModal from './components/common/ActionConfirmModal';
 import ToastContainer from './components/common/ToastContainer';
 import EmailSettingsPage from './components/EmailSettingsPage';
 import { UserRole, View, User, Notification } from './components/types';
-import { authenticateUser, fetchNotifications } from './services/apiService';
+import { authenticateUser, fetchNotifications } from './services/apiClient';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>(View.Branding);

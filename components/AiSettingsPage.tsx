@@ -1,7 +1,7 @@
 import React, { useContext, useState, useEffect, useCallback } from 'react';
 import { BrandingContext } from '../contexts/BrandingContext';
 import { type AiSettings, View } from './types';
-import { useToast } from '../../contexts/ToastContext';
+import { useToast } from '../contexts/ToastContext';
 
 interface AiSettingsPageProps {
   onNavigate: (view: View) => void;

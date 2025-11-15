@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import * as api from '../services/apiService';
+import * as api from '../services/apiClient';
 import { type Test } from './types';
 import { EditIcon, PlusIcon, DownloadIcon, UploadIcon, ClockIcon } from './common/Icons';
 

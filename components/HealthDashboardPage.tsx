@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { runSystemHealthCheck } from '../services/apiService';
+import { runSystemHealthCheck } from '../services/apiClient';
 import { type SystemCheckResult } from './types';
 import { BrandingContext } from '../contexts/BrandingContext';
 

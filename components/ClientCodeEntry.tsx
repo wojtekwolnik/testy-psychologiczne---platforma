@@ -1,7 +1,7 @@
 
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getTestIdForCode } from '../services/apiService';
+import { getTestIdForCode } from '../services/apiClient';
 import { BrandingContext } from '../contexts/BrandingContext';
 import { SpinnerIcon } from './common/Icons';
 

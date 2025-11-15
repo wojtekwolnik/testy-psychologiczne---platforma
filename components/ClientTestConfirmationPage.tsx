@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useContext } from 'react';
 import { useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { fetchTestById } from '../services/apiService';
+import { fetchTestById } from '../services/apiClient';
 import { type Test } from './types';
 import { BrandingContext } from '../contexts/BrandingContext';
 

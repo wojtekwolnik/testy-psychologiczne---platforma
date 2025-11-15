@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { fetchTestById, saveTest, fetchPdfTemplates } from '../services/apiService';
+import { fetchTestById, saveTest, fetchPdfTemplates } from '../services/apiClient';
 import type { Test, Scale, Question, AnswerOption, ScoringRule, Section, PdfTemplate } from './types';
 import { PlusIcon, TrashIcon } from './common/Icons';
 import RichTextInput from './common/RichTextInput';
