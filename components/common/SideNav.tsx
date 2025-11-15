@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { UserRole, User, Notification } from '../types';
 import { ClipboardListIcon, UserGroupIcon, CogIcon, UserManagementIcon, BrandingIcon, ChartPieIcon, LogoutIcon, DocumentationIcon, SparklesIcon, HeartIcon, BellIcon, EnvelopeIcon } from './Icons';
 import { BrandingContext } from '../../contexts/BrandingContext';
-import { markNotificationsAsRead } from '../../services/apiService';
+import { markNotificationsAsRead } from '../../services/apiClient';
 
 interface SideNavProps {
     user: User;
