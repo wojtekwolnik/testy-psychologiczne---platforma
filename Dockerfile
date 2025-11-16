@@ -1,33 +1,41 @@
-# Etap 1: Budowanie aplikacji
-FROM node:20-slim as builder
+# Etap 1: Build aplikacji
+FROM node:20 AS builder
 
-# Ustawienie katalogu roboczego
 WORKDIR /app
 
-# Kopiowanie plików package.json i package-lock.json (jeśli istnieje)
 COPY package*.json ./
-
-# Instalacja zależności
 RUN npm install
 
-# Kopiowanie reszty plików aplikacji
 COPY . .
 
-# Budowanie aplikacji
+RUN npx prisma generate
 RUN npm run build
 
-# Etap 2: Serwowanie aplikacji
+# Etap 2: Stworzenie finalnego, lekkiego obrazu produkcyjnego
 FROM node:20-slim
 
 WORKDIR /app
 
-# Kopiowanie zbudowanej aplikacji z etapu "builder"
-COPY --from=builder /app/dist ./dist
-COPY package*.json ./
+ENV NODE_ENV=production
+
+# Kopiujemy tylko niezbędne pliki z etapu 'builder'
+COPY --from=builder /app/package*.json ./
 RUN npm install --omit=dev
 
-# Ustawienie domyślnego portu, na którym nasłuchuje aplikacja Vite preview
-EXPOSE 4173
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-# Komenda do uruchomienia serwera preview
-CMD [ "npm", "run", "preview" ]
+COPY server.js . 
+
+# Kopiujemy i przygotowujemy skrypt entrypoint
+COPY entrypoint.sh ./
+RUN chmod +x entrypoint.sh
+
+EXPOSE 3000
+
+# Ustawiamy entrypoint, który uruchomi migracje przed startem aplikacji
+ENTRYPOINT ["./entrypoint.sh"]
+
+# Domyślna komenda, która zostanie przekazana do entrypoint.sh
+CMD ["node", "server.js"]

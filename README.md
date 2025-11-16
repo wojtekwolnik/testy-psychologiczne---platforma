@@ -1,93 +1,171 @@
 # Platforma do Testów Psychologicznych Online
 
-Ta aplikacja to kompleksowa platforma do przeprowadzania i zarządzania testami psychologicznymi online. Umożliwia tworzenie testów, zarządzanie użytkownikami (administratorzy, terapeuci) oraz generowanie raportów.
+ Witaj w centrum dowodzenia Twojej platformy do testów psychologicznych. Ten dokument to Twój przewodnik – od pierwszego uruchomienia po zaawansowane zarządzanie. Aplikacja została zaprojektowana w filozofii "batteries-included": wszystko, czego potrzebujesz, jest już na pokładzie i działa w zautomatyzowany sposób.
 
 ---
 
-## Architektura i Model Bezpieczeństwa
+## Wymagania: Dwa Narzędzia, Które Robią Wszystko
 
-Platforma została zaprojektowana z myślą o maksymalnym bezpieczeństwie i rozdziale danych. Zrozumienie poniższych koncepcji jest kluczowe do poprawnego wdrożenia i zarządzania systemem.
+Aby uruchomić całą platformę, potrzebujesz na swoim serwerze lub komputerze tylko dwóch narzędzi:
 
-### Plik `.env` i Zmienne Środowiskowe
+- **Docker:** Wyobraź go sobie jako system do tworzenia miniaturowych, wirtualnych komputerów (nazywanych kontenerami). Każdy z nich ma jedno zadanie – jeden uruchamia bazę danych, drugi aplikację w Node.js. Są od siebie idealnie odizolowane.
 
-Konfiguracja serwera (backendu) jest w całości zarządzana przez plik `.env` umieszczony w głównym katalogu aplikacji. **Plik ten nigdy nie może być udostępniany ani dodawany do systemu kontroli wersji (np. Git).** Zawiera on klucze niezbędne do działania aplikacji.
+- **Docker Compose:** To Twój "pilot" lub "dyrygent". Używa pliku `docker-compose.yml` jako instrukcji, aby za pomocą jednego polecenia uruchomić, połączyć ze sobą i zarządzać wszystkimi tymi wirtualnymi komputerami (kontenerami).
 
-Plik `.gitignore` jest już skonfigurowany, aby go ignorować.
-
-### Klucze Bezpieczeństwa
-
-System opiera się na dwóch fundamentalnych kluczach, które musisz zdefiniować w pliku `.env`:
-
-*   `SETUP_KEY`: Jednorazowy "klucz główny" używany wyłącznie do autoryzacji operacji najwyższego ryzyka, takich jak pierwsza konfiguracja systemu. Jest to Twoja gwarancja, że tylko osoba z dostępem do serwera może wykonać te krytyczne czynności.
-*   `JWT_SECRET`: Długi, losowy sekret używany do cyfrowego podpisywania "kart dostępu" (tokenów JWT) dla każdego zalogowanego użytkownika. To ten sekret gwarantuje, że serwer jest w stanie bezpiecznie weryfikować tożsamość użytkownika przy każdym zapytaniu.
-
-> ### Czym jest i dlaczego potrzebuję Tokenu JWT?
->
-> Wyobraź sobie, że **ID terapeuty** to Twój dowód osobisty, a **Token JWT** to karta magnetyczna do Twojego gabinetu.
->
-> Sam dowód nie wystarczy, aby wejść do gabinetu – każdy mógłby podać Twoje imię. Potrzebujesz unikalnej, sekretnej karty, którą dostajesz w recepcji po okazaniu dowodu i podaniu hasła (w procesie logowania).
->
-> Token JWT to właśnie taka cyfrowa karta. Serwer wydaje ją po poprawnym logowaniu, a przeglądarka okazuje ją przy każdej próbie dostępu do chronionych danych (np. listy wyników). Serwer, widząc ważny token, wie, że żądanie jest autentyczne i pochodzi od właściwej osoby, dzięki czemu może bezpiecznie odesłać **tylko te dane, do których dany terapeuta ma uprawnienia.**
+**Nie musisz instalować Node.js, PostgreSQLa ani niczego innego.** Docker i Docker Compose zajmą się tym za Ciebie.
 
 ---
 
-## Konfiguracja i Pierwsze Uruchomienie
+## Pierwsze Uruchomienie i Konfiguracja (Deployment)
 
-### Krok 1: Utwórz plik `.env`
+Proces wdrożenia sprowadza się do czterech prostych kroków, które zamienią ten kod w działającą aplikację.
 
-Skopiuj zawartość pliku `.env.example` (jeśli istnieje) lub utwórz nowy plik `.env` i uzupełnij go według poniższego wzoru. **Uzupełnij `DATABASE_URL` i `SETUP_KEY`. Pozostaw `JWT_SECRET` pusty.**
+### Krok 1: Pobierz Plany (Sklonuj Repozytorium)
 
-```env
-#====================================================================================
-# ZMIENNE KRYTYCZNE (wymagane do uruchomienia aplikacji)
-#====================================================================================
+To polecenie pobiera z Twojego repozytorium Git wszystkie "plany konstrukcyjne" aplikacji na Twój serwer lub komputer, a następnie przenosi Cię do nowo utworzonego katalogu `psycheform`.
 
-# Adres URL połączenia z bazą danych PostgreSQL.
-# Format: postgresql://[uzytkownik]:[haslo]@[host]:[port]/[nazwa-bazy]
-DATABASE_URL="postgresql://user:password@localhost:5432/mydatabase"
+```bash
+# Pobierz kod z repozytorium
+git clone [adres-twojego-repozytorium] psycheform
 
-# Klucz używany do jednorazowej autoryzacji operacji wysokiego ryzyka.
-# Użyj generatora haseł lub wpisz długą, trudną do odgadnięcia frazę.
-SETUP_KEY="unikalny-i-trudny-do-zgadniecia-klucz-konfiguracyjny"
-
-# Sekret do podpisywania tokenów JWT. Musi być długi i losowy.
-# Zostanie automatycznie wygenerowany i zapisany przez Kreator Konfiguracji.
-JWT_SECRET=""
-
-#====================================================================================
-# KONFIGURACJA USŁUG ZEWNĘTRZNYCH (opcjonalne, zarządzane z panelu admina)
-#====================================================================================
-
-# Pola dla SMTP i AI są celowo pozostawione puste. 
-# Zostaną uzupełnione przez Kreator Konfiguracji lub później w panelu admina.
-SMTP_HOST=""
-SMTP_PORT=""
-SMTP_USER=""
-SMTP_PASS=""
-SMTP_SECURE="false"
-
-AI_PROVIDER="gemini"
-GEMINI_API_KEY=""
-AI_MODEL="gemini-1.5-flash"
+# Wejdź do folderu z aplikacją
+cd psycheform
 ```
 
-### Krok 2: Uruchom Kreator Konfiguracji
+### Krok 2: Stwórz Pęk Kluczy (Plik Konfiguracyjny `.env`)
 
-Po ustawieniu zmiennych w pliku `.env` i uruchomieniu aplikacji, przejdź do niej w przeglądarce.
+Każdy system potrzebuje sekretów: haseł, kluczy dostępu. Nasza aplikacja przechowuje je w pliku `.env`. Nigdy nie umieszczamy tego pliku w Git, aby poufne dane były bezpieczne.
 
-1.  Zostaniesz automatycznie przekierowany do **Kreatora Konfiguracji** (`/setup`).
-2.  W formularzu postępuj zgodnie z krokami:
-    *   **Klucze Bezpieczeństwa**: Wklej swój `SETUP_KEY` z pliku `.env`. Następnie, **użyj przycisku "Generuj"**, aby stworzyć bezpieczny `JWT_SECRET`. Zostanie on automatycznie zapisany w pliku `.env` na serwerze.
-    *   **Konto Administratora**: Utwórz pierwsze konto, które będzie służyło do zarządzania całym systemem.
-    *   **(Opcjonalnie)** Skonfiguruj od razu działanie **usługi e-mail (SMTP)** oraz **Asystenta AI**.
-3.  Po kliknięciu "Zakończ i Zapisz", aplikacja jest w pełni skonfigurowana i gotowa do pracy. Zostaniesz przekierowany do strony logowania.
+To polecenie tworzy Twój własny plik `.env` na podstawie dostarczonego szablonu.
+
+```bash
+cp .env.example .env
+```
+
+**Twoje zadanie:** Otwórz nowo utworzony plik `.env` w edytorze tekstu i uzupełnij go. Na start najważniejsze są trzy zmienne, które pozwolą aplikacji połączyć się z bazą danych: `POSTGRES_USER`, `POSTGRES_PASSWORD` i `POSTGRES_DB`.
+
+> **Ważne:** Zmienna `DATABASE_URL` jest już poprawnie skonfigurowana do komunikacji *wewnętrznej* między kontenerami. Nie musisz jej zmieniać!
+
+### Krok 3: Włącz Zasilanie (Uruchom Całą Infrastrukturę)
+
+To jest najważniejsze polecenie. Działa jak wciśnięcie głównego włącznika zasilania dla całego systemu. Uruchom je w głównym katalogu aplikacji.
+
+```bash
+docker-compose up -d
+```
+
+**Co dokładnie robi to polecenie?**
+- `docker-compose up`: Czyta instrukcję z `docker-compose.yml` i uruchamia wszystkie zdefiniowane tam usługi (aplikację, bazę danych, monitoring etc.).
+- `-d`: Uruchamia wszystko w trybie "detached" (w tle), zwalniając Twój terminal. System będzie działał, nawet gdy zamkniesz połączenie z serwerem.
+
+### Krok 4: Skonfiguruj Aplikację (Kreator w Przeglądarce)
+
+Twoja infrastruktura już działa, ale sama aplikacja potrzebuje jeszcze ostatniego szlifu.
+
+Otwórz przeglądarkę i przejdź pod adres `http://localhost:3000` (lub adres IP Twojego serwera).
+
+Zostaniesz automatycznie przekierowany do **Kreatora Konfiguracji**, który poprosi Cię o dwie rzeczy:
+1.  **Stworzenie konta administratora:** To będzie pierwsze konto w systemie, z pełnymi uprawnieniami.
+2.  **Wygenerowanie sekretu sesji (JWT_SECRET):** To kluczowy element bezpieczeństwa, używany do podpisywania sesji użytkowników. Kreator automatycznie wygeneruje silny klucz i **sam zapisze go w Twoim pliku `.env`**.
+
+**Gratulacje! Twoja aplikacja jest w pełni skonfigurowana, bezpieczna i gotowa do pracy.**
 
 ---
 
-## Dostępne Skrypty
+## Kokpit Monitoringu i Logów (Grafana)
 
-W projekcie dostępne są następujące skrypty:
+Twoja aplikacja jest wyposażona w profesjonalny system do centralnego zbierania i analizy logów w czasie rzeczywistym, oparty o **Grafana** i **Loki**. To Twój "kokpit kontrolny", który daje Ci pełen wgląd w to, co dzieje się "pod maską" całego systemu.
 
-- `npm run dev`: Uruchamia serwer deweloperski Vite.
-- `npm run build`: Kompiluje aplikację do statycznych plików produkcyjnych.
-- `npm run preview`: Uruchamia lokalny serwer do podglądu wersji produkcyjnej.
+### Dostęp do Kokpitu
+
+- **Adres:** `http://localhost:3001` (lub `http://<IP-serwera>:3001`)
+- **Użytkownik:** `admin`
+- **Hasło:** `admin` (zostaniesz poproszony o zmianę hasła przy pierwszym logowaniu)
+
+### Jak z tego korzystać?
+
+Po zalogowaniu, przejdź do sekcji **"Explore"** w menu po lewej stronie. Kluczem do sukcesu jest używanie **etykiet (labels)** do filtrowania logów (np. `{service="app"}`).
+
+---
+
+## Kopie Zapasowe i Odtwarzanie Danych
+
+System dba o bezpieczeństwo Twoich danych poprzez automatyczne, regularne kopie zapasowe.
+
+### Automatyczne Kopie Zapasowe
+
+- **Częstotliwość:** Co 24 godziny.
+- **Lokalizacja:** Folder `./backups`.
+- **Retencja:** Automatyczne usuwanie kopii starszych niż 30 dni.
+
+### Odtwarzanie Danych z Kopii Zapasowej
+
+> **Uwaga!** Proces ten jest **operacją niszczącą**. Aktualna baza danych zostanie **całkowicie usunięta i zastąpiona** danymi z wybranego pliku kopii zapasowej. Wykonuj go z rozwagą.
+
+Proces odtwarzania jest zautomatyzowany za pomocą jednego, potężnego polecenia. Oto, co musisz zrobić i co dokładnie się wydarzy:
+
+**Krok 1: Wybierz plik kopii zapasowej**
+
+Najpierw zajrzyj do folderu z kopiami, aby znaleźć nazwę pliku, którego chcesz użyć. Zazwyczaj będziesz szukać najnowszej dostępnej kopii.
+
+```bash
+ls -l backups
+```
+
+**Krok 2: Uruchom procedurę odtwarzania**
+
+Skopiuj poniższe polecenie i **pamiętaj, aby podmienić `NAZWA-TWOJEJ-KOPII.sql.gz`** na rzeczywistą nazwę pliku wybraną w kroku 1.
+
+```bash
+docker-compose down && cat backups/NAZWA-TWOJEJ-KOPII.sql.gz | docker-compose run -T --rm db sh -c "gunzip | psql -U ${POSTGRES_USER} -d ${POSTGRES_DB}" && docker-compose up -d
+```
+
+---
+
+## Aktualizacja Aplikacji: Nowa Era z CI/CD
+
+Twoja aplikacja została wyposażona w potok **Ciągłej Integracji (CI)** za pomocą GitHub Actions. Oznacza to, że proces aktualizacji jest teraz częściowo zautomatyzowany i o wiele bardziej niezawodny.
+
+### Jak to działa?
+
+1.  **Wypychasz kod do GitHuba:** Za każdym razem, gdy robisz `git push` do gałęzi `main`, robot w GitHub Actions automatycznie buduje nowy obraz Dockerowy Twojej aplikacji.
+2.  **Publikacja w Rejestrze:** Nowy, świeży obraz jest publikowany w Twoim **prywatnym rejestrze kontenerów** na GitHubie (GHCR).
+3.  **Aktualizacja na serwerze:** Twoim zadaniem jest już tylko poinstruowanie serwera, aby pobrał ten nowy obraz i zrestartował aplikację.
+
+### Proces Aktualizacji (Nowa Wersja)
+
+**Krok 1: Zaloguj się do Rejestru Kontenerów GitHub (jednorazowo)**
+
+Aby Twój serwer mógł pobierać prywatne obrazy, musisz go najpierw uwierzytelnić. **Tę operację wykonujesz tylko raz.**
+
+1.  **Wygeneruj Token Dostępowy:**
+    -   Na GitHubie, wejdź w `Settings` > `Developer settings` > `Personal access tokens` > `Tokens (classic)`.
+    -   Wygeneruj nowy token z uprawnieniem `read:packages`.
+    -   **Skopiuj ten token!** To jedyny raz, kiedy go zobaczysz.
+
+2.  **Zaloguj się na serwerze:**
+    Użyj poniższego polecenia na swoim serwerze, podmieniając `TWOJA-NAZWA-UŻYTKOWNIKA` na Twój login z GitHuba. Gdy zostaniesz poproszony o hasło, **wklej wygenerowany token**.
+
+    ```bash
+    docker login ghcr.io -u TWOJA-NAZWA-UŻYTKOWNIKA
+    ```
+
+**Krok 2: Pobierz Najnowszą Wersję Aplikacji**
+
+Po wypchnięciu zmian do GitHuba i upewnieniu się, że zadanie w zakładce "Actions" zakończyło się sukcesem, połącz się z serwerem i wykonaj poniższe polecenia w głównym katalogu aplikacji:
+
+```bash
+# Pobierz najnowsze pliki konfiguracyjne (w tym docker-compose.yml)
+git pull
+
+# Pobierz najnowszy obraz aplikacji z rejestru i zrestartuj tylko ją
+docker-compose pull app
+docker-compose up -d --no-deps app
+```
+
+**Co robią te polecenia?**
+- `git pull`: Aktualizuje pliki na serwerze, w tym `docker-compose.yml`, aby upewnić się, że serwer wie, której wersji obrazu szukać.
+- `docker-compose pull app`: To kluczowe polecenie. Nakazuje Docker Compose pobranie najnowszej wersji obrazu `app` z rejestru (GHCR), do którego się zalogowałeś.
+- `docker-compose up -d --no-deps app`: Uruchamia ponownie **tylko i wyłącznie kontener aplikacji**, bez dotykania bazy danych czy innych usług (`--no-deps`). Docker Compose jest inteligentny - widząc, że ma nowszy obraz, automatycznie użyje go do restartu.
+
+To wszystko! Proces jest szybszy i bezpieczniejszy, ponieważ nie budujesz już kodu na serwerze produkcyjnym.

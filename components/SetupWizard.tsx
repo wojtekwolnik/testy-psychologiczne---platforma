@@ -20,8 +20,7 @@ const SetupWizard: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [setupKey, setSetupKey] = useState('');
-  const [jwtSecret, setJwtSecret] = useState(''); // <-- NOWY STAN
+  const [jwtSecret, setJwtSecret] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
@@ -38,7 +37,6 @@ const SetupWizard: React.FC = () => {
       setAiConfig(prev => ({...prev, [name]: value }))
   }
 
-  // Funkcja do generowania bezpiecznego, losowego klucza
   const generateSecret = () => {
       const array = new Uint32Array(16);
       window.crypto.getRandomValues(array);
@@ -61,13 +59,12 @@ const SetupWizard: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/setup', { // Ujednolicony endpoint
+      const response = await fetch('/api/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
             admin: { email, password },
-            setupKey, 
-            jwtSecret, // <-- WYSYŁAMY NOWY SEKRET
+            jwtSecret,
             smtp: smtpConfig.host ? smtpConfig : undefined, 
             ai: aiConfig.apiKey ? aiConfig : undefined
         }),
@@ -82,9 +79,7 @@ const SetupWizard: React.FC = () => {
       navigate('/login');
     } catch (error: any) {
       const errorMessage = error.message || "Wystąpił nieznany błąd.";
-       if (errorMessage.includes('Invalid setup key')) {
-        toast.error("Nieprawidłowy klucz konfiguracyjny (Setup Key).");
-      } else if (errorMessage.includes('Setup already completed')) {
+       if (errorMessage.includes('Setup already completed')) {
         toast.warn("Konfiguracja została już wcześniej zakończona. Przekierowuję do logowania.");
         navigate('/login');
       } else {
@@ -105,8 +100,8 @@ const SetupWizard: React.FC = () => {
             </p>
             <div className="space-y-4 text-slate-300">
                  <div>
-                    <h3 className="font-semibold text-lg text-indigo-300 mb-2">1. Klucze Bezpieczeństwa</h3>
-                    <p className='text-sm'>Podaj klucz `SETUP_KEY` z pliku `.env`, aby autoryzować tę operację. Następnie wygeneruj i zapisz `JWT_SECRET`, który jest niezbędny do zabezpieczenia sesji użytkowników.</p>
+                    <h3 className="font-semibold text-lg text-indigo-300 mb-2">1. Klucz Bezpieczeństwa</h3>
+                    <p className='text-sm'>Wygeneruj i zapisz `JWT_SECRET` w pliku .env. Jest on niezbędny do zabezpieczenia sesji użytkowników i prawidłowego działania aplikacji.</p>
                 </div>
                 <div>
                     <h3 className="font-semibold text-lg text-indigo-300 mb-2">2. Konto Administratora</h3>
@@ -125,11 +120,7 @@ const SetupWizard: React.FC = () => {
             
             {/* --- SEKCJA KLUCZY --- */}
             <div className='p-4 bg-indigo-50 rounded-lg border border-indigo-200 space-y-4'>
-                <p className='text-sm text-indigo-800 font-semibold'>Krok 1: Klucze Bezpieczeństwa</p>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700">Klucz Konfiguracyjny (Setup Key)</label>
-                  <input type="text" value={setupKey} onChange={(e) => setSetupKey(e.target.value)} required className="mt-1 block w-full px-4 py-2 border border-slate-300 rounded-md" placeholder="Wklej klucz z pliku .env" />
-                </div>
+                <p className='text-sm text-indigo-800 font-semibold'>Krok 1: Klucz Bezpieczeństwa Sesji</p>
                 <div>
                   <label className="block text-sm font-bold text-slate-700">Sekret Sesji (JWT Secret)</label>
                   <div className="flex gap-2 mt-1">

@@ -1,30 +1,97 @@
-
-version: '3.8'
-
 services:
-  postgres:
-    image: postgres:14-alpine
-    container_name: psych_db
+  db:
+    image: postgres:15
+    container_name: psycheform_db
     restart: always
-    environment:
-      POSTGRES_USER: johndoe
-      POSTGRES_PASSWORD: randompassword
-      POSTGRES_DB: mydb
+    env_file: .env
     ports:
-      - '5432:5432'
+      - "${DB_PORT}:5432"
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        loki-external-labels: service=db
 
   app:
-    container_name: psych_app
-    build: .
+    image: ghcr.io/TWOJA-NAZWA-UŻYTKOWNIKA/NAZWA-TWOJEGO-REPOZYTORIUM:latest
+    container_name: psycheform_app
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    env_file: .env
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        loki-external-labels: service=app
+
+  backup:
+    image: postgres:15
+    container_name: psycheform_backup
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      - PGPASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - ./backups:/backups
+    command: >
+      sh -c "
+        echo 'Uruchomiono usługę kopii zapasowych. Pierwsza kopia za 5 minut...'
+        sleep 300
+        while true; do
+          BACKUP_FILE=/backups/backup-$(date +%Y-%m-%d_%H-%M-%S).sql.gz
+          echo \"Tworzenie kopii: $BACKUP_FILE\"
+          pg_dump -h db -U \"${POSTGRES_USER}\" -d \"${POSTGRES_DB}\" | gzip > \"$BACKUP_FILE\"
+          echo \"Kopia zapasowa utworzona pomyślnie.\"
+          echo \"Usuwanie kopii starszych niż 30 dni...\"
+          find /backups -name '*.sql.gz' -mtime +30 -delete
+          echo \"Stare kopie usunięte. Następna kopia za 24h.\"
+          sleep 86400
+        done
+      "
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://localhost:3100/loki/api/v1/push"
+        loki-external-labels: service=backup
+
+  loki:
+    image: grafana/loki:2.9.0
+    container_name: psycheform_loki
     restart: always
     ports:
-      - '3000:3000'
-    depends_on:
-      - postgres
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki-data:/loki
+
+  grafana:
+    image: grafana/grafana-oss:9.5.1
+    container_name: psycheform_grafana
+    restart: always
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana-provisioning:/etc/grafana/provisioning
     environment:
-      DATABASE_URL: "postgresql://johndoe:randompassword@postgres:5432/mydb?schema=public"
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
 
 volumes:
-  db-data:
+  postgres-data:
+  loki-data:
+  grafana-data:

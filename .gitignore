@@ -1,13 +1,18 @@
-# Dependencies
-/node_modules
+# Zależności
+node_modules
 
-# Build artifacts
-/dist
+# Pliki logów i tymczasowe
+npm-debug.log
+yarn-error.log
+.pnpm-debug.log
 
-# Environment variables
+# Pliki konfiguracyjne środowiska
 .env
+.env.*
+!.env.example
 
-# Prisma
-/prisma/migrations
-/prisma/seed.js
-/prisma/dev.db
+# Dane i wolumeny Dockera
+postgres-data
+
+# Kopie zapasowe bazy danych
+backups/*.sql.gz
