@@ -70,12 +70,12 @@ const AdminDashboard: React.FC = () => {
   };
   
   const handleCsvImportClick = () => {
-    navigate('/admin/tests'); // Updated navigation
+    navigate('/admin/tests');
     setIsCreateMenuOpen(false);
   };
   
   const handleCreateNewClick = () => {
-    navigate('/admin/test/new'); // Updated navigation
+    navigate('/admin/test/new');
     setIsCreateMenuOpen(false);
   };
 
@@ -87,7 +87,6 @@ const AdminDashboard: React.FC = () => {
     reader.onload = (event) => {
         try {
             const importedTest = JSON.parse(event.target?.result as string);
-            // Navigate and pass data via state
             navigate('/admin/test/new', { state: { importedTest } });
         } catch (err) {
             alert("Błąd podczas przetwarzania pliku JSON. Upewnij się, że ma poprawny format.");
@@ -100,14 +99,31 @@ const AdminDashboard: React.FC = () => {
   const handleShowHistory = async (canonicalId: string) => {
     setIsHistoryLoading(true);
     setIsHistoryModalOpen(true);
-    const allVersions = await fetchTestVersions();
-    const versions = allVersions.filter(v => v.canonicalId === canonicalId);
-    setHistoryVersions(versions);
-    setIsHistoryLoading(false);
+    try {
+        const versions = await fetchTestVersions(canonicalId); // <-- CORRECTED THIS LINE
+        setHistoryVersions(versions);
+    } catch (err) {
+        // Handle error if necessary, e.g., show a toast notification
+        console.error("Failed to fetch test versions:", err);
+        setHistoryVersions([]); // Clear previous results
+    } finally {
+        setIsHistoryLoading(false);
+    }
   };
 
   const filteredTests = useMemo(() => {
-    return tests.filter(test => 
+    // Display only the latest version of each test (by canonicalId)
+    const latestVersions = new Map<string, Test>();
+    tests.forEach(test => {
+        const existing = latestVersions.get(test.canonicalId);
+        if (!existing || test.version > existing.version) {
+            latestVersions.set(test.canonicalId, test);
+        }
+    });
+    
+    const testsToDisplay = Array.from(latestVersions.values());
+
+    return testsToDisplay.filter(test => 
         test.title.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [tests, searchTerm]);
@@ -194,7 +210,7 @@ const AdminDashboard: React.FC = () => {
                       <DownloadIcon /> Eksportuj
                     </button>
                     <button
-                      onClick={() => navigate(`/admin/test/edit/${test.id}`)} // Updated navigation
+                      onClick={() => navigate(`/admin/test/edit/${test.id}`)}
                       className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-700 font-semibold rounded-md hover:bg-slate-200 text-sm"
                     >
                       <EditIcon /> Edytuj
@@ -214,9 +230,9 @@ const AdminDashboard: React.FC = () => {
                 <h2 className="text-2xl font-bold mb-4">Historia Wersji Testu</h2>
                 <div className="flex-grow overflow-y-auto pr-2">
                     {isHistoryLoading ? (
-                        <p>Ładowanie historii...</p>                    ) : (
+                        <p>Ładowanie historii...</p>                    ) : historyVersions.length > 0 ? (
                         <div className="space-y-3">
-                        {historyVersions.map(v => (
+                        {historyVersions.sort((a, b) => b.version - a.version).map(v => (
                             <div key={v.id} className="bg-[var(--background-color)] p-3 rounded-lg flex justify-between items-center">
                                 <div>
                                     <p className="font-semibold">{v.title}</p>
@@ -226,11 +242,13 @@ const AdminDashboard: React.FC = () => {
                                 </div>
                                 <div className="flex gap-2">
                                     <button onClick={() => handleExport(v.id)} className="p-2 hover:bg-slate-200 rounded-full" title="Eksportuj tę wersję"><DownloadIcon /></button>
-                                    <button onClick={() => navigate(`/admin/test/edit/${v.id}`)} className="p-2 hover:bg-slate-200 rounded-full" title="Edytuj tę wersję"><EditIcon /></button>
+                                    <button onClick={() => { setIsHistoryModalOpen(false); navigate(`/admin/test/edit/${v.id}`); }} className="p-2 hover:bg-slate-200 rounded-full" title="Edytuj tę wersję"><EditIcon /></button>
                                 </div>
                             </div>
                         ))}
                         </div>
+                    ) : (
+                        <p>Brak historii wersji dla tego testu.</p>
                     )}
                 </div>
                 <div className="flex justify-end gap-4 mt-6">

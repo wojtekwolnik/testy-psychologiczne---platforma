@@ -3,180 +3,94 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { fetchTestById, saveTest, fetchPdfTemplates } from '../services/apiClient';
 import type { Test, Scale, Question, AnswerOption, ScoringRule, Section, PdfTemplate } from './types';
-import { PlusIcon, TrashIcon } from './common/Icons';
+import { PlusIcon, TrashIcon, CalculatorIcon } from './common/Icons';
 import RichTextInput from './common/RichTextInput';
 import { generateUniqueId } from '../utils/idUtils';
-
-// This function remains the same, it's good as it is.
-const sanitizeImportedTest = (imported: Test): Test => {
-    const scaleIdMap = new Map<string, string>();
-    const sanitizedScales = imported.scales.map(s => {
-        const newId = generateUniqueId('s');
-        scaleIdMap.set(s.id, newId);
-        return { ...s, id: newId };
-    });
-
-    const sanitizedSections = imported.sections.map(sec => {
-        const optionIdMap = new Map<string, string>();
-        const sanitizedQuestions = sec.questions.map(q => {
-            const sanitizedOptions = q.options.map(o => {
-                const newId = generateUniqueId('o');
-                optionIdMap.set(o.id, newId);
-                return { ...o, id: newId };
-            });
-
-            const sanitizedScoring: Test['sections'][0]['questions'][0]['scoring'] = {};
-            for (const oldOptionId in q.scoring) {
-                const newOptionId = optionIdMap.get(oldOptionId);
-                if (newOptionId) {
-                    sanitizedScoring[newOptionId] = q.scoring[oldOptionId]
-                        .map(rule => ({
-                            ...rule,
-                            scaleId: scaleIdMap.get(rule.scaleId) || '',
-                        }))
-                        .filter(rule => rule.scaleId); // Remove rules for scales that don't exist
-                }
-            }
-            return {
-                ...q,
-                id: generateUniqueId('q'),
-                options: sanitizedOptions,
-                scoring: sanitizedScoring,
-            };
-        });
-
-        return {
-            ...sec,
-            id: generateUniqueId('sec'),
-            questions: sanitizedQuestions,
-        };
-    });
-
-    // Treat as a brand new test
-    return {
-        ...imported,
-        id: generateUniqueId('new'),
-        canonicalId: generateUniqueId('tid'),
-        version: 1,
-        scales: sanitizedScales,
-        sections: sanitizedSections,
-        createdAt: new Date(),
-    };
-};
 
 const TestEditor: React.FC = () => {
   const navigate = useNavigate();
   const { testId } = useParams<{ testId: string }>();
-  const location = useLocation();
-  const importedTest = location.state?.importedTest as Test | undefined;
-
-  const [test, setTest] = useState<Test>({
-    id: generateUniqueId('new'), canonicalId: generateUniqueId('tid'), version: 1, title: '', description: '',
-    instructions: '', questionsPerPage: null, scales: [], sections: [], defaultTemplateId: null, createdAt: new Date(),
-  });
+  const [test, setTest] = useState<Test | null>(null);
   const [templates, setTemplates] = useState<PdfTemplate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadInitialData = async () => {
         setIsLoading(true);
-        const fetchedTemplates = await fetchPdfTemplates();
-        setTemplates(fetchedTemplates);
-
-        let initialTest: Test | undefined;
-
-        if (importedTest) {
-            initialTest = sanitizeImportedTest(importedTest);
-        } else if (testId) {
-            initialTest = await fetchTestById(testId);
-        }
-        
-        if (initialTest) {
-          setTest(initialTest);
-        } else {
-            const newTest: Test = {
-              id: generateUniqueId('new'), canonicalId: generateUniqueId('tid'), version: 1, title: 'Nowy Test',
-              description: '',
-              instructions: 'Proszę odpowiedzieć na wszystkie pytania szczerze.',
-              questionsPerPage: 5, scales: [],
-              sections: [{ id: generateUniqueId('sec'), title: 'Sekcja 1', questions: [] }],
-              defaultTemplateId: fetchedTemplates.length > 0 ? fetchedTemplates[0].id : null,
-              createdAt: new Date(),
-            };
-            setTest(newTest);
-        }
-        setIsLoading(false);
+        try {
+            const fetchedTemplates = await fetchPdfTemplates();
+            setTemplates(fetchedTemplates);
+            let initialTest: Test | null = null;
+            if (testId) {
+                initialTest = await fetchTestById(testId);
+            }
+            if (initialTest) {
+                setTest(initialTest);
+            } else {
+                const newTest: Test = {
+                    id: generateUniqueId('new'), 
+                    canonicalId: generateUniqueId('tid'), version: 1, title: 'Nowy Test',
+                    description: '', instructions: '', questionsPerPage: 10, scales: [],
+                    sections: [{ id: generateUniqueId('sec'), title: 'Sekcja 1', questions: [] }],
+                    defaultTemplateId: null, createdAt: new Date().toISOString(),
+                };
+                setTest(newTest);
+            }
+        } catch(e) { console.error("Failed to load initial data", e); } 
+        finally { setIsLoading(false); }
     };
     loadInitialData();
-  }, [testId, importedTest]);
-  
-  const validateTest = useCallback(() => {
-    for (const [sIndex, section] of test.sections.entries()) {
-        for (const [qIndex, question] of section.questions.entries()) {
-            for (const [optionId, rules] of Object.entries(question.scoring)) {
-                for (const [rIndex, rule] of (rules as ScoringRule[]).entries()) {
-                    if (!rule.scaleId || rule.points === undefined || rule.points === null) {
-                       const option = question.options.find(o => o.id === optionId);
-                       const optionText = option ? `"${option.text.replace(/<[^>]*>?/gm, '')}"` : `ID: ${optionId}`;
-                       setValidationError(`Błąd walidacji: W Sekcji ${sIndex + 1}, Pytaniu ${qIndex + 1}, przy odpowiedzi ${optionText}, reguła punktacji #${rIndex + 1} jest niekompletna. Upewnij się, że wybrano skalę i wpisano punkty.`);
-                       return false;
-                    }
-                }
-            }
-        }
-    }
-    setValidationError(null);
-    return true;
-  }, [test]);
+  }, [testId]);
 
-  const handleSave = useCallback(async (asNewVersion: boolean) => {
-    if (!validateTest()) {
-        return false;
-    }
-    setIsSaving(true);
-    try {
-        const savedTest = await saveTest(test, asNewVersion);
-        setTest(savedTest);
-        return true;
-    } catch (error) {
-        console.error("Failed to save test:", error);
-        setValidationError("Nie udało się zapisać testu. Spróbuj ponownie.");
-        return false;
-    } finally {
-        setIsSaving(false);
-    }
-  }, [test, validateTest]);
-
-  const handleSaveAndExit = useCallback(async (asNewVersion: boolean) => {
-      const success = await handleSave(asNewVersion);
-      if (success) {
-        navigate('/admin/dashboard'); // Updated navigation
-      }
-  }, [handleSave, navigate]);
+  const handleSaveAndExit = useCallback(async (asNewVersion: boolean) => { 
+        if (!test) return;
+        setIsSaving(true);
+        try {
+            const savedTest = await saveTest(test, asNewVersion);
+            setTest(savedTest);
+            navigate('/admin/dashboard');
+        } catch(e) { console.error(e) } finally { setIsSaving(false); }
+    }, [test, navigate]);
 
   const handleTestChange = (field: keyof Test, value: any) => {
-    setTest(prev => ({ ...prev, [field]: value }));
+    setTest(prev => prev ? ({ ...prev, [field]: value }) : null);
   };
 
-  const addScale = () => {
-    const newScale: Scale = { id: generateUniqueId('s'), name: '', description: '' };
-    setTest(prev => ({ ...prev, scales: [...prev.scales, newScale] }));
+  const addScale = (type: 'standard' | 'calculated') => {
+    let newScale: Scale;
+    if (type === 'standard') {
+        newScale = { id: generateUniqueId('s'), type: 'standard', name: 'Nowa Skala Standardowa', description: '', maxScore: 50 };
+    } else {
+        newScale = { id: generateUniqueId('s'), type: 'calculated', name: 'Nowa Skala Obliczeniowa', description: '', formula: '' };
+    }
+    setTest(prev => prev ? ({ ...prev, scales: [...prev.scales, newScale] }) : null);
   };
   
-  const updateScale = (index: number, field: keyof Scale, value: string) => {
-      setTest(prev => ({
+  const updateScale = (index: number, updatedValues: Partial<Scale>) => {
+      setTest(prev => prev ? ({
         ...prev,
-        scales: prev.scales.map((s, i) => i === index ? { ...s, [field]: value } : s),
-      }));
+        scales: prev.scales.map((s, i) => i === index ? { ...s, ...updatedValues } : s),
+      }) : null);
   };
 
   const removeScale = (idToRemove: string) => {
-    setTest(prev => ({
-        ...prev,
-        scales: prev.scales.filter(s => s.id !== idToRemove),
-        sections: prev.sections.map(sec => ({
+    setTest(prev => {
+        if (!prev) return null;
+
+        const cleanedScales = prev.scales
+            .filter(s => s.id !== idToRemove)
+            .map(s => {
+                if (s.type === 'calculated' && s.formula && s.formula.includes(`{${idToRemove}}`)) {
+                    return {
+                        ...s,
+                        formula: s.formula.replace(new RegExp(`\\{${idToRemove}\\}`, 'g'), '0'),
+                    };
+                }
+                return s;
+            });
+
+        const cleanedSections = prev.sections.map(sec => ({
             ...sec,
             questions: sec.questions.map(q => ({
                 ...q,
@@ -189,385 +103,80 @@ const TestEditor: React.FC = () => {
                     return acc;
                 }, {} as Record<string, ScoringRule[]>)
             }))
-        }))
-    }));
-  };
-  
-  const addSection = () => {
-      const newSection: Section = { id: generateUniqueId('sec'), title: '', questions: [] };
-      setTest(prev => ({ ...prev, sections: [...prev.sections, newSection] }));
-  };
+        }));
 
-  const updateSectionTitle = (sIndex: number, title: string) => {
-      setTest(prev => ({
-        ...prev,
-        sections: prev.sections.map((sec, i) => i === sIndex ? { ...sec, title } : sec)
-      }));
-  };
-  
-  const removeSection = (sIndex: number) => {
-      setTest(prev => ({
-        ...prev,
-        sections: prev.sections.filter((_, i) => i !== sIndex)
-      }));
-  };
-
-  const addQuestion = (sIndex: number) => {
-    const newQuestion: Question = {
-      id: generateUniqueId('q'),
-      text: '',
-      type: 'multiple-choice',
-      options: [],
-      scoring: {},
-    };
-    setTest(prev => ({
-        ...prev,
-        sections: prev.sections.map((sec, i) => {
-            if (i === sIndex) {
-                return { ...sec, questions: [...sec.questions, newQuestion] };
-            }
-            return sec;
-        }),
-    }));
-  };
-  
-  const updateQuestion = (sIndex: number, qIndex: number, field: keyof Question, value: any) => {
-    setTest(prev => {
-        const newSections = prev.sections.map((section, currentSIndex) => {
-            if (currentSIndex !== sIndex) return section;
-
-            const newQuestions = section.questions.map((question, currentQIndex) => {
-                if (currentQIndex !== qIndex) return question;
-
-                const updatedQuestion = { ...question, [field]: value };
-
-                if (field === 'type' && value === 'likert-5') {
-                    updatedQuestion.options = [
-                        { id: generateUniqueId('o'), text: 'Zdecydowanie się nie zgadzam' },
-                        { id: generateUniqueId('o'), text: 'Nie zgadzam się' },
-                        { id: generateUniqueId('o'), text: 'Ani tak, ani nie' },
-                        { id: generateUniqueId('o'), text: 'Zgadzam się' },
-                        { id: generateUniqueId('o'), text: 'Zdecydowanie się zgadzam' },
-                    ];
-                }
-                return updatedQuestion;
-            });
-
-            return { ...section, questions: newQuestions };
-        });
-
-        return { ...prev, sections: newSections };
+        return {
+            ...prev,
+            scales: cleanedScales,
+            sections: cleanedSections,
+        };
     });
   };
   
-  const removeQuestion = (sIndex: number, qIndex: number) => {
-    setTest(prev => ({
-        ...prev,
-        sections: prev.sections.map((sec, i) => {
-            if (i === sIndex) {
-                return { ...sec, questions: sec.questions.filter((_, qi) => qi !== qIndex) };
-            }
-            return sec;
-        }),
-    }));
-  };
+  const insertScaleIdIntoFormula = (index: number, scaleId: string) => {
+      const currentScale = test?.scales[index];
+      if(currentScale?.type === 'calculated') {
+          const currentFormula = currentScale.formula || '';
+          const newFormula = `${currentFormula}{${scaleId}}`;
+          updateScale(index, { formula: newFormula });
+      }
+  }
 
-  const addOption = (sIndex: number, qIndex: number) => {
-    const newOption: AnswerOption = { id: generateUniqueId('o'), text: '' };
-    setTest(prev => ({
-        ...prev,
-        sections: prev.sections.map((sec, i) => {
-            if (i === sIndex) {
-                return {
-                    ...sec,
-                    questions: sec.questions.map((q, qi) => {
-                        if (qi === qIndex) {
-                            return { ...q, options: [...q.options, newOption] };
-                        }
-                        return q;
-                    })
-                };
-            }
-            return sec;
-        }),
-    }));
-  };
-
-  const updateOption = (sIndex: number, qIndex: number, oIndex: number, text: string) => {
-    setTest(prev => ({
-        ...prev,
-        sections: prev.sections.map((sec, i) => {
-            if (i === sIndex) {
-                return {
-                    ...sec,
-                    questions: sec.questions.map((q, qi) => {
-                        if (qi === qIndex) {
-                            return {
-                                ...q,
-                                options: q.options.map((opt, oi) => oi === oIndex ? { ...opt, text } : opt)
-                            };
-                        }
-                        return q;
-                    })
-                };
-            }
-            return sec;
-        }),
-    }));
-  };
-
-  const removeOption = (sIndex: number, qIndex: number, optionId: string) => {
-      setTest(prev => {
-        const newSections = prev.sections.map((section, currentSIndex) => {
-            if (currentSIndex !== sIndex) return section;
-
-            const newQuestions = section.questions.map((question, currentQIndex) => {
-                if (currentQIndex !== qIndex) return question;
-
-                const newOptions = question.options.filter(o => o.id !== optionId);
-                const newScoring = { ...question.scoring };
-                delete newScoring[optionId];
-
-                return { ...question, options: newOptions, scoring: newScoring };
-            });
-
-            return { ...section, questions: newQuestions };
-        });
-
-        return { ...prev, sections: newSections };
-    });
-  };
-  
-  const addScoringRule = (sIndex: number, qIndex: number, optionId: string) => {
-    const newRule: ScoringRule = { scaleId: test.scales[0]?.id || '', points: 0 };
-    setTest(prev => {
-        const newSections = prev.sections.map((section, currentSIndex) => {
-            if (currentSIndex !== sIndex) return section;
-
-            const newQuestions = section.questions.map((question, currentQIndex) => {
-                if (currentQIndex !== qIndex) return question;
-
-                const newScoring = {
-                    ...question.scoring,
-                    [optionId]: [...(question.scoring[optionId] || []), newRule],
-                };
-
-                return { ...question, scoring: newScoring };
-            });
-
-            return { ...section, questions: newQuestions };
-        });
-
-        return { ...prev, sections: newSections };
-    });
-  };
-  
-  const updateScoringRule = (sIndex: number, qIndex: number, optionId: string, ruleIndex: number, field: keyof ScoringRule, value: any) => {
-    setTest(prev => {
-        const newSections = prev.sections.map((section, currentSIndex) => {
-            if (currentSIndex !== sIndex) return section;
-
-            const newQuestions = section.questions.map((question, currentQIndex) => {
-                if (currentQIndex !== qIndex) return question;
-
-                const newRules = (question.scoring[optionId] || []).map((rule, currentRuleIndex) => {
-                    if (currentRuleIndex !== ruleIndex) return rule;
-                    return { ...rule, [field]: value };
-                });
-
-                const newScoring = {
-                    ...question.scoring,
-                    [optionId]: newRules,
-                };
-
-                return { ...question, scoring: newScoring };
-            });
-
-            return { ...section, questions: newQuestions };
-        });
-
-        return { ...prev, sections: newSections };
-    });
-  };
-
-  const removeScoringRule = (sIndex: number, qIndex: number, optionId: string, ruleIndex: number) => {
-    setTest(prev => {
-        const newSections = prev.sections.map((section, currentSIndex) => {
-            if (currentSIndex !== sIndex) return section;
-
-            const newQuestions = section.questions.map((question, currentQIndex) => {
-                if (currentQIndex !== qIndex) return question;
-
-                const newRules = (question.scoring[optionId] || []).filter((_, currentRuleIndex) => currentRuleIndex !== ruleIndex);
-                const newScoring = { ...question.scoring, [optionId]: newRules };
-                if (newRules.length === 0) {
-                    delete newScoring[optionId];
-                }
-
-                return { ...question, scoring: newScoring };
-            });
-
-            return { ...section, questions: newQuestions };
-        });
-
-        return { ...prev, sections: newSections };
-    });
-  };
-
-  if (isLoading) return <div className="p-8 text-center">Ładowanie edytora testów...</div>;
-  
-  const isEditingExistingTest = !!testId && !importedTest;
-  const pageTitle = importedTest ? `Importuj Test (v1)` : isEditingExistingTest ? `Edytuj Test (v${test.version})` : 'Utwórz Nowy Test (v1)';
+  if (isLoading || !test) return <div className="p-8 text-center">Ładowanie edytora testów...</div>;
 
   return (
     <div className="p-4 sm:p-8 max-w-5xl mx-auto">
-      <h1 className="text-4xl font-bold mb-6">{pageTitle}</h1>
-
-      {/* Test Details */}
-      <div className="bg-[var(--secondary-color)] p-6 rounded-xl shadow-lg mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Szczegóły Testu</h2>
-        <div className="space-y-4">
-          <RichTextInput placeholder="Tytuł testu" value={test.title} onChange={value => handleTestChange('title', value)} />
-          <RichTextInput placeholder="Opis testu" value={test.description} onChange={value => handleTestChange('description', value)} />
-          <RichTextInput placeholder="Instrukcje dla klienta" value={test.instructions} onChange={value => handleTestChange('instructions', value)} />
-           <div>
-            <label className="block text-sm font-medium mb-1">Domyślny szablon raportu PDF</label>
-            <select
-                value={test.defaultTemplateId || ''}
-                onChange={e => handleTestChange('defaultTemplateId', e.target.value)}
-                className="w-full p-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]"
-            >
-                <option value="">Brak (użyj systemowego domyślnego)</option>
-                {templates.map(tpl => <option key={tpl.id} value={tpl.id}>{tpl.name}</option>)}
-            </select>
-          </div>
-           <div>
-                <label className="block text-sm font-medium mb-1">Pytania na stronę (paginacja)</label>
-                <input 
-                    type="number" 
-                    placeholder="Zostaw puste, by wyłączyć" 
-                    value={test.questionsPerPage || ''} 
-                    onChange={e => handleTestChange('questionsPerPage', e.target.value ? parseInt(e.target.value, 10) : null)} 
-                    className="w-full p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" 
-                />
-                <p className="text-xs opacity-60 mt-1">Określ, ile pytań ma być wyświetlanych na jednej stronie. Pozostawienie pustego pola wyłączy podział na strony.</p>
-           </div>
-        </div>
-      </div>
-      
-      {/* Scales */}
+      <h1 className="text-4xl font-bold mb-6">Edytor Testu</h1>
       <div className="bg-[var(--secondary-color)] p-6 rounded-xl shadow-lg mb-8">
         <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-semibold">Skale Oceny</h2>
-            <button onClick={addScale} className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-color)]/20 text-[var(--accent-color)] font-semibold rounded-lg hover:bg-[var(--accent-color)]/30 transition-colors">
-                <PlusIcon/> Dodaj Skalę
-            </button>
+            <div className="flex gap-2">
+                 <button onClick={() => addScale('standard')} className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-color)]/20 text-[var(--accent-color)] font-semibold rounded-lg hover:bg-[var(--accent-color)]/30 transition-colors">
+                    <PlusIcon/> Dodaj Skalę Standardową
+                </button>
+                <button onClick={() => addScale('calculated')} className="flex items-center gap-2 px-4 py-2 bg-orange-400/20 text-orange-500 font-semibold rounded-lg hover:bg-orange-400/30 transition-colors">
+                    <CalculatorIcon/> Dodaj Skalę Obliczeniową
+                </button>
+            </div>
         </div>
         <div className="space-y-4">
             {test.scales.map((scale, i) => (
-                <div key={scale.id} className="flex items-start gap-4 p-4 bg-[var(--background-color)] rounded-lg">
-                    <input type="text" placeholder="Nazwa skali (np. Lęk)" value={scale.name} onChange={e => updateScale(i, 'name', e.target.value)} className="w-1/3 p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
-                    <input type="text" placeholder="Opis skali" value={scale.description} onChange={e => updateScale(i, 'description', e.target.value)} className="flex-grow p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
-                    <button onClick={() => removeScale(scale.id)} className="p-2 text-[var(--error-color)] hover:bg-red-100 rounded-full"><TrashIcon/></button>
+                <div key={scale.id} className={`p-4 rounded-lg bg-[var(--background-color)] border-l-4 ${scale.type === 'calculated' ? 'border-orange-500' : 'border-blue-500'}`}>
+                    <div className="flex items-start gap-4">
+                        <div className="flex-grow space-y-2">
+                            <input type="text" placeholder="Nazwa skali" value={scale.name} onChange={e => updateScale(i, { name: e.target.value })} className="w-full p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
+                            <input type="text" placeholder="Opis skali" value={scale.description} onChange={e => updateScale(i, { description: e.target.value })} className="w-full p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
+                        </div>
+                         <button onClick={() => removeScale(scale.id)} className="p-2 text-[var(--error-color)] hover:bg-red-100 rounded-full"><TrashIcon/></button>
+                    </div>
+                    {scale.type === 'standard' ? (
+                        <div className="mt-2">
+                            <label className="text-sm font-medium">Maksymalna liczba punktów:</label>
+                             <input type="number" value={scale.maxScore || 0} onChange={e => updateScale(i, { maxScore: parseInt(e.target.value) || 0 })} className="w-32 p-2 ml-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
+                        </div>
+                    ) : (
+                        <div className="mt-3 p-3 bg-orange-400/10 rounded-md">
+                            <label className="text-sm font-medium text-orange-700">Formuła obliczeniowa:</label>
+                            <input type="text" placeholder="np. ({scale-id1} + {scale-id2}) / 2" value={scale.formula || ''} onChange={e => updateScale(i, { formula: e.target.value })} className="w-full p-2 mt-1 border border-orange-300 rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
+                            <div className="mt-2 text-xs">
+                                <span className="font-semibold">Wstaw ID skali:</span>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                {test.scales.filter(s => s.id !== scale.id).map(s => (
+                                    <button key={s.id} onClick={() => insertScaleIdIntoFormula(i, s.id)} className="text-xs bg-slate-200 hover:bg-slate-300 px-2 py-1 rounded-md">{s.name} ({s.id})</button>
+                                ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             ))}
         </div>
       </div>
-
-      {/* Sections and Questions */}
-       <div className="space-y-6">
-        {test.sections.map((section, sIndex) => (
-            <div key={section.id} className="bg-[var(--secondary-color)] p-6 rounded-xl shadow-lg">
-                <div className="flex justify-between items-center mb-4">
-                    <div className="flex-grow">
-                        <RichTextInput placeholder={`Tytuł sekcji ${sIndex + 1}`} value={section.title} onChange={value => updateSectionTitle(sIndex, value)} />
-                    </div>
-                    {test.sections.length > 1 && <button onClick={() => removeSection(sIndex)} className="p-2 ml-4 text-[var(--error-color)] hover:bg-red-100 rounded-full"><TrashIcon/></button>}
-                </div>
-
-                <div className="space-y-6">
-                    {section.questions.map((q, qIndex) => (
-                        <div key={q.id} className="p-4 border border-[var(--background-color)] rounded-lg">
-                            <div className="flex items-start gap-4 mb-4">
-                                <div className="flex-grow">
-                                  <RichTextInput placeholder={`Pytanie ${qIndex + 1}`} value={q.text} onChange={value => updateQuestion(sIndex, qIndex, 'text', value)} />
-                                </div>
-                                <select value={q.type} onChange={e => updateQuestion(sIndex, qIndex, 'type', e.target.value)} className="p-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]">
-                                    <option value="multiple-choice">Jednokrotny wybór</option>
-                                    <option value="multiple-select">Wielokrotny wybór</option>
-                                    <option value="likert-5">Skala Likerta (5 st.)</option>
-                                </select>
-                                <button onClick={() => removeQuestion(sIndex, qIndex)} className="p-2 text-[var(--error-color)] hover:bg-red-100 rounded-full"><TrashIcon/></button>
-                            </div>
-                            <div className="pl-4 space-y-3">
-                                {q.options.map((opt, oIndex) => (
-                                    <div key={opt.id} className="bg-[var(--background-color)] p-3 rounded-lg">
-                                        <div className="flex items-start gap-2">
-                                            <div className="flex-grow">
-                                                <RichTextInput placeholder={`Odpowiedź ${oIndex + 1}`} value={opt.text} onChange={value => updateOption(sIndex, qIndex, oIndex, value)} />
-                                            </div>
-                                            {q.type !== 'likert-5' && <button onClick={() => removeOption(sIndex, qIndex, opt.id)} className="p-2 text-[var(--error-color)] hover:bg-red-100 rounded-full self-center"><TrashIcon/></button>}
-                                        </div>
-                                        <div className="pl-4 mt-2 space-y-2">
-                                            {(q.scoring[opt.id] || []).map((rule, ruleIndex) => (
-                                                <div key={ruleIndex} className="flex items-center gap-2">
-                                                    <span className="text-sm">Reguła #{ruleIndex + 1}:</span>
-                                                    <select value={rule.scaleId} onChange={e => updateScoringRule(sIndex, qIndex, opt.id, ruleIndex, 'scaleId', e.target.value)} className="p-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]" disabled={test.scales.length === 0}>
-                                                        <option value="">{test.scales.length === 0 ? 'Brak skal' : 'Wybierz skalę'}</option>
-                                                        {test.scales.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                                    </select>
-                                                    <input type="number" placeholder="Pkt" value={rule.points} onChange={e => updateScoringRule(sIndex, qIndex, opt.id, ruleIndex, 'points', parseInt(e.target.value, 10) || 0)} className="w-24 p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]"/>
-                                                    <button onClick={() => removeScoringRule(sIndex, qIndex, opt.id, ruleIndex)} className="p-1 text-[var(--error-color)] hover:bg-red-100 rounded-full"><TrashIcon/></button>
-                                                </div>
-                                            ))}
-                                            <button 
-                                                onClick={() => addScoringRule(sIndex, qIndex, opt.id)} 
-                                                disabled={test.scales.length === 0}
-                                                title={test.scales.length === 0 ? "Najpierw dodaj skalę, aby móc przypisać punkty." : "Dodaj regułę punktacji"}
-                                                className="text-xs text-[var(--accent-color)] font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-                                            >
-                                                + Dodaj regułę punktacji
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                                {q.type !== 'likert-5' && <button onClick={() => addOption(sIndex, qIndex)} className="text-sm text-[var(--primary-color)] font-semibold mt-2">+ Dodaj opcję</button>}
-                            </div>
-                        </div>
-                    ))}
-                     <button onClick={() => addQuestion(sIndex)} className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-color)]/20 text-[var(--accent-color)] font-semibold rounded-lg hover:bg-[var(--accent-color)]/30 transition-colors mt-4">
-                        <PlusIcon/> Dodaj Pytanie do tej sekcji
-                    </button>
-                </div>
-            </div>
-        ))}
-         <button onClick={addSection} className="w-full text-center py-4 border-2 border-dashed border-[var(--border-color)] opacity-60 rounded-lg hover:bg-[var(--secondary-color)] hover:border-slate-400 transition-colors">
-            + Dodaj nową sekcję
-        </button>
-      </div>
-      
-      {validationError && (
-        <div className="mt-4 p-4 bg-red-100 text-[var(--error-color)] rounded-lg font-semibold">
-            {validationError}
-        </div>
-      )}
-
       <div className="flex justify-end gap-4 mt-8">
         <button onClick={() => navigate('/admin/dashboard')} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg">Anuluj</button>
-        {isEditingExistingTest ? (
-          <>
-            <button onClick={() => handleSaveAndExit(false)} disabled={isSaving} className="px-6 py-2 bg-slate-600 text-white font-semibold rounded-lg disabled:bg-slate-400">
-              {isSaving ? 'Zapisywanie...' : 'Zapisz zmiany'}
-            </button>
-            <button onClick={() => handleSaveAndExit(true)} disabled={isSaving} className="px-6 py-2 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold rounded-lg disabled:bg-slate-400">
-              {isSaving ? 'Zapisywanie...' : 'Zapisz jako nową wersję'}
-            </button>
-          </>
-        ) : (
-          <button onClick={() => handleSaveAndExit(false)} disabled={isSaving} className="px-6 py-2 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold rounded-lg disabled:bg-slate-400">
+        <button onClick={() => handleSaveAndExit(false)} disabled={isSaving} className="px-6 py-2 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold rounded-lg disabled:bg-slate-400">
             {isSaving ? 'Zapisywanie...' : 'Zapisz Test'}
-          </button>
-        )}
+        </button>
       </div>
     </div>
   );

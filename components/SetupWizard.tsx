@@ -21,10 +21,10 @@ const SetupWizard: React.FC = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [setupKey, setSetupKey] = useState('');
+  const [jwtSecret, setJwtSecret] = useState(''); // <-- NOWY STAN
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  // NOWE STANY DLA KONFIGURACJI ZAAWANSOWANEJ
   const [smtpConfig, setSmtpConfig] = useState({ host: '', port: '', user: '', pass: '', secure: false });
   const [aiConfig, setAiConfig] = useState({ apiKey: '', provider: 'gemini', model: 'gemini-1.5-flash' });
 
@@ -38,27 +38,36 @@ const SetupWizard: React.FC = () => {
       setAiConfig(prev => ({...prev, [name]: value }))
   }
 
+  // Funkcja do generowania bezpiecznego, losowego klucza
+  const generateSecret = () => {
+      const array = new Uint32Array(16);
+      window.crypto.getRandomValues(array);
+      const secret = Array.from(array, dec => ('0' + dec.toString(16)).substr(-8)).join('');
+      setJwtSecret(secret);
+      toast.success("Wygenerowano bezpieczny sekret!", { autoClose: 2000 });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      toast.error("Hasła nie są takie same.");
-      return;
+      return toast.error("Hasła nie są takie same.");
     }
     if (password.length < 8) {
-      toast.error("Hasło musi mieć co najmniej 8 znaków.");
-      return;
+      return toast.error("Hasło musi mieć co najmniej 8 znaków.");
+    }
+    if (jwtSecret.length < 32) {
+      return toast.error("JWT Secret jest wymagany i musi mieć co najmniej 32 znaki.");
     }
 
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/setup/create-admin', {
+      const response = await fetch('/api/setup', { // Ujednolicony endpoint
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // ZMIANA: Wysyłamy teraz dodatkowe dane konfiguracyjne
         body: JSON.stringify({ 
-            email, 
-            password, 
+            admin: { email, password },
             setupKey, 
+            jwtSecret, // <-- WYSYŁAMY NOWY SEKRET
             smtp: smtpConfig.host ? smtpConfig : undefined, 
             ai: aiConfig.apiKey ? aiConfig : undefined
         }),
@@ -74,9 +83,9 @@ const SetupWizard: React.FC = () => {
     } catch (error: any) {
       const errorMessage = error.message || "Wystąpił nieznany błąd.";
        if (errorMessage.includes('Invalid setup key')) {
-        toast.error("Nieprawidłowy klucz konfiguracyjny. Sprawdź zmienną środowiskową SETUP_KEY.");
-      } else if (errorMessage.includes('already exists')) {
-        toast.error("Konfiguracja została już zakończona. Aplikacja jest gotowa do użytku.");
+        toast.error("Nieprawidłowy klucz konfiguracyjny (Setup Key).");
+      } else if (errorMessage.includes('Setup already completed')) {
+        toast.warn("Konfiguracja została już wcześniej zakończona. Przekierowuję do logowania.");
         navigate('/login');
       } else {
         toast.error(`Błąd: ${errorMessage}`);
@@ -92,21 +101,20 @@ const SetupWizard: React.FC = () => {
         <div className="hidden md:block w-1/2 bg-slate-800 text-white p-8 overflow-y-auto" style={{maxHeight: '95vh'}}>
            <h2 className="text-2xl font-bold text-indigo-400 mb-4">Witaj w Kreatorze Konfiguracji</h2>
             <p className="text-slate-300 mb-6">
-                To jednorazowy proces, który pozwoli Ci uruchomić aplikację. Utworzymy konto administratora i opcjonalnie skonfigurujemy usługi zewnętrzne.
+                To jednorazowy proces, który pozwoli Ci uruchomić i zabezpieczyć Twoją aplikację.
             </p>
             <div className="space-y-4 text-slate-300">
                  <div>
-                    <h3 className="font-semibold text-lg text-indigo-300 mb-2">Dane Podstawowe</h3>
-                    <p className='text-sm'>Podaj klucz konfiguracyjny `SETUP_KEY` ze zmiennych środowiskowych serwera oraz utwórz pierwsze konto administratora.</p>
+                    <h3 className="font-semibold text-lg text-indigo-300 mb-2">1. Klucze Bezpieczeństwa</h3>
+                    <p className='text-sm'>Podaj klucz `SETUP_KEY` z pliku `.env`, aby autoryzować tę operację. Następnie wygeneruj i zapisz `JWT_SECRET`, który jest niezbędny do zabezpieczenia sesji użytkowników.</p>
                 </div>
                 <div>
-                    <h3 className="font-semibold text-lg text-indigo-300 mb-2">Konfiguracja Opcjonalna</h3>
-                    <p className='text-sm'>Możesz od razu skonfigurować wysyłkę e-maili (SMTP) oraz integrację z AI. Jeśli pominiesz ten krok, te usługi nie będą dostępne i będzie trzeba je skonfigurować później manualnie na serwerze.</p>
-                    <p className="text-xs mt-2 p-2 bg-yellow-900/50 text-yellow-300 rounded-md">Wprowadzone tu dane (hasło SMTP, klucz API) zostaną zapisane w pliku `.env` na serwerze i nie będą później widoczne w panelu administracyjnym.</p>
+                    <h3 className="font-semibold text-lg text-indigo-300 mb-2">2. Konto Administratora</h3>
+                    <p className='text-sm'>Utwórz pierwsze konto administratora, które będzie służyło do zarządzania całym systemem.</p>
                 </div>
                  <div>
-                    <h3 className="font-semibold text-lg text-indigo-300 mb-2">Zakończenie</h3>
-                    <p className='text-sm'>Po pomyślnym utworzeniu konta, zostaniesz przekierowany na stronę logowania. Twoja aplikacja będzie gotowa do pracy!</p>
+                    <h3 className="font-semibold text-lg text-indigo-300 mb-2">3. Usługi Zewnętrzne (Opcjonalne)</h3>
+                    <p className='text-sm'>Możesz od razu skonfigurować wysyłkę e-maili (SMTP) oraz integrację z AI. Wprowadzone tu dane zostaną zapisane w pliku `.env` na serwerze.</p>
                 </div>
             </div>
         </div>
@@ -114,44 +122,58 @@ const SetupWizard: React.FC = () => {
         <div className="w-full md:w-1/2 p-8 overflow-y-auto" style={{maxHeight: '95vh'}}>
           <h1 className="text-3xl font-bold text-slate-800 mb-6">Zakończ Konfigurację</h1>
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-bold text-slate-700">Adres e-mail Administratora</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="mt-1 block w-full px-4 py-2 border border-slate-300 rounded-md" placeholder="admin@twojafirma.pl" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Hasło (min. 8 znaków)</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} className="mt-1 block w-full px-4 py-2 border border-slate-300 rounded-md" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Potwierdź hasło</label>
-              <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="mt-1 block w-full px-4 py-2 border border-slate-300 rounded-md" />
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-indigo-700">Klucz Konfiguracyjny (Setup Key)</label>
-              <input type="text" value={setupKey} onChange={(e) => setSetupKey(e.target.value)} required className="mt-1 block w-full px-4 py-2 border-2 border-indigo-300 rounded-md bg-indigo-50" placeholder="Wklej klucz ze zmiennych środowiskowych" />
-            </div>
             
-            {/* SEKCJA SMTP */}
-            <CollapsibleSection title="Konfiguracja Wysyłki E-mail (Opcjonalne)">
+            {/* --- SEKCJA KLUCZY --- */}
+            <div className='p-4 bg-indigo-50 rounded-lg border border-indigo-200 space-y-4'>
+                <p className='text-sm text-indigo-800 font-semibold'>Krok 1: Klucze Bezpieczeństwa</p>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700">Klucz Konfiguracyjny (Setup Key)</label>
+                  <input type="text" value={setupKey} onChange={(e) => setSetupKey(e.target.value)} required className="mt-1 block w-full px-4 py-2 border border-slate-300 rounded-md" placeholder="Wklej klucz z pliku .env" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700">Sekret Sesji (JWT Secret)</label>
+                  <div className="flex gap-2 mt-1">
+                    <input type="text" value={jwtSecret} onChange={(e) => setJwtSecret(e.target.value)} required minLength={32} className="block w-full px-4 py-2 border border-slate-300 rounded-md" placeholder="Wklej lub wygeneruj sekret..." />
+                    <button type="button" onClick={generateSecret} className="px-4 py-2 bg-slate-600 text-white font-semibold rounded-lg hover:bg-slate-700 text-nowrap">Generuj</button>
+                  </div>
+                  <p className='text-xs text-slate-500 mt-1'>Kluczowy dla bezpieczeństwa, musi mieć min. 32 znaki. Zostanie zapisany w pliku .env.</p>
+                </div>
+            </div>
+
+            {/* --- SEKCJA ADMINA --- */}
+            <div className='p-4 bg-slate-50 rounded-lg border border-slate-200 space-y-4'>
+                 <p className='text-sm text-slate-800 font-semibold'>Krok 2: Konto Administratora</p>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700">Adres e-mail Administratora</label>
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="mt-1 block w-full px-4 py-2 border border-slate-300 rounded-md" placeholder="admin@twojafirma.pl" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Hasło (min. 8 znaków)</label>
+                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} className="mt-1 block w-full px-4 py-2 border border-slate-300 rounded-md" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700">Potwierdź hasło</label>
+                  <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required className="mt-1 block w-full px-4 py-2 border border-slate-300 rounded-md" />
+                </div>
+            </div>
+
+            {/* --- SEKCJE OPCJONALNE --- */}
+            <CollapsibleSection title="Krok 3: E-mail i AI (Opcjonalne)">
                  <input type="text" name="host" placeholder="Host SMTP" value={smtpConfig.host} onChange={handleSmtpChange} className="mt-1 block w-full px-4 py-2 border border-slate-300 rounded-md" />
                  <input type="text" name="port" placeholder="Port SMTP" value={smtpConfig.port} onChange={handleSmtpChange} className="mt-1 block w-full px-4 py-2 border border-slate-300 rounded-md" />
                  <input type="text" name="user" placeholder="Użytkownik SMTP" value={smtpConfig.user} onChange={handleSmtpChange} className="mt-1 block w-full px-4 py-2 border border-slate-300 rounded-md" />
                  <input type="password" name="pass" placeholder="Hasło SMTP" value={smtpConfig.pass} onChange={handleSmtpChange} className="mt-1 block w-full px-4 py-2 border border-slate-300 rounded-md" />
                  <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="secure" checked={smtpConfig.secure} onChange={handleSmtpChange} /> Użyj połączenia SSL/TLS</label>
-            </CollapsibleSection>
-
-            {/* SEKCJA AI */}
-            <CollapsibleSection title="Konfiguracja Asystenta AI (Opcjonalne)">
+                 <hr/>
                 <select name="provider" value={aiConfig.provider} onChange={handleAiChange} className="mt-1 block w-full px-4 py-2 border border-slate-300 rounded-md bg-white">
                     <option value="gemini">Google Gemini</option>
-                    <option value="chatgpt">OpenAI ChatGPT (Symulacja)</option>
                 </select>
                  <input type="password" name="apiKey" placeholder="Klucz API dostawcy AI" value={aiConfig.apiKey} onChange={handleAiChange} className="mt-1 block w-full px-4 py-2 border border-slate-300 rounded-md" />
                  <input type="text" name="model" placeholder="Nazwa modelu (np. gemini-1.5-flash)" value={aiConfig.model} onChange={handleAiChange} className="mt-1 block w-full px-4 py-2 border border-slate-300 rounded-md" />
             </CollapsibleSection>
 
             <button type="submit" disabled={isSubmitting} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-lg text-lg font-bold text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-400 transition-colors">
-              {isSubmitting ? 'Zapisywanie konfiguracji...' : 'Zakończ Konfigurację'}
+              {isSubmitting ? 'Zapisywanie konfiguracji...' : 'Zakończ i Zapisz'}
             </button>
           </form>
         </div>

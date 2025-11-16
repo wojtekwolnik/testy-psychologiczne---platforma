@@ -1,18 +1,16 @@
 
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchResultById, fetchTestById, fetchPdfTemplates, getAiInterpretation } from '../services/apiClient';
-import type { TestResult, Test, ClientAnswer, PdfTemplate } from './types';
+import type { TestResult, Test, PdfTemplate, Question } from './types';
 import { DownloadIcon, SparklesIcon, ChevronLeftIcon } from './common/Icons';
 import { BrandingContext } from '../contexts/BrandingContext';
 import RichTextInput from './common/RichTextInput';
 
-// The heavy PDF generation logic is no longer imported statically.
-
 const ReportView: React.FC = () => {
     const { resultId } = useParams<{ resultId: string }>();
     const navigate = useNavigate();
-    const { branding, isBrandingLoaded } = useContext(BrandingContext);
+    const { branding } = useContext(BrandingContext);
     const [result, setResult] = useState<TestResult | null>(null);
     const [test, setTest] = useState<Test | null>(null);
     const [pdfTemplates, setPdfTemplates] = useState<PdfTemplate[]>([]);
@@ -24,7 +22,6 @@ const ReportView: React.FC = () => {
     const [isInterpretationLoading, setIsInterpretationLoading] = useState(false);
     const [customInterpretation, setCustomInterpretation] = useState('');
 
-
     useEffect(() => {
         if (!resultId) {
             setError("Nie znaleziono ID wyniku w adresie URL.");
@@ -35,21 +32,22 @@ const ReportView: React.FC = () => {
         const loadData = async () => {
             try {
                 const fetchedResult = await fetchResultById(resultId);
-                if (!fetchedResult) {
-                    setError("Nie znaleziono wyniku testu.");
-                    return;
-                }
                 setResult(fetchedResult);
-                setCustomInterpretation(fetchedResult.therapistInterpretation || '');
 
-                const fetchedTest = await fetchTestById(fetchedResult.testId);
+                const fetchedTest = await fetchTestById(fetchedResult!.testId);
                 setTest(fetchedTest);
 
-                const templates = await fetchPdfTemplates(fetchedResult.testId);
-                setPdfTemplates(templates);
+                if (fetchedTest) {
+                    const templates = await fetchPdfTemplates();
+                    setPdfTemplates(templates.filter(t => t.testCanonicalId === fetchedTest.canonicalId));
+                }
 
-            } catch (err) {
-                setError("Wystąpił błąd podczas ładowania danych.");
+            } catch (err: any) {
+                if (err.message.includes("Access Denied")) {
+                    setError("Nie masz uprawnień do wyświetlenia tego wyniku.");
+                } else {
+                    setError("Wystąpił błąd podczas ładowania danych lub wynik nie istnieje.");
+                }
                 console.error(err);
             } finally {
                 setIsLoading(false);
@@ -60,20 +58,17 @@ const ReportView: React.FC = () => {
     }, [resultId]);
 
     const handleGeneratePdf = async () => {
-        if (!result || !test) return;
-
+        if (!result || !test || !branding) return;
         setIsGenerating(true);
         try {
-            // Dynamically import the PDF generator only when needed
             const { generatePdf } = await import('./pdfGenerator');
-            
             const templateToUse = pdfTemplates.find(t => t.id === selectedTemplate);
             const pdfBytes = await generatePdf(result, test, branding, templateToUse, customInterpretation);
             
             const blob = new Blob([pdfBytes], { type: 'application/pdf' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `Raport-${result.clientName.replace(/ /g, '_')}-${new Date().toISOString().split('T')[0]}.pdf`;
+            link.download = `Raport-${result.clientIdentifier.replace(/ /g, '_')}.pdf`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -90,8 +85,9 @@ const ReportView: React.FC = () => {
         setIsInterpretationLoading(true);
         setAiInterpretation(null);
         try {
-            const interpretation = await getAiInterpretation(test, result);
-            setAiInterpretation(interpretation.interpretation);
+            // Corrected the function call to have no arguments
+            const response = await getAiInterpretation();
+            setAiInterpretation(response.interpretation);
         } catch (error) {
             console.error('Błąd pobierania interpretacji AI:', error);
             setError("Nie udało się uzyskać interpretacji od AI.");
@@ -100,58 +96,40 @@ const ReportView: React.FC = () => {
         }
     };
 
+    const questionsMap = useMemo(() => {
+        if (!test) return new Map<string, Question>();
+        const map = new Map<string, Question>();
+        test.sections.forEach(sec => sec.questions.forEach(q => map.set(q.id, q)));
+        return map;
+    }, [test]);
 
-    if (isLoading || !isBrandingLoaded) return <div className="flex justify-center items-center h-screen"><div>Ładowanie danych raportu...</div></div>;
-    if (error) return <div className="p-8 text-center text-red-600">{error}</div>;
+    // Removed isBrandingLoaded from the condition
+    if (isLoading) return <div className="flex justify-center items-center h-screen"><div>Ładowanie danych raportu...</div></div>;
+    if (error) return <div className="p-8 text-center text-red-600 font-semibold">{error}</div>;
     if (!result || !test) return <div className="p-8 text-center">Nie znaleziono danych wyniku lub testu.</div>;
 
-    const getScaleDescription = (scaleKey: string) => {
-        const scale = test.scales.find(s => s.key === scaleKey);
-        return scale?.description || 'Brak opisu skali.';
+    const getScaleDetails = (scaleId: string) => {
+        const scale = test.scales.find(s => s.id === scaleId);
+        return scale ? { name: scale.name, description: scale.description } : { name: scaleId, description: 'Brak opisu.' };
     };
 
     return (
         <div className="bg-gray-100 min-h-screen">
-            <header className="bg-white shadow-sm sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <div className="flex justify-between items-center">
-                        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
-                            <ChevronLeftIcon />
-                            <span>Powrót</span>
-                        </button>
-                        <h1 className="text-2xl font-bold text-gray-800">Raport Wyników</h1>
-                         <div className="flex items-center gap-4">
-                            <select
-                                value={selectedTemplate}
-                                onChange={(e) => setSelectedTemplate(e.target.value)}
-                                className="py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                            >
-                                <option value="default">Domyślny Szablon</option>
-                                {pdfTemplates.map(template => (
-                                    <option key={template.id} value={template.id}>{template.name}</option>
-                                ))}
-                            </select>
-                            <button
-                                onClick={handleGeneratePdf}
-                                disabled={isGenerating}
-                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 disabled:bg-blue-400 transition-colors"
-                            >
-                                {isGenerating ? 'Generowanie...' : <><DownloadIcon /> Pobierz PDF</>}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            <header className="bg-white shadow-sm sticky top-0 z-10 p-4">
+                 <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900">
+                    <ChevronLeftIcon />
+                    Powrót
+                </button>
             </header>
             
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Main content */}
                     <div className="lg:col-span-2 bg-white p-8 rounded-xl shadow-lg">
                         <div className="border-b pb-6 mb-6">
-                            <div className="flex justify-between items-start">
+                             <div className="flex justify-between items-start">
                                 <div>
                                     <h2 className="text-3xl font-bold text-gray-900">{test.title}</h2>
-                                    <p className="text-lg text-gray-600 mt-1">Pacjent: {result.clientName}</p>
+                                    <p className="text-lg text-gray-600 mt-1">Identyfikator klienta: {result.clientIdentifier}</p>
                                 </div>
                                 <div className="text-right">
                                     <p className="text-sm text-gray-500">Data Ukończenia</p>
@@ -160,56 +138,96 @@ const ReportView: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* Scores Section */}
                         <div className="mb-8">
-                            <h3 className="text-2xl font-semibold text-gray-800 mb-4">Wyniki Główne</h3>
+                            <h3 className="text-2xl font-semibold text-gray-800 mb-4">Wyniki</h3>
                             <div className="space-y-4">
-                                {Object.entries(result.scores).map(([key, value]) => (
-                                    <div key={key} className="bg-gray-50 p-4 rounded-lg">
-                                        <p className="font-bold text-lg text-blue-700">{key}</p>
-                                        <p className="text-gray-600 mt-1">{getScaleDescription(key)}</p>
-                                        <p className="text-2xl font-extrabold text-gray-800 mt-2">Wynik: {value}</p>
-                                    </div>
-                                ))}
+                                {Object.entries(result.scores).map(([scaleId, value]) => {
+                                    const { name, description } = getScaleDetails(scaleId);
+                                    const maxScore = test.scales.find(s => s.id === scaleId)?.maxScore;
+                                    const percentage = maxScore ? (value / maxScore) * 100 : 0;
+                                    return (
+                                        <div key={scaleId} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <p className="font-bold text-lg text-indigo-700">{name}</p>
+                                                <p className="text-2xl font-extrabold text-gray-800">{value}{maxScore ? ` / ${maxScore}`: ''}</p>
+                                            </div>
+                                            {maxScore && (
+                                                <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                                                    <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${percentage}%` }}></div>
+                                                </div>
+                                            )}
+                                            <p className="text-gray-600 text-sm mt-2">{description}</p>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                         
-                        {/* Interpretation Section */}
                         <div>
-                             <h3 className="text-2xl font-semibold text-gray-800 mb-4">Interpretacja i Notatki Terapeuty</h3>
-                            
-                            {/* AI Interpretation */}
-                            <div className="mb-6">
-                                <button onClick={handleGetAiInterpretation} disabled={isInterpretationLoading} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg shadow-md hover:bg-purple-700 disabled:bg-purple-400 transition-colors">
-                                    {isInterpretationLoading ? 'Analizowanie...' : <><SparklesIcon /> Poproś AI o interpretację</>}
-                                </button>
-                                {isInterpretationLoading && <p className="text-sm text-gray-600 mt-2">Generowanie interpretacji, to może potrwać chwilę...</p>}
+                             <h3 className="text-2xl font-semibold text-gray-800 mb-4">Interpretacja</h3>
+                             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h4 className="font-semibold">Notatki i interpretacja terapeuty</h4>
+                                    <button 
+                                        onClick={handleGetAiInterpretation}
+                                        disabled={isInterpretationLoading}
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-purple-100 text-purple-700 font-semibold rounded-md hover:bg-purple-200 transition-colors text-sm disabled:opacity-50"
+                                    >
+                                        <SparklesIcon />
+                                        {isInterpretationLoading ? 'Generowanie...' : 'Generuj z AI'}
+                                    </button>
+                                </div>
+                                {isInterpretationLoading && <div className="text-center p-4">Analizowanie wyników...</div>}
                                 {aiInterpretation && (
-                                    <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                                        <h4 className="font-bold text-purple-800">Sugestia od AI</h4>
-                                        <p className="text-gray-700 mt-2 whitespace-pre-wrap">{aiInterpretation}</p>
+                                    <div className="prose prose-sm max-w-none p-4 mb-4 bg-purple-50 rounded-md border border-purple-200">
+                                        <h5 className="font-semibold">Sugestia od AI:</h5>
+                                        <p>{aiInterpretation}</p>
+                                        <button onClick={() => { setCustomInterpretation(aiInterpretation); setAiInterpretation(null); }} className="text-sm font-semibold text-purple-600 hover:underline mt-2">Użyj tej sugestii</button>
                                     </div>
                                 )}
-                            </div>
-
-                             {/* Therapist's custom interpretation */}
-                            <RichTextInput
-                                initialValue={customInterpretation}
-                                onSave={(newInterpretation) => setCustomInterpretation(newInterpretation)}
-                            />
+                                 <RichTextInput value={customInterpretation} onChange={setCustomInterpretation} />
+                             </div>
                         </div>
                     </div>
 
-                    {/* Sidebar with Answers */}
-                    <div className="bg-white p-6 rounded-xl shadow-lg self-start">
-                        <h3 className="text-xl font-semibold text-gray-800 border-b pb-3 mb-4">Udzielone Odpowiedzi</h3>
-                        <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-                            {result.answers.map((answer: ClientAnswer, index: number) => (
-                                <div key={index} className="text-sm">
-                                    <p className="font-semibold text-gray-700">Pytanie {index + 1}: {test.questions[index]?.text}</p>
-                                    <p className="text-gray-600 pl-4">Odpowiedź: {String(answer.value)}</p>
-                                </div>
-                            ))}
+                    <div className="bg-white p-6 rounded-xl shadow-lg self-start sticky top-24">
+                        <div className="flex justify-between items-center border-b pb-3 mb-4">
+                            <h3 className="text-xl font-semibold text-gray-800">Opcje Raportu</h3>
+                            <button 
+                                onClick={handleGeneratePdf} 
+                                disabled={isGenerating}
+                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+                            >
+                                <DownloadIcon/> {isGenerating ? 'Generowanie...' : 'Pobierz PDF'}
+                            </button>
+                        </div>
+                        <div className="mb-4">
+                            <label htmlFor="template-select" className="block text-sm font-medium text-gray-700 mb-2">Szablon PDF</label>
+                            <select id="template-select" value={selectedTemplate} onChange={e => setSelectedTemplate(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900">
+                                <option value="default">Domyślny wygląd raportu</option>
+                                {pdfTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                            </select>
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-800 border-b pb-3 my-4">Udzielone Odpowiedzi</h3>
+                        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                            {Object.entries(result.answers).map(([questionId, answerValue]) => {
+                                const question = questionsMap.get(questionId);
+                                if (!question) return null;
+
+                                let answerText = '';
+                                if (Array.isArray(answerValue)) { // Multiple select
+                                    answerText = answerValue.map(val => question.options.find(opt => opt.id === val)?.text || val).join(', ');
+                                } else { // Single select / Likert
+                                    answerText = question.options.find(opt => opt.id === answerValue)?.text || String(answerValue);
+                                }
+
+                                return (
+                                    <div key={questionId} className="text-sm">
+                                        <p className="font-semibold text-gray-700" dangerouslySetInnerHTML={{ __html: question.text }} />
+                                        <p className="text-gray-600 pl-4">Odpowiedź: {answerText}</p>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>

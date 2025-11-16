@@ -24,7 +24,8 @@ const TherapistDashboard: React.FC = () => {
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
 
-  const THERAPIST_ID = 'user-2'; // Hardcoded therapist ID for demo
+  // Hardcoded therapist ID is REMOVED. The server will identify the user via token.
+  // const THERAPIST_ID = 'user-2';
 
   useEffect(() => {
     loadData();
@@ -36,10 +37,11 @@ const TherapistDashboard: React.FC = () => {
   const loadData = async () => {
     try {
       setIsLoading(true);
+      // API calls no longer need therapistId, the server handles it.
       const [fetchedResults, fetchedTests, fetchedCodes] = await Promise.all([
-        fetchResults(THERAPIST_ID),
+        fetchResults(),
         fetchTests(true), 
-        fetchActiveCodes(THERAPIST_ID)
+        fetchActiveCodes()
       ]);
       
       fetchedResults.sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
@@ -51,7 +53,7 @@ const TherapistDashboard: React.FC = () => {
         setSelectedTest(fetchedTests[0].id);
       }
     } catch (err) {
-      setError("Nie udało się załadować danych.");
+      setError("Nie udało się załadować danych. Odśwież stronę, aby spróbować ponownie.");
     } finally {
       setIsLoading(false);
     }
@@ -73,7 +75,8 @@ const TherapistDashboard: React.FC = () => {
     const expiry = new Date(expiryDate);
     expiry.setHours(23, 59, 59, 999);
     
-    const newCode = await generateAccessCode(selectedTest, THERAPIST_ID, expiry);
+    // therapistId is no longer passed. Server associates it via token.
+    const newCode = await generateAccessCode(selectedTest, expiry);
     setActiveCodes(prev => [...prev, newCode]);
   };
 
@@ -87,6 +90,7 @@ const TherapistDashboard: React.FC = () => {
   const confirmDeleteResult = async (resultId: string) => {
     try {
         await deleteResult(resultId);
+        // Reload all data to reflect the change
         await loadData();
     } catch {
         setError("Nie udało się usunąć wyniku.");

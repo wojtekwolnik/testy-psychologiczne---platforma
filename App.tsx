@@ -1,11 +1,8 @@
+
 import React, { Suspense, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet, useNavigate } from 'react-router-dom';
-
-// --- Import Contexts & Auth ---
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { UserRole, Notification } from './components/types';
-
-// --- Import Static Components (essential for initial layout) ---
 import SideNav from './components/common/SideNav';
 import ToastContainer from './components/common/ToastContainer';
 import BrandingStyles from './components/BrandingStyles';
@@ -16,9 +13,7 @@ const ClientCodeEntry = React.lazy(() => import('./components/ClientCodeEntry'))
 const StaffLoginPage = React.lazy(() => import('./components/StaffLoginPage').then(module => ({ default: module.StaffLoginPage })) );
 const AdminDashboard = React.lazy(() => import('./components/AdminDashboard'));
 const TherapistDashboard = React.lazy(() => import('./components/TherapistDashboard'));
-// Corrected import for the DEFAULT export
 const ClientTestView = React.lazy(() => import('./components/ClientTestView')); 
-// Correct import for the NAMED export
 const ClientThankYou = React.lazy(() => import('./components/ClientTestView').then(module => ({ default: module.ClientThankYou })) );
 const ClientTestConfirmationPage = React.lazy(() => import('./components/ClientTestConfirmationPage'));
 const ReportView = React.lazy(() => import('./components/ReportView'));
@@ -110,6 +105,7 @@ const ProtectedRoute = ({ roles }: ProtectedRouteProps) => {
   if (isLoading) return <LoadingFallback />;
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
   if (!roles.includes(user.role)) {
+    // Redirect based on user's actual role
     const defaultPath = user.role === UserRole.Admin ? '/admin/dashboard' : '/therapist/dashboard';
     return <Navigate to={defaultPath} replace />;
   }
@@ -121,13 +117,15 @@ const AppRouter = () => (
     <Routes>
       <Route path="/setup" element={<SetupWizard />} />
       <Route element={<SetupChecker />}>
+        {/* Public Routes */}
         <Route path="/" element={<ClientCodeEntry />} />
         <Route path="/start-test" element={<ClientTestConfirmationPage />} />
         <Route path="/test/:testId/:clientCode" element={<ClientTestView />} />
         <Route path="/thank-you" element={<ClientThankYou />} />
         <Route path="/login" element={<StaffLoginPage />} />
-        <Route path="/2fa" element={<TwoFactorAuthPage onVerify={() => {}} onBack={() => {}} />} />
+        <Route path="/2fa" element={<TwoFactorAuthPage />} />
 
+        {/* Authenticated Staff Routes */}
         <Route element={<StaffLayout />}>
           <Route element={<ProtectedRoute roles={[UserRole.Admin]} />}>
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
@@ -172,7 +170,7 @@ const App = () => (
                 <AppRouter />
             </Suspense>
         </div>
-    </AuthProvider>
+   </AuthProvider>
   </BrowserRouter>
 );
 

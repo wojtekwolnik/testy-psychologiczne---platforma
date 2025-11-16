@@ -4,25 +4,38 @@ Ta aplikacja to kompleksowa platforma do przeprowadzania i zarządzania testami 
 
 ---
 
-## Koncepcja Architektury Konfiguracji
+## Architektura i Model Bezpieczeństwa
 
-Ta aplikacja została zaprojektowana z myślą o maksymalnym bezpieczeństwie i elastyczności konfiguracji. Kluczowym założeniem jest **separacja kodu od konfiguracji**, zwłaszcza w przypadku danych wrażliwych (sekrety, klucze API, hasła).
+Platforma została zaprojektowana z myślą o maksymalnym bezpieczeństwie i rozdziale danych. Zrozumienie poniższych koncepcji jest kluczowe do poprawnego wdrożenia i zarządzania systemem.
 
-**Wszystkie dane konfiguracyjne serwera są zarządzane za pomocą zmiennych środowiskowych i pliku `.env`.**
+### Plik `.env` i Zmienne Środowiskowe
 
-Panel administracyjny aplikacji (front-end) dostarcza jedynie **bezpiecznych interfejsów** do modyfikacji tych zmiennych, autoryzowanych za pomocą jednorazowego `SETUP_KEY`. Gwarantuje to, że zmiany mogą być wprowadzane tylko przez osobę z dostępem do środowiska serwerowego, ale w wygodny sposób, bez konieczności każdorazowego logowania się do terminala serwera.
+Konfiguracja serwera (backendu) jest w całości zarządzana przez plik `.env` umieszczony w głównym katalogu aplikacji. **Plik ten nigdy nie może być udostępniany ani dodawany do systemu kontroli wersji (np. Git).** Zawiera on klucze niezbędne do działania aplikacji.
+
+Plik `.gitignore` jest już skonfigurowany, aby go ignorować.
+
+### Klucze Bezpieczeństwa
+
+System opiera się na dwóch fundamentalnych kluczach, które musisz zdefiniować w pliku `.env`:
+
+*   `SETUP_KEY`: Jednorazowy "klucz główny" używany wyłącznie do autoryzacji operacji najwyższego ryzyka, takich jak pierwsza konfiguracja systemu. Jest to Twoja gwarancja, że tylko osoba z dostępem do serwera może wykonać te krytyczne czynności.
+*   `JWT_SECRET`: Długi, losowy sekret używany do cyfrowego podpisywania "kart dostępu" (tokenów JWT) dla każdego zalogowanego użytkownika. To ten sekret gwarantuje, że serwer jest w stanie bezpiecznie weryfikować tożsamość użytkownika przy każdym zapytaniu.
+
+> ### Czym jest i dlaczego potrzebuję Tokenu JWT?
+>
+> Wyobraź sobie, że **ID terapeuty** to Twój dowód osobisty, a **Token JWT** to karta magnetyczna do Twojego gabinetu.
+>
+> Sam dowód nie wystarczy, aby wejść do gabinetu – każdy mógłby podać Twoje imię. Potrzebujesz unikalnej, sekretnej karty, którą dostajesz w recepcji po okazaniu dowodu i podaniu hasła (w procesie logowania).
+>
+> Token JWT to właśnie taka cyfrowa karta. Serwer wydaje ją po poprawnym logowaniu, a przeglądarka okazuje ją przy każdej próbie dostępu do chronionych danych (np. listy wyników). Serwer, widząc ważny token, wie, że żądanie jest autentyczne i pochodzi od właściwej osoby, dzięki czemu może bezpiecznie odesłać **tylko te dane, do których dany terapeuta ma uprawnienia.**
 
 ---
 
-## Konfiguracja Serwera i Zmienne Środowiskowe (`.env`)
-
-Aplikacja back-endowa ładuje swoją konfigurację ze zmiennych środowiskowych. Najprostszym sposobem na zarządzanie nimi podczas dewelopmentu jest stworzenie pliku `.env` w głównym katalogu projektu.
-
-**Nigdy nie umieszczaj pliku `.env` w systemie kontroli wersji (Git)!** Plik `.gitignore` jest już skonfigurowany, aby go ignorować.
+## Konfiguracja i Pierwsze Uruchomienie
 
 ### Krok 1: Utwórz plik `.env`
 
-Skopiuj zawartość pliku `.env.example` (jeśli istnieje) lub utwórz nowy plik `.env` i uzupełnij go według poniższego wzoru:
+Skopiuj zawartość pliku `.env.example` (jeśli istnieje) lub utwórz nowy plik `.env` i uzupełnij go według poniższego wzoru. **Uzupełnij `DATABASE_URL` i `SETUP_KEY`. Pozostaw `JWT_SECRET` pusty.**
 
 ```env
 #====================================================================================
@@ -33,55 +46,41 @@ Skopiuj zawartość pliku `.env.example` (jeśli istnieje) lub utwórz nowy plik
 # Format: postgresql://[uzytkownik]:[haslo]@[host]:[port]/[nazwa-bazy]
 DATABASE_URL="postgresql://user:password@localhost:5432/mydatabase"
 
-# Długi, losowy i tajny klucz używany do podpisywania tokenów sesji (JWT).
-# Użyj generatora haseł (min. 32 znaki).
-JWT_SECRET="twoj-super-tajny-i-dlugi-klucz-do-podpisywania-tokenow"
-
-# Klucz używany do jednorazowej autoryzacji operacji wysokiego ryzyka,
-# takich jak pierwsza konfiguracja i późniejsza zmiana kluczy API/SMTP.
-# Użyj generatora haseł.
+# Klucz używany do jednorazowej autoryzacji operacji wysokiego ryzyka.
+# Użyj generatora haseł lub wpisz długą, trudną do odgadnięcia frazę.
 SETUP_KEY="unikalny-i-trudny-do-zgadniecia-klucz-konfiguracyjny"
+
+# Sekret do podpisywania tokenów JWT. Musi być długi i losowy.
+# Zostanie automatycznie wygenerowany i zapisany przez Kreator Konfiguracji.
+JWT_SECRET=""
 
 #====================================================================================
 # KONFIGURACJA USŁUG ZEWNĘTRZNYCH (opcjonalne, zarządzane z panelu admina)
 #====================================================================================
 
-# --- Ustawienia serwera pocztowego SMTP (do wysyłania powiadomień) ---
-# Te pola są celowo pozostawione puste. Można je uzupełnić podczas pierwszej
-# konfiguracji w interfejsie webowym lub później w panelu Zarządzania Konfiguracją Serwera.
+# Pola dla SMTP i AI są celowo pozostawione puste. 
+# Zostaną uzupełnione przez Kreator Konfiguracji lub później w panelu admina.
 SMTP_HOST=""
 SMTP_PORT=""
 SMTP_USER=""
-SMTP_PASS="" # To hasło zostanie zapisane tutaj po konfiguracji w UI
-SMTP_SECURE="false" # Zmieni się na "true", jeśli zaznaczysz SSL/TLS
+SMTP_PASS=""
+SMTP_SECURE="false"
 
-# --- Ustawienia Asystenta AI (do generowania sugestii) ---
-# Te pola również są zarządzane z poziomu panelu administracyjnego.
-AI_PROVIDER="gemini" # Domyślny dostawca, może być zmieniony w UI
-GEMINI_API_KEY="" # Klucz API zostanie zapisany tutaj po konfiguracji w UI
-AI_MODEL="gemini-1.5-flash" # Domyślny model, może być zmieniony w UI
-
+AI_PROVIDER="gemini"
+GEMINI_API_KEY=""
+AI_MODEL="gemini-1.5-flash"
 ```
 
-### Krok 2: Pierwsza Konfiguracja Aplikacji
+### Krok 2: Uruchom Kreator Konfiguracji
 
-Po ustawieniu zmiennych krytycznych (`DATABASE_URL`, `JWT_SECRET`, `SETUP_KEY`) w pliku `.env` i uruchomieniu aplikacji, przejdź do przeglądarki.
+Po ustawieniu zmiennych w pliku `.env` i uruchomieniu aplikacji, przejdź do niej w przeglądarce.
 
 1.  Zostaniesz automatycznie przekierowany do **Kreatora Konfiguracji** (`/setup`).
-2.  W formularzu:
-    *   Utwórz konto **głównego administratora**.
-    *   Wklej swój `SETUP_KEY` z pliku `.env`, aby autoryzować operację.
-    *   **(Opcjonalnie)** Od razu skonfiguruj działanie **usługi e-mail (SMTP)** oraz **Asystenta AI**, podając odpowiednie dane (host, port, hasła, klucze API). Te dane zostaną bezpiecznie zapisane w Twoim pliku `.env` na serwerze.
-3.  Po zakończeniu, aplikacja jest gotowa do pracy.
-
-### Krok 3: Zarządzanie Konfiguracją w Przyszłości
-
-Jeśli w przyszłości będziesz potrzebować zmienić klucz API do AI lub hasło do serwera SMTP:
-
-1.  Zaloguj się na swoje konto administratora.
-2.  Przejdź do ustawień "AI" lub "E-mail" i kliknij przycisk **"Zarządzaj Konfiguracją Serwera"**.
-3.  Zostaniesz poproszony o **ponowne podanie `SETUP_KEY`**, aby potwierdzić, że masz uprawnienia do tak istotnej zmiany.
-4.  Po autoryzacji, będziesz mógł wprowadzić nowe wartości, które zaktualizują odpowiednie pola w pliku `.env` na serwerze.
+2.  W formularzu postępuj zgodnie z krokami:
+    *   **Klucze Bezpieczeństwa**: Wklej swój `SETUP_KEY` z pliku `.env`. Następnie, **użyj przycisku "Generuj"**, aby stworzyć bezpieczny `JWT_SECRET`. Zostanie on automatycznie zapisany w pliku `.env` na serwerze.
+    *   **Konto Administratora**: Utwórz pierwsze konto, które będzie służyło do zarządzania całym systemem.
+    *   **(Opcjonalnie)** Skonfiguruj od razu działanie **usługi e-mail (SMTP)** oraz **Asystenta AI**.
+3.  Po kliknięciu "Zakończ i Zapisz", aplikacja jest w pełni skonfigurowana i gotowa do pracy. Zostaniesz przekierowany do strony logowania.
 
 ---
 

@@ -1,43 +1,7 @@
 
-export enum UserRole {
-  Admin = 'ADMIN',
-  Therapist = 'THERAPIST',
-  Client = 'CLIENT',
-}
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  password?: string; 
-  role: UserRole.Admin | UserRole.Therapist;
-  twoFactorEnabled: boolean;
-}
-
-export enum View {
-  Login = 'LOGIN',
-  StaffLogin = 'STAFF_LOGIN',
-  TwoFactorAuth = 'TWO_FACTOR_AUTH',
-  AdminDashboard = 'ADMIN_DASHBOARD',
-  TestEditor = 'TEST_EDITOR',
-  UserManagement = 'USER_MANAGEMENT',
-  Branding = 'BRANDING',
-  AggregatedData = 'AGGREGATED_DATA',
-  TherapistDashboard = 'THERAPIST_DASHBOARD',
-  ReportView = 'REPORT_VIEW',
-  ClientCodeEntry = 'CLIENT_CODE_ENTRY',
-  ClientTest = 'CLIENT_TEST',
-  ClientThankYou = 'CLIENT_THANK_YOU',
-  TemplateManager = 'TEMPLATE_MANAGER',
-  TemplateEditor = 'TEMPLATE_EDITOR',
-  TestImporter = 'TEST_IMPORTER',
-  Documentation = 'DOCUMENTATION',
-  TherapistDocumentation = 'THERAPIST_DOCUMENTATION',
-  AiSettings = 'AI_SETTINGS',
-  HealthDashboard = 'HEALTH_DASHBOARD',
-  ClientTestConfirmation = 'CLIENT_TEST_CONFIRMATION',
-  EmailSettings = 'EMAIL_SETTINGS',
-}
+// =========================================================================
+// Test & Results Related Types
+// =========================================================================
 
 export interface AnswerOption {
   id: string;
@@ -49,215 +13,106 @@ export interface ScoringRule {
   points: number;
 }
 
-export type ScoringMap = Record<string, ScoringRule[]>;
-
 export interface Question {
-  id: string;
+  id:string;
   text: string;
   type: 'multiple-choice' | 'multiple-select' | 'likert-5';
   options: AnswerOption[];
-  scoring: ScoringMap;
+  scoring: Record<string, ScoringRule[]>; // Maps AnswerOption ID to an array of scoring rules
 }
 
 export interface Section {
-    id: string;
-    title: string;
-    questions: Question[];
+  id: string;
+  title: string;
+  questions: Question[];
 }
 
 export interface Scale {
+  type: 'standard' | 'calculated';
   id: string;
   name: string;
   description: string;
+  maxScore?: number; 
+  formula?: string;  
 }
 
 export interface Test {
-  id: string; 
+  id: string;
   canonicalId: string; 
   version: number;
-  createdAt: Date;
   title: string;
   description: string;
-  instructions: string; 
-  questionsPerPage: number | null; 
-  scales: Scale[];
+  instructions: string;
+  questionsPerPage: number | null;
   sections: Section[];
+  scales: Scale[];
   defaultTemplateId: string | null;
-}
-
-export interface ClientAnswer {
-  questionId: string;
-  selectedOptionId?: string; 
-  selectedOptionIds?: string[]; 
-}
-
-
-export interface CalculatedScaleScore {
-  scaleId: string;
-  scaleName: string;
-  score: number;
-  maxScore: number;
+  createdAt: string;
 }
 
 export interface TestResult {
-  id:string;
-  testId: string; 
-  testVersion: number;
+  id: string;
+  testId: string;
   testTitle: string;
-  clientIdentifier: string; 
-  completedAt: Date;
-  answers: ClientAnswer[];
-  scores: CalculatedScaleScore[];
-  therapistId: string; 
-}
-
-export interface AiSettings {
-    enabled: boolean;
-    provider: 'gemini' | 'chatgpt';
-    apiKey: string;
-    endpoint: string; 
-    model: string;
-    systemPrompt: string;
-}
-
-export interface SmtpSettings {
-    host: string;
-    port: number;
-    secure: boolean;
-    username: string;
-    password?: string;
-}
-
-export interface EmailSettings {
-    smtp: SmtpSettings;
-    fromName: string;
-    fromEmail: string;
-    therapistNotificationSubject: string;
-    therapistNotificationBody: string;
-}
-
-export interface BrandingSettings {
-  appName: string;
-  logoUrl: string | null;
-  // New Visual Properties
-  fontFamily: string;
-  borderRadius: number; // in rem units
-  boxShadow: string;
-
-  // Colors
-  primaryColor: string;
-  secondaryColor: string;
-  accentColor: string;
-  backgroundColor: string;
-  textColor: string;
-  
-  // Detailed Colors
-  borderColor: string;
-  inputBackgroundColor: string;
-  inputTextColor: string;
-  errorColor: string;
-  warningColor: string;
-  successColor: string;
-
-  adminColor: string;
-  adminBackgroundColor: string;
-  therapistColor: string;
-  therapistBackgroundColor: string;
-  
-  chartColors: string[];
-
-  // Client Page Texts
-  clientPageTitle: string;
-  clientPageDescription: string;
-  clientPageButtonText: string;
-
-  // Client Thank You Page Texts
-  clientThankYouTitle: string;
-  clientThankYouMessage: string;
-  clientThankYouButtonText: string;
-  
-  // Client Confirmation Page Texts
-  clientConfirmationTitle: string;
-  clientConfirmationMessage: string;
-  clientConfirmationButtonText: string;
-
-  aiSettings: AiSettings;
-  emailSettings: EmailSettings;
+  testVersion: number;
+  therapistId: string; // ID of the therapist who owns this result
+  clientIdentifier: string;
+  completedAt: string;
+  scores: { [scaleId: string]: number };
+  answers: { [questionId: string]: string | string[] };
 }
 
 export interface AccessCode {
-    code: string;
-    testId: string; 
-    isUsed: boolean;
-    generatedBy: string; 
-    createdAt: Date;
-    expiresAt: Date;
+  code: string;
+  testId: string;
+  therapistId: string;
+  isUsed: boolean;
+  expiresAt: string;
 }
 
-export interface AggregatedTestInfo {
-    testId: string;
-    testTitle: string;
-    version: number;
-    completionCount: number;
-}
 
-export interface DetailedAggregatedData {
-    testId: string;
-    testTitle: string;
-    completionCount: number;
-    scales: Scale[];
-    scoreDistribution: Record<string, { bin: string; count: number }[]>;
-    answerFrequency: Record<string, { name: string; value: number }[]>;
-}
+// =========================================================================
+// PDF Template Related Types
+// =========================================================================
+
+export type ReportComponent = {
+  id: string; 
+  type: 'Header' | 'ScoresTable' | 'BarChart' | 'RadarChart' | 'RichText';
+  title?: string; 
+  options: { [key: string]: any };
+};
 
 export interface PdfTemplate {
-    id: string;
-    name: string;
-    includeBarChart: boolean;
-    includePieChart: boolean;
-    includeDetailedAnswers: boolean;
-    includeHeader: boolean;
-    includeClientInfo: boolean;
-    includeScoresTable: boolean;
-    customHeaderText: string;
+  id: string;
+  name: string;
+  testCanonicalId: string; 
+  components: ReportComponent[];
 }
 
-export interface ScaleReliability {
-    scaleId: string;
-    scaleName:string;
-    cronbachsAlpha: number | null; 
+
+// =========================================================================
+// User & Auth Related Types
+// =========================================================================
+
+export enum UserRole {
+  Admin = 'admin',
+  Therapist = 'therapist',
 }
 
-export interface QuestionDiscrimination {
-    questionId: string;
-    questionText: string;
-    discriminationIndex: number | null; 
-    difficultyIndex: number | null; 
-    scaleId: string; 
+export interface User {
+  id: string;
+  username: string;
+  role: UserRole;
+  createdAt: string;
+  email: string; // Add email to User type
 }
 
-export interface PsychometricData {
-    testId: string;
-    completionCount: number;
-    scaleReliability: ScaleReliability[];
-    questionDiscrimination: QuestionDiscrimination[];
-}
-
-export interface SystemCheckResult {
-  module: string;
-  status: 'OK' | 'FAIL' | 'DEGRADED';
-  message: string;
-  details?: string;
-}
+// =========================================================================
+// UI & General Application Types
+// =========================================================================
 
 export interface Notification {
   id: string;
-  userId: string;
   message: string;
-  createdAt: Date;
-  isRead: boolean;
-  context?: {
-    view: View;
-    params: any; 
-  };
+  type: 'success' | 'error' | 'info';
 }
