@@ -28,7 +28,7 @@ export const generateAccessCode = async () => ({ code: 'MOCKCODE' });
 export const fetchActiveCodes = async () => [];
 export const deleteResult = async () => ({});
 export const checkTestStatus = async () => ({ status: 'new' });
-export const fetchTestById = async () => null;
+export const fetchTestById = async (testId: string) => null;
 export const submitTest = async () => ({});
 export const fetchResultById = async () => null;
 export const fetchPdfTemplates = async () => [];

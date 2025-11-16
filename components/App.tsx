@@ -25,6 +25,7 @@ import ConfirmModal from './components/common/ConfirmModal';
 import ActionConfirmModal from './components/common/ActionConfirmModal';
 import ToastContainer from './components/common/ToastContainer';
 import EmailSettingsPage from './components/EmailSettingsPage';
+import ServerConfigPage from './components/ServerConfigPage';
 import { UserRole, View, User, Notification } from './components/types';
 import { authenticateUser, fetchNotifications } from './services/apiClient';
 
@@ -33,33 +34,26 @@ const App: React.FC = () => {
   const [context, setContext] = useState<any>({});
   const [loggedInUser, setLoggedInUser] = useState<User | null>({ id: 'user-1', name: 'Jan Kowalski', email: 'admin@example.com', role: UserRole.Admin, twoFactorEnabled: true });
   
-  // State for unsaved changes confirmation
   const [isDirty, setIsDirty] = useState(false);
   const [saveAction, setSaveAction] = useState<{ handler: () => Promise<any> } | null>(null);
   const [navigationTarget, setNavigationTarget] = useState<{ view: View, context?: any } | null>(null);
   
-  // State for logout confirmation
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  
-  // State for notifications
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
-    // Fetch notifications if a therapist is logged in
     if (loggedInUser?.role === UserRole.Therapist) {
         const loadNotifications = async () => {
             const fetchedNotifications = await fetchNotifications(loggedInUser.id);
             setNotifications(fetchedNotifications);
         };
         loadNotifications();
-        // Optional: set up polling for new notifications
-        const interval = setInterval(loadNotifications, 30000); // Poll every 30 seconds
+        const interval = setInterval(loadNotifications, 30000);
         return () => clearInterval(interval);
     } else {
-        setNotifications([]); // Clear notifications for admin or logged out users
+        setNotifications([]);
     }
   }, [loggedInUser]);
-
 
   const handleStaffLogin = async (email: string, password: string): Promise<string | null> => {
     const user = await authenticateUser(email, password);
@@ -69,7 +63,6 @@ const App: React.FC = () => {
             setCurrentView(View.TwoFactorAuth);
             return null;
         } else {
-            // Log in directly if 2FA is not enabled
             setLoggedInUser(user);
             setCurrentView(user.role === UserRole.Admin ? View.AdminDashboard : View.TherapistDashboard);
             return null;
@@ -89,7 +82,7 @@ const App: React.FC = () => {
   };
   
   const performNavigation = useCallback((view: View, newContext: any = {}) => {
-    setIsDirty(false); // Reset dirty state on navigation
+    setIsDirty(false);
     setSaveAction(null);
     setCurrentView(view);
     setContext(newContext);
@@ -120,12 +113,10 @@ const App: React.FC = () => {
   const onConfirmSave = async () => {
     if (saveAction && navigationTarget) {
       const success = await saveAction.handler();
-      // Only navigate if save was successful (e.g. passed validation)
       if (success) {
         performNavigation(navigationTarget.view, navigationTarget.context);
         setNavigationTarget(null);
       } else {
-        // If save failed (e.g. validation), just close the modal
         setNavigationTarget(null);
       }
     }
@@ -152,9 +143,9 @@ const App: React.FC = () => {
     switch (currentView) {
       case View.ClientCodeEntry: return <LoginPage onNavigate={handleNavigate} />;
       case View.StaffLogin: return <StaffLoginPage onLogin={handleStaffLogin} onNavigate={handleNavigate} />;
-      case View.TwoFactorAuth: return <TwoFactorAuthPage onVerify={handle2FASuccess} onBack={() => handleNavigate(View.ClientCodeEntry)} />;
+      // ZMIANA: Przekazujemy `userToAuth` do komponentu
+      case View.TwoFactorAuth: return <TwoFactorAuthPage userToAuth={context.userToAuth} onVerify={handle2FASuccess} onBack={() => handleNavigate(View.ClientCodeEntry)} />;
       
-      // Staff views are rendered inside the layout
       case View.AdminDashboard: return <AdminDashboard onNavigate={handleNavigate} />;
       case View.TestEditor: return <TestEditor testId={context.testId} importedTest={context.importedTest} {...editorProps} />;
       case View.UserManagement: return <UserManagement onNavigate={handleNavigate} />;
@@ -167,11 +158,12 @@ const App: React.FC = () => {
       case View.AiSettings: return <AiSettingsPage {...editorProps} />;
       case View.EmailSettings: return <EmailSettingsPage {...editorProps} />;
       case View.HealthDashboard: return <HealthDashboardPage />;
+      case View.ServerConfig: return <ServerConfigPage {...editorProps} />;
+      
       case View.TherapistDashboard: return <TherapistDashboard onNavigate={handleNavigate} />;
       case View.ReportView: return <ReportView resultId={context.resultId} />;
       case View.TherapistDocumentation: return <TherapistDocumentationPage />;
       
-      // Client views
       case View.ClientTestConfirmation: return <ClientTestConfirmationPage testId={context.testId} clientCode={context.clientCode} onNavigate={handleNavigate} />;
       case View.ClientTest: return <ClientTestView testId={context.testId} clientCode={context.clientCode} onNavigate={handleNavigate} />;
       case View.ClientThankYou: return <ClientThankYou onNavigate={handleNavigate}/>;
@@ -180,8 +172,10 @@ const App: React.FC = () => {
   };
   
   const isStaffView = loggedInUser && [
-      View.AdminDashboard, View.TestEditor, View.UserManagement, View.Branding, View.AggregatedData, View.TemplateManager, View.TemplateEditor, View.TestImporter,
-      View.TherapistDashboard, View.ReportView, View.Documentation, View.TherapistDocumentation, View.AiSettings, View.HealthDashboard, View.EmailSettings
+      View.AdminDashboard, View.TestEditor, View.UserManagement, View.Branding, View.AggregatedData, 
+      View.TemplateManager, View.TemplateEditor, View.TestImporter, View.Documentation, View.AiSettings, 
+      View.HealthDashboard, View.EmailSettings, View.ServerConfig,
+      View.TherapistDashboard, View.ReportView, View.TherapistDocumentation
   ].includes(currentView);
 
   return (

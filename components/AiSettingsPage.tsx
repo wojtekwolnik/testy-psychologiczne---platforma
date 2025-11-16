@@ -1,20 +1,24 @@
+
 import React, { useContext, useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { BrandingContext } from '../contexts/BrandingContext';
 import { type AiSettings } from './types';
-import { type StaffLayoutContext } from '../App';
+import { type StaffLayoutContext, View } from '../App'; // ZMIANA: Import View
 import { useToast } from '../contexts/ToastContext';
+import { SparklesIcon, CogIcon } from './common/Icons'; // ZMIANA: Import CogIcon
 
 const AiSettingsPage = () => {
   const { onNavigate, setIsDirty, setSaveAction } = useOutletContext<StaffLayoutContext>();
   const { branding, setBranding } = useContext(BrandingContext);
-  const [localSettings, setLocalSettings] = useState<AiSettings>(branding.aiSettings);
+
+  const [localSettings, setLocalSettings] = useState<Omit<AiSettings, 'apiKey'>>(branding.aiSettings);
   const [isSaving, setIsSaving] = useState(false);
   const [initialState, setInitialState] = useState('');
   const { showToast } = useToast();
 
   useEffect(() => {
-    const stringState = JSON.stringify(branding.aiSettings);
+    const { apiKey, ...rest } = branding.aiSettings;
+    const stringState = JSON.stringify(rest);
     setInitialState(stringState);
     setLocalSettings(JSON.parse(stringState));
   }, [branding.aiSettings]);
@@ -25,8 +29,7 @@ const AiSettingsPage = () => {
 
   const handleSave = useCallback(async () => {
       setIsSaving(true);
-      setBranding({ ...branding, aiSettings: localSettings });
-      // Simulate API call
+      setBranding({ ...branding, aiSettings: { ...branding.aiSettings, ...localSettings } });
       await new Promise(resolve => setTimeout(resolve, 300)); 
       setInitialState(JSON.stringify(localSettings));
       setIsSaving(false);
@@ -40,7 +43,7 @@ const AiSettingsPage = () => {
     return () => setSaveAction(null);
   }, [handleSave, setSaveAction]);
 
-  const handleChange = (field: keyof AiSettings, value: any) => {
+  const handleChange = (field: keyof Omit<AiSettings, 'apiKey'>, value: any) => {
     setLocalSettings(prev => ({...prev, [field]: value}));
   };
 
@@ -50,7 +53,6 @@ const AiSettingsPage = () => {
       <p className="opacity-80 mb-8">Skonfiguruj integrację z zewnętrznymi modelami językowymi, aby włączyć funkcję sugestii interpretacji dla terapeutów.</p>
 
       <div className="bg-[var(--secondary-color)] p-8 rounded-xl shadow-lg space-y-8">
-        {/* Enable/Disable Toggle */}
         <div className="flex items-center justify-between p-4 border rounded-lg">
             <div>
                 <h2 className="text-xl font-semibold">Asystent Interpretacji AI</h2>
@@ -62,7 +64,6 @@ const AiSettingsPage = () => {
             </label>
         </div>
 
-        {/* Configuration Form (shown only if enabled) */}
         {localSettings.enabled && (
             <div className="space-y-6 pt-6 border-t border-[var(--border-color)]">
                  <div>
@@ -72,26 +73,34 @@ const AiSettingsPage = () => {
                         <option value="chatgpt">OpenAI ChatGPT (Symulacja)</option>
                     </select>
                 </div>
-                 <div>
-                    <label className="block text-lg font-semibold mb-2">Klucz API</label>
-                    <input
-                        type="password"
-                        placeholder="Wprowadź swój klucz API"
-                        value={localSettings.apiKey}
-                        onChange={(e) => handleChange('apiKey', e.target.value)}
-                        className="w-full p-3 border-2 border-[var(--border-color)] rounded-lg text-[var(--input-text-color)] bg-[var(--input-background-color)] font-mono"
-                    />
+                
+                {/* === ZMIANA: ZASTĄPIONO BLOKIEM PROWADZĄCYM DO NOWEJ STRONY === */}
+                <div>
+                    <label className="block text-lg font-semibold mb-2">Konfiguracja Klucza API</label>
+                    <div className="p-4 bg-slate-100 rounded-lg border-2 border-slate-200 space-y-3">
+                        <p className="text-sm text-slate-800">Klucz API jest konfigurowany na serwerze. Aby go zmienić, przejdź do dedykowanej strony zarządzania konfiguracją serwera.</p>
+                        <button
+                            type="button"
+                            onClick={() => onNavigate(View.ServerConfig)}
+                            className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-sm hover:bg-indigo-700 transition-colors"
+                        >
+                            <CogIcon />
+                            Zarządzaj Konfiguracją Serwera
+                        </button>
+                    </div>
                 </div>
+                {/* === KONIEC ZMIANY === */}
+
                  <div>
                     <label className="block text-lg font-semibold mb-2">Model</label>
                     <input
                         type="text"
-                        placeholder="np. gemini-2.5-flash"
+                        placeholder="np. gemini-1.5-flash"
                         value={localSettings.model}
                         onChange={(e) => handleChange('model', e.target.value)}
                         className="w-full p-3 border-2 border-[var(--border-color)] rounded-lg text-[var(--input-text-color)] bg-[var(--input-background-color)]"
                     />
-                    <p className="text-xs opacity-60 mt-1">Podaj dokładną nazwę modelu, którego chcesz użyć (np. `gemini-2.5-flash` lub `gpt-4o`).</p>
+                    <p className="text-xs opacity-60 mt-1">Podaj dokładną nazwę modelu, którego chcesz użyć (np. `gemini-1.5-flash` lub `gpt-4o`).</p>
                 </div>
                  <div>
                     <label className="block text-lg font-semibold mb-2">Prompt Systemowy</label>
@@ -112,7 +121,7 @@ const AiSettingsPage = () => {
       </div>
 
        <div className="flex justify-end gap-4 mt-8">
-        <button onClick={() => onNavigate('/admin/dashboard')} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg">Anuluj</button>
+        <button onClick={() => onNavigate(View.AdminDashboard)} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg">Anuluj</button>
         <button onClick={handleSave} disabled={isSaving} className="px-6 py-2 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold rounded-lg disabled:bg-slate-400">
             {isSaving ? 'Zapisywanie...' : 'Zapisz ustawienia AI'}
         </button>

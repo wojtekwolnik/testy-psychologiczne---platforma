@@ -112,40 +112,42 @@ const TestEditor: React.FC = () => {
     loadInitialData();
   }, [testId, importedTest]);
   
-  const validateTest = () => {
-      for (const [sIndex, section] of test.sections.entries()) {
-          for (const [qIndex, question] of section.questions.entries()) {
-              for (const [optionId, rules] of Object.entries(question.scoring)) {
-                  for (const [rIndex, rule] of (rules as ScoringRule[]).entries()) {
-                      if (!rule.scaleId || rule.points === undefined || rule.points === null) {
-                         const option = question.options.find(o => o.id === optionId);
-                         const optionText = option ? `"${option.text.replace(/<[^>]*>?/gm, '')}"` : `ID: ${optionId}`;
-                         setValidationError(`Błąd walidacji: W Sekcji ${sIndex + 1}, Pytaniu ${qIndex + 1}, przy odpowiedzi ${optionText}, reguła punktacji #${rIndex + 1} jest niekompletna. Upewnij się, że wybrano skalę i wpisano punkty.`);
-                         return false;
-                      }
-                  }
-              }
-          }
-      }
-      setValidationError(null);
-      return true;
-  }
+  const validateTest = useCallback(() => {
+    for (const [sIndex, section] of test.sections.entries()) {
+        for (const [qIndex, question] of section.questions.entries()) {
+            for (const [optionId, rules] of Object.entries(question.scoring)) {
+                for (const [rIndex, rule] of (rules as ScoringRule[]).entries()) {
+                    if (!rule.scaleId || rule.points === undefined || rule.points === null) {
+                       const option = question.options.find(o => o.id === optionId);
+                       const optionText = option ? `"${option.text.replace(/<[^>]*>?/gm, '')}"` : `ID: ${optionId}`;
+                       setValidationError(`Błąd walidacji: W Sekcji ${sIndex + 1}, Pytaniu ${qIndex + 1}, przy odpowiedzi ${optionText}, reguła punktacji #${rIndex + 1} jest niekompletna. Upewnij się, że wybrano skalę i wpisano punkty.`);
+                       return false;
+                    }
+                }
+            }
+        }
+    }
+    setValidationError(null);
+    return true;
+  }, [test]);
 
   const handleSave = useCallback(async (asNewVersion: boolean) => {
     if (!validateTest()) {
         return false;
     }
     setIsSaving(true);
-    // Use a function to get the most recent state value
-    setTest(currentTest => {
-        saveTest(currentTest, asNewVersion).then(savedTest => {
-            setTest(savedTest);
-            setIsSaving(false);
-        });
-        return currentTest; // No immediate state change
-    });
-    return true;
-  }, []);
+    try {
+        const savedTest = await saveTest(test, asNewVersion);
+        setTest(savedTest);
+        return true;
+    } catch (error) {
+        console.error("Failed to save test:", error);
+        setValidationError("Nie udało się zapisać testu. Spróbuj ponownie.");
+        return false;
+    } finally {
+        setIsSaving(false);
+    }
+  }, [test, validateTest]);
 
   const handleSaveAndExit = useCallback(async (asNewVersion: boolean) => {
       const success = await handleSave(asNewVersion);
@@ -231,19 +233,29 @@ const TestEditor: React.FC = () => {
   
   const updateQuestion = (sIndex: number, qIndex: number, field: keyof Question, value: any) => {
     setTest(prev => {
-        const newSections = JSON.parse(JSON.stringify(prev.sections));
-        const question = newSections[sIndex].questions[qIndex];
-        question[field] = value;
+        const newSections = prev.sections.map((section, currentSIndex) => {
+            if (currentSIndex !== sIndex) return section;
 
-        if (field === 'type' && value === 'likert-5') {
-            question.options = [
-                { id: generateUniqueId('o'), text: 'Zdecydowanie się nie zgadzam' },
-                { id: generateUniqueId('o'), text: 'Nie zgadzam się' },
-                { id: generateUniqueId('o'), text: 'Ani tak, ani nie' },
-                { id: generateUniqueId('o'), text: 'Zgadzam się' },
-                { id: generateUniqueId('o'), text: 'Zdecydowanie się zgadzam' },
-            ];
-        }
+            const newQuestions = section.questions.map((question, currentQIndex) => {
+                if (currentQIndex !== qIndex) return question;
+
+                const updatedQuestion = { ...question, [field]: value };
+
+                if (field === 'type' && value === 'likert-5') {
+                    updatedQuestion.options = [
+                        { id: generateUniqueId('o'), text: 'Zdecydowanie się nie zgadzam' },
+                        { id: generateUniqueId('o'), text: 'Nie zgadzam się' },
+                        { id: generateUniqueId('o'), text: 'Ani tak, ani nie' },
+                        { id: generateUniqueId('o'), text: 'Zgadzam się' },
+                        { id: generateUniqueId('o'), text: 'Zdecydowanie się zgadzam' },
+                    ];
+                }
+                return updatedQuestion;
+            });
+
+            return { ...section, questions: newQuestions };
+        });
+
         return { ...prev, sections: newSections };
     });
   };
@@ -305,11 +317,23 @@ const TestEditor: React.FC = () => {
   };
 
   const removeOption = (sIndex: number, qIndex: number, optionId: string) => {
-    setTest(prev => {
-        const newSections = JSON.parse(JSON.stringify(prev.sections));
-        const question = newSections[sIndex].questions[qIndex];
-        question.options = question.options.filter((o: AnswerOption) => o.id !== optionId);
-        delete question.scoring[optionId];
+      setTest(prev => {
+        const newSections = prev.sections.map((section, currentSIndex) => {
+            if (currentSIndex !== sIndex) return section;
+
+            const newQuestions = section.questions.map((question, currentQIndex) => {
+                if (currentQIndex !== qIndex) return question;
+
+                const newOptions = question.options.filter(o => o.id !== optionId);
+                const newScoring = { ...question.scoring };
+                delete newScoring[optionId];
+
+                return { ...question, options: newOptions, scoring: newScoring };
+            });
+
+            return { ...section, questions: newQuestions };
+        });
+
         return { ...prev, sections: newSections };
     });
   };
@@ -317,27 +341,75 @@ const TestEditor: React.FC = () => {
   const addScoringRule = (sIndex: number, qIndex: number, optionId: string) => {
     const newRule: ScoringRule = { scaleId: test.scales[0]?.id || '', points: 0 };
     setTest(prev => {
-        const newSections = JSON.parse(JSON.stringify(prev.sections));
-        const question = newSections[sIndex].questions[qIndex];
-        question.scoring[optionId] = [...(question.scoring[optionId] || []), newRule];
+        const newSections = prev.sections.map((section, currentSIndex) => {
+            if (currentSIndex !== sIndex) return section;
+
+            const newQuestions = section.questions.map((question, currentQIndex) => {
+                if (currentQIndex !== qIndex) return question;
+
+                const newScoring = {
+                    ...question.scoring,
+                    [optionId]: [...(question.scoring[optionId] || []), newRule],
+                };
+
+                return { ...question, scoring: newScoring };
+            });
+
+            return { ...section, questions: newQuestions };
+        });
+
         return { ...prev, sections: newSections };
     });
   };
   
   const updateScoringRule = (sIndex: number, qIndex: number, optionId: string, ruleIndex: number, field: keyof ScoringRule, value: any) => {
     setTest(prev => {
-        const newSections = JSON.parse(JSON.stringify(prev.sections));
-        const rules = newSections[sIndex].questions[qIndex].scoring[optionId];
-        rules[ruleIndex] = { ...rules[ruleIndex], [field]: value };
+        const newSections = prev.sections.map((section, currentSIndex) => {
+            if (currentSIndex !== sIndex) return section;
+
+            const newQuestions = section.questions.map((question, currentQIndex) => {
+                if (currentQIndex !== qIndex) return question;
+
+                const newRules = (question.scoring[optionId] || []).map((rule, currentRuleIndex) => {
+                    if (currentRuleIndex !== ruleIndex) return rule;
+                    return { ...rule, [field]: value };
+                });
+
+                const newScoring = {
+                    ...question.scoring,
+                    [optionId]: newRules,
+                };
+
+                return { ...question, scoring: newScoring };
+            });
+
+            return { ...section, questions: newQuestions };
+        });
+
         return { ...prev, sections: newSections };
     });
   };
 
   const removeScoringRule = (sIndex: number, qIndex: number, optionId: string, ruleIndex: number) => {
     setTest(prev => {
-        const newSections = JSON.parse(JSON.stringify(prev.sections));
-        const rules = newSections[sIndex].questions[qIndex].scoring[optionId];
-        rules.splice(ruleIndex, 1);
+        const newSections = prev.sections.map((section, currentSIndex) => {
+            if (currentSIndex !== sIndex) return section;
+
+            const newQuestions = section.questions.map((question, currentQIndex) => {
+                if (currentQIndex !== qIndex) return question;
+
+                const newRules = (question.scoring[optionId] || []).filter((_, currentRuleIndex) => currentRuleIndex !== ruleIndex);
+                const newScoring = { ...question.scoring, [optionId]: newRules };
+                if (newRules.length === 0) {
+                    delete newScoring[optionId];
+                }
+
+                return { ...question, scoring: newScoring };
+            });
+
+            return { ...section, questions: newQuestions };
+        });
+
         return { ...prev, sections: newSections };
     });
   };
