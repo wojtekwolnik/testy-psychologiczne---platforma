@@ -5,12 +5,13 @@ import { fetchTestById, saveTest, fetchPdfTemplates } from '../services/apiClien
 import type { Test, Scale, Question, AnswerOption, ScoringRule, Section, PdfTemplate } from './types';
 import { PlusIcon, TrashIcon } from './common/Icons';
 import RichTextInput from './common/RichTextInput';
+import { generateUniqueId } from '../utils/idUtils';
 
 // This function remains the same, it's good as it is.
 const sanitizeImportedTest = (imported: Test): Test => {
     const scaleIdMap = new Map<string, string>();
     const sanitizedScales = imported.scales.map(s => {
-        const newId = `s-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        const newId = generateUniqueId('s');
         scaleIdMap.set(s.id, newId);
         return { ...s, id: newId };
     });
@@ -19,7 +20,7 @@ const sanitizeImportedTest = (imported: Test): Test => {
         const optionIdMap = new Map<string, string>();
         const sanitizedQuestions = sec.questions.map(q => {
             const sanitizedOptions = q.options.map(o => {
-                const newId = `o-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+                const newId = generateUniqueId('o');
                 optionIdMap.set(o.id, newId);
                 return { ...o, id: newId };
             });
@@ -38,7 +39,7 @@ const sanitizeImportedTest = (imported: Test): Test => {
             }
             return {
                 ...q,
-                id: `q-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+                id: generateUniqueId('q'),
                 options: sanitizedOptions,
                 scoring: sanitizedScoring,
             };
@@ -46,7 +47,7 @@ const sanitizeImportedTest = (imported: Test): Test => {
 
         return {
             ...sec,
-            id: `sec-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            id: generateUniqueId('sec'),
             questions: sanitizedQuestions,
         };
     });
@@ -54,8 +55,8 @@ const sanitizeImportedTest = (imported: Test): Test => {
     // Treat as a brand new test
     return {
         ...imported,
-        id: `new-${Date.now()}`,
-        canonicalId: `tid-${Date.now()}`,
+        id: generateUniqueId('new'),
+        canonicalId: generateUniqueId('tid'),
         version: 1,
         scales: sanitizedScales,
         sections: sanitizedSections,
@@ -70,7 +71,7 @@ const TestEditor: React.FC = () => {
   const importedTest = location.state?.importedTest as Test | undefined;
 
   const [test, setTest] = useState<Test>({
-    id: `new-${Date.now()}`, canonicalId: `tid-${Date.now()}`, version: 1, title: '', description: '',
+    id: generateUniqueId('new'), canonicalId: generateUniqueId('tid'), version: 1, title: '', description: '',
     instructions: '', questionsPerPage: null, scales: [], sections: [], defaultTemplateId: null, createdAt: new Date(),
   });
   const [templates, setTemplates] = useState<PdfTemplate[]>([]);
@@ -96,11 +97,11 @@ const TestEditor: React.FC = () => {
           setTest(initialTest);
         } else {
             const newTest: Test = {
-              id: `new-${Date.now()}`, canonicalId: `tid-${Date.now()}`, version: 1, title: 'Nowy Test',
+              id: generateUniqueId('new'), canonicalId: generateUniqueId('tid'), version: 1, title: 'Nowy Test',
               description: '',
               instructions: 'Proszę odpowiedzieć na wszystkie pytania szczerze.',
               questionsPerPage: 5, scales: [],
-              sections: [{ id: `sec-${Date.now()}`, title: 'Sekcja 1', questions: [] }],
+              sections: [{ id: generateUniqueId('sec'), title: 'Sekcja 1', questions: [] }],
               defaultTemplateId: fetchedTemplates.length > 0 ? fetchedTemplates[0].id : null,
               createdAt: new Date(),
             };
@@ -135,11 +136,16 @@ const TestEditor: React.FC = () => {
         return false;
     }
     setIsSaving(true);
-    const savedTest = await saveTest(test, asNewVersion);
-    setTest(savedTest);
-    setIsSaving(false);
+    // Use a function to get the most recent state value
+    setTest(currentTest => {
+        saveTest(currentTest, asNewVersion).then(savedTest => {
+            setTest(savedTest);
+            setIsSaving(false);
+        });
+        return currentTest; // No immediate state change
+    });
     return true;
-  }, [test]);
+  }, []);
 
   const handleSaveAndExit = useCallback(async (asNewVersion: boolean) => {
       const success = await handleSave(asNewVersion);
@@ -152,16 +158,16 @@ const TestEditor: React.FC = () => {
     setTest(prev => ({ ...prev, [field]: value }));
   };
 
-  // --- Scale, Section, Question, Option, Scoring Management methods are unchanged ---
-    const addScale = () => {
-    const newScale: Scale = { id: `s-${Date.now()}`, name: '', description: '' };
+  const addScale = () => {
+    const newScale: Scale = { id: generateUniqueId('s'), name: '', description: '' };
     setTest(prev => ({ ...prev, scales: [...prev.scales, newScale] }));
   };
   
   const updateScale = (index: number, field: keyof Scale, value: string) => {
-    const newScales = [...test.scales];
-    newScales[index] = { ...newScales[index], [field]: value };
-    setTest(prev => ({ ...prev, scales: newScales }));
+      setTest(prev => ({
+        ...prev,
+        scales: prev.scales.map((s, i) => i === index ? { ...s, [field]: value } : s),
+      }));
   };
 
   const removeScale = (idToRemove: string) => {
@@ -185,105 +191,155 @@ const TestEditor: React.FC = () => {
     }));
   };
   
-  // --- Section Management ---
   const addSection = () => {
-      const newSection: Section = { id: `sec-${Date.now()}`, title: '', questions: [] };
+      const newSection: Section = { id: generateUniqueId('sec'), title: '', questions: [] };
       setTest(prev => ({ ...prev, sections: [...prev.sections, newSection] }));
   };
 
   const updateSectionTitle = (sIndex: number, title: string) => {
-      const newSections = [...test.sections];
-      newSections[sIndex].title = title;
-      setTest(prev => ({...prev, sections: newSections}));
+      setTest(prev => ({
+        ...prev,
+        sections: prev.sections.map((sec, i) => i === sIndex ? { ...sec, title } : sec)
+      }));
   };
   
   const removeSection = (sIndex: number) => {
-      const newSections = [...test.sections];
-      newSections.splice(sIndex, 1);
-      setTest(prev => ({ ...prev, sections: newSections}));
+      setTest(prev => ({
+        ...prev,
+        sections: prev.sections.filter((_, i) => i !== sIndex)
+      }));
   };
 
-
-  // --- Question Management ---
   const addQuestion = (sIndex: number) => {
     const newQuestion: Question = {
-      id: `q-${Date.now()}`,
+      id: generateUniqueId('q'),
       text: '',
       type: 'multiple-choice',
       options: [],
       scoring: {},
     };
-    const newSections = [...test.sections];
-    newSections[sIndex].questions.push(newQuestion);
-    setTest(prev => ({ ...prev, sections: newSections }));
+    setTest(prev => ({
+        ...prev,
+        sections: prev.sections.map((sec, i) => {
+            if (i === sIndex) {
+                return { ...sec, questions: [...sec.questions, newQuestion] };
+            }
+            return sec;
+        }),
+    }));
   };
   
   const updateQuestion = (sIndex: number, qIndex: number, field: keyof Question, value: any) => {
-    const newSections = [...test.sections];
-    (newSections[sIndex].questions[qIndex] as any)[field] = value;
-    
-    if (field === 'type' && value === 'likert-5') {
-        const likertOptions = [
-            { id: `o-${Date.now()}-1`, text: 'Zdecydowanie się nie zgadzam' },
-            { id: `o-${Date.now()}-2`, text: 'Nie zgadzam się' },
-            { id: `o-${Date.now()}-3`, text: 'Ani tak, ani nie' },
-            { id: `o-${Date.now()}-4`, text: 'Zgadzam się' },
-            { id: `o-${Date.now()}-5`, text: 'Zdecydowanie się zgadzam' },
-        ];
-        newSections[sIndex].questions[qIndex].options = likertOptions;
-    }
+    setTest(prev => {
+        const newSections = JSON.parse(JSON.stringify(prev.sections));
+        const question = newSections[sIndex].questions[qIndex];
+        question[field] = value;
 
-    setTest(prev => ({ ...prev, sections: newSections }));
+        if (field === 'type' && value === 'likert-5') {
+            question.options = [
+                { id: generateUniqueId('o'), text: 'Zdecydowanie się nie zgadzam' },
+                { id: generateUniqueId('o'), text: 'Nie zgadzam się' },
+                { id: generateUniqueId('o'), text: 'Ani tak, ani nie' },
+                { id: generateUniqueId('o'), text: 'Zgadzam się' },
+                { id: generateUniqueId('o'), text: 'Zdecydowanie się zgadzam' },
+            ];
+        }
+        return { ...prev, sections: newSections };
+    });
   };
   
   const removeQuestion = (sIndex: number, qIndex: number) => {
-    const newSections = [...test.sections];
-    newSections[sIndex].questions.splice(qIndex, 1);
-    setTest(prev => ({ ...prev, sections: newSections }));
+    setTest(prev => ({
+        ...prev,
+        sections: prev.sections.map((sec, i) => {
+            if (i === sIndex) {
+                return { ...sec, questions: sec.questions.filter((_, qi) => qi !== qIndex) };
+            }
+            return sec;
+        }),
+    }));
   };
 
-  // --- Option & Scoring Management ---
   const addOption = (sIndex: number, qIndex: number) => {
-    const newOption: AnswerOption = { id: `o-${Date.now()}`, text: '' };
-    const newSections = [...test.sections];
-    newSections[sIndex].questions[qIndex].options.push(newOption);
-    setTest(prev => ({ ...prev, sections: newSections }));
+    const newOption: AnswerOption = { id: generateUniqueId('o'), text: '' };
+    setTest(prev => ({
+        ...prev,
+        sections: prev.sections.map((sec, i) => {
+            if (i === sIndex) {
+                return {
+                    ...sec,
+                    questions: sec.questions.map((q, qi) => {
+                        if (qi === qIndex) {
+                            return { ...q, options: [...q.options, newOption] };
+                        }
+                        return q;
+                    })
+                };
+            }
+            return sec;
+        }),
+    }));
   };
 
   const updateOption = (sIndex: number, qIndex: number, oIndex: number, text: string) => {
-    const newSections = [...test.sections];
-    newSections[sIndex].questions[qIndex].options[oIndex].text = text;
-    setTest(prev => ({ ...prev, sections: newSections }));
+    setTest(prev => ({
+        ...prev,
+        sections: prev.sections.map((sec, i) => {
+            if (i === sIndex) {
+                return {
+                    ...sec,
+                    questions: sec.questions.map((q, qi) => {
+                        if (qi === qIndex) {
+                            return {
+                                ...q,
+                                options: q.options.map((opt, oi) => oi === oIndex ? { ...opt, text } : opt)
+                            };
+                        }
+                        return q;
+                    })
+                };
+            }
+            return sec;
+        }),
+    }));
   };
 
   const removeOption = (sIndex: number, qIndex: number, optionId: string) => {
-    const newSections = [...test.sections];
-    const question = newSections[sIndex].questions[qIndex];
-    question.options = question.options.filter(o => o.id !== optionId);
-    delete question.scoring[optionId];
-    setTest(prev => ({ ...prev, sections: newSections }));
+    setTest(prev => {
+        const newSections = JSON.parse(JSON.stringify(prev.sections));
+        const question = newSections[sIndex].questions[qIndex];
+        question.options = question.options.filter((o: AnswerOption) => o.id !== optionId);
+        delete question.scoring[optionId];
+        return { ...prev, sections: newSections };
+    });
   };
   
   const addScoringRule = (sIndex: number, qIndex: number, optionId: string) => {
-    const newSections = [...test.sections];
-    const question = newSections[sIndex].questions[qIndex];
     const newRule: ScoringRule = { scaleId: test.scales[0]?.id || '', points: 0 };
-    question.scoring[optionId] = [...(question.scoring[optionId] || []), newRule];
-    setTest(prev => ({ ...prev, sections: newSections }));
+    setTest(prev => {
+        const newSections = JSON.parse(JSON.stringify(prev.sections));
+        const question = newSections[sIndex].questions[qIndex];
+        question.scoring[optionId] = [...(question.scoring[optionId] || []), newRule];
+        return { ...prev, sections: newSections };
+    });
   };
   
   const updateScoringRule = (sIndex: number, qIndex: number, optionId: string, ruleIndex: number, field: keyof ScoringRule, value: any) => {
-    const newSections = [...test.sections];
-    const rules = newSections[sIndex].questions[qIndex].scoring[optionId];
-    rules[ruleIndex] = { ...rules[ruleIndex], [field]: value };
-    setTest(prev => ({ ...prev, sections: newSections }));
+    setTest(prev => {
+        const newSections = JSON.parse(JSON.stringify(prev.sections));
+        const rules = newSections[sIndex].questions[qIndex].scoring[optionId];
+        rules[ruleIndex] = { ...rules[ruleIndex], [field]: value };
+        return { ...prev, sections: newSections };
+    });
   };
 
   const removeScoringRule = (sIndex: number, qIndex: number, optionId: string, ruleIndex: number) => {
-    const newSections = [...test.sections];
-    const rules = newSections[sIndex].questions[qIndex].scoring[optionId];
-    rules.splice(ruleIndex, 1);
-    setTest(prev => ({ ...prev, sections: newSections }));
+    setTest(prev => {
+        const newSections = JSON.parse(JSON.stringify(prev.sections));
+        const rules = newSections[sIndex].questions[qIndex].scoring[optionId];
+        rules.splice(ruleIndex, 1);
+        return { ...prev, sections: newSections };
+    });
   };
 
   if (isLoading) return <div className="p-8 text-center">Ładowanie edytora testów...</div>;
