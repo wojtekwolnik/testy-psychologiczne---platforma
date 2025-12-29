@@ -44,7 +44,7 @@ const ClientTestConfirmationPage: React.FC = () => {
 
   const handleStart = () => {
     // Navigate to the test-taking view
-    router.push(`/test/${testId}/${clientCode}`);
+    router.push(`/test/${testId}?clientCode=${clientCode}`);
   };
 
   // If the page is accessed directly without testId, stick to error state handling inside
