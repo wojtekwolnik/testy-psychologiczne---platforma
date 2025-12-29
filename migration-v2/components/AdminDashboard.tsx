@@ -146,16 +146,28 @@ const AdminDashboard: React.FC = () => {
               <PlusIcon /> Utwórz Test
             </button>
             {isCreateMenuOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-[var(--secondary-color)] rounded-lg shadow-xl z-10 border border-[var(--border-color)]">
-                <button onClick={handleCreateNewClick} className="w-full text-left px-4 py-3 hover:bg-[var(--background-color)]">
+              <div
+                className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl z-50 border border-[var(--border-color)]"
+                style={{ backgroundColor: 'var(--secondary-color, #ffffff)' }}
+              >
+                <button
+                  onClick={handleCreateNewClick}
+                  className="w-full text-left px-4 py-3 hover:bg-[var(--background-color)] transition-colors text-[var(--text-color)]"
+                >
                   <p className="font-semibold">Utwórz nowy</p>
                   <p className="text-xs opacity-70">Zaprojektuj test od zera w edytorze.</p>
                 </button>
-                <button onClick={handleCsvImportClick} className="w-full text-left px-4 py-3 hover:bg-[var(--background-color)] border-t border-[var(--border-color)]">
+                <button
+                  onClick={handleCsvImportClick}
+                  className="w-full text-left px-4 py-3 hover:bg-[var(--background-color)] border-t border-[var(--border-color)] transition-colors text-[var(--text-color)]"
+                >
                   <p className="font-semibold">Importuj (CSV)</p>
                   <p className="text-xs opacity-70">Rekomendowane do tworzenia nowych testów z pliku.</p>
                 </button>
-                <button onClick={handleJsonImportClick} className="w-full text-left px-4 py-3 hover:bg-[var(--background-color)] border-t border-[var(--border-color)]">
+                <button
+                  onClick={handleJsonImportClick}
+                  className="w-full text-left px-4 py-3 hover:bg-[var(--background-color)] border-t border-[var(--border-color)] transition-colors text-[var(--text-color)]"
+                >
                   <p className="font-semibold">Importuj (JSON)</p>
                   <p className="text-xs opacity-70">Do przywracania kopii zapasowych i archiwów.</p>
                 </button>

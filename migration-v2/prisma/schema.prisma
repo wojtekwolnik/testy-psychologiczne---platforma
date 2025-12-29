@@ -78,6 +78,7 @@ model TestResult {
   completedAt      DateTime @default(now())
   scores           String   // JSON: Record<string, number>
   answers          String   // JSON: Record<string, any>
+  analysis         String?  // AI generated analysis (Markdown)
 }
 
 model PdfTemplate {
@@ -97,4 +98,10 @@ model AccessCode {
   isUsed          Boolean  @default(false)
   expiresAt       DateTime
   createdAt       DateTime @default(now())
+}
+
+model SystemSettings {
+  id        String   @id @default("default") // Singleton
+  branding  String   // JSON string of BrandingSettings
+  updatedAt DateTime @updatedAt
 }

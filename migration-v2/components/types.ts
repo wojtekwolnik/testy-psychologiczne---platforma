@@ -60,6 +60,7 @@ export interface TestResult {
   completedAt: string;
   scores: { [scaleId: string]: number };
   answers: { [questionId: string]: string | string[] };
+  analysis?: string | null;
 }
 
 export interface AccessCode {
@@ -136,6 +137,32 @@ export interface ClientAnswer {
   selectedOptionIds?: string[];
 }
 
+export interface ThemePalette {
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
+  textColor: string;
+  borderColor: string;
+  inputBackgroundColor: string;
+  inputTextColor: string;
+  errorColor: string;
+  warningColor: string;
+  successColor: string;
+  adminColor: string;
+  adminBackgroundColor: string;
+  therapistColor: string;
+  therapistBackgroundColor: string;
+
+  // Sidebar
+  sidebarBackground: string;
+  sidebarTextColor: string;
+  sidebarActiveBackground: string;
+  sidebarActiveText: string;
+  sidebarHoverBackground: string;
+  sidebarHoverText: string;
+}
+
 export interface BrandingSettings {
   appName: string;
   logoUrl: string;
@@ -153,7 +180,12 @@ export interface BrandingSettings {
   clientConfirmationMessage: string;
   clientConfirmationButtonText: string;
 
-  // Theme colors
+  // Modern Theming
+  mode: 'system' | 'light' | 'dark';
+  lightTheme: ThemePalette;
+  darkTheme: ThemePalette;
+
+  // Valid for backward compatibility (optional/deprecated)
   primaryColor?: string;
   secondaryColor?: string;
   accentColor?: string;
@@ -169,6 +201,12 @@ export interface BrandingSettings {
   adminBackgroundColor?: string;
   therapistColor?: string;
   therapistBackgroundColor?: string;
+  sidebarBackground?: string;
+  sidebarTextColor?: string;
+  sidebarActiveBackground?: string;
+  sidebarActiveText?: string;
+  sidebarHoverBackground?: string;
+  sidebarHoverText?: string;
 
   aiSettings: {
     enabled: boolean;
@@ -179,6 +217,7 @@ export interface BrandingSettings {
     systemPrompt: string;
   };
   emailSettings: {
+    enabled?: boolean;
     smtp: {
       host: string;
       port: number;

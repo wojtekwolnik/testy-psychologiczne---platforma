@@ -8,7 +8,10 @@ import { type TestResult, type Test, type AccessCode } from './types';
 import { ChartBarIcon, TrashIcon, PlusIcon, ClipboardCopyIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
 
+import { useAuth } from '../contexts/AuthContext';
+
 const TherapistDashboard: React.FC = () => {
+  const { user } = useAuth();
   const router = useRouter();
   const [results, setResults] = useState<TestResult[]>([]);
   const [tests, setTests] = useState<Test[]>([]);
@@ -77,8 +80,9 @@ const TherapistDashboard: React.FC = () => {
     const expiry = new Date(expiryDate);
     expiry.setHours(23, 59, 59, 999);
 
-    // therapistId is passed explicitly for now (migration phase)
-    const newCode = await generateAccessCode(selectedTest, expiry, 'default-therapist-id');
+    // therapistId is passed explicitly from auth context
+    if (!user) return;
+    const newCode = await generateAccessCode(selectedTest, expiry, user.id);
     setActiveCodes(prev => [newCode, ...prev]);
     // Note: fetchActiveCodes could also be called to refresh, but local update is faster.
   };

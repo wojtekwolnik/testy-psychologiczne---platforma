@@ -149,8 +149,6 @@ export async function submitTest(testId: string, answers: Record<string, string[
     const result = await prisma.testResult.create({
         data: {
             testId: test.id,
-            // testTitle: test.title, // Removed as not in schema
-            // testVersion: test.version, // Removed as not in schema
             therapistId: therapistId,
             clientIdentifier: clientIdentifier,
             scores: dbScores,
@@ -158,6 +156,28 @@ export async function submitTest(testId: string, answers: Record<string, string[
             completedAt: new Date()
         }
     });
+
+    // Send Notification Email
+    try {
+        const therapistUser = await prisma.user.findUnique({ where: { id: therapistId } });
+        if (therapistUser && therapistUser.email) {
+            // Dynamically import to avoid circular dep issues if any, though likely fine here.
+            const { sendTherapistNotification } = await import('../services/emailService');
+            // We need a report link - constructing it based on result ID
+            const reportLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/report/${result.id}`;
+
+            await sendTherapistNotification(
+                therapistUser.email,
+                therapistUser.username || 'Terapeuta',
+                clientIdentifier,
+                test.title,
+                reportLink
+            );
+        }
+    } catch (emailError) {
+        console.error("Failed to send notification email:", emailError);
+        // Do not fail the submission if email fails
+    }
 
     revalidatePath('/therapist/dashboard');
 
@@ -169,6 +189,25 @@ export async function submitTest(testId: string, answers: Record<string, string[
         scores: JSON.parse(result.scores as string),
         answers: JSON.parse(result.answers as string)
     };
+}
+
+
+
+export async function saveAnalysis(resultId: string, analysis: string): Promise<void> {
+    await prisma.testResult.update({
+        where: { id: resultId },
+        data: { analysis } as any
+    });
+    revalidatePath('/therapist/dashboard');
+}
+
+export async function triggerAnalysis(resultId: string): Promise<string | null> {
+    const { generateAnalysis } = await import('../services/aiService');
+    const analysis = await generateAnalysis(resultId);
+    if (analysis) {
+        await saveAnalysis(resultId, analysis);
+    }
+    return analysis;
 }
 
 export async function fetchResults(): Promise<TestResult[]> {

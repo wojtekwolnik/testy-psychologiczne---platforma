@@ -8,7 +8,5 @@ export default function TestConfirmationPage() {
     const testId = searchParams.get('testId');
     const clientCode = searchParams.get('clientCode');
 
-    if (!testId || !clientCode) return <div>Brak danych testu.</div>;
-
-    return <ClientTestConfirmationPage testId={testId} clientCode={clientCode} />;
+    return <ClientTestConfirmationPage />;
 }

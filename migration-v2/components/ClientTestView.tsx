@@ -6,11 +6,18 @@ import { validateAccessCode } from '@/app/actions/accessCodeActions';
 import type { Test, ClientAnswer, Question, TestResult } from './types';
 import { BrandingContext } from '../contexts/BrandingContext';
 
-const ClientTestView: React.FC = () => {
+interface ClientTestViewProps {
+    testId?: string;
+    clientCode?: string;
+}
+
+import { ClientThankYou } from './ClientThankYou';
+
+export default function ClientTestView(props: ClientTestViewProps) {
     const params = useParams();
-    // Ensure params are treated as strings
-    const testId = typeof params?.testId === 'string' ? params.testId : '';
-    const clientCode = typeof params?.clientCode === 'string' ? params.clientCode : '';
+    // Use props if provided (from server component wrapper), fallback to params (if client routed)
+    const testId = props.testId || (typeof params?.testId === 'string' ? params.testId : '');
+    const clientCode = props.clientCode || (typeof params?.clientCode === 'string' ? params.clientCode : '');
 
     const router = useRouter();
 
@@ -294,6 +301,3 @@ const ClientTestView: React.FC = () => {
 };
 
 
-import { ClientThankYou } from './ClientThankYou';
-
-export default ClientTestView;
