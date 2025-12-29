@@ -10,7 +10,7 @@ const mockUsers: User[] = [
         email: 'admin@example.com',
         role: UserRole.Admin,
         createdAt: new Date().toISOString(),
-        // In a real scenario, we'd store a hashed password and 2FA secret
+        fullName: 'Administrator'
     },
     {
         id: 'therapist-user-id',
@@ -18,6 +18,7 @@ const mockUsers: User[] = [
         email: 'therapist@example.com',
         role: UserRole.Therapist,
         createdAt: new Date().toISOString(),
+        fullName: 'Terapeuta'
     },
 ];
 
@@ -104,7 +105,7 @@ export const checkAuthStatus = async (): Promise<User> => {
     return Promise.reject("No active session");
 };
 
-export const login = async (email, password) => {
+export const login = async (email: string, password: string) => {
     const user = mockUsers.find(u => u.email === email);
     if (!user) {
         throw new Error("Nie znaleziono użytkownika o podanym adresie email.");
@@ -323,7 +324,7 @@ export const getAppSettings = async () => null;
 export const updateAppSettings = async () => ({});
 export const fetchNotifications = async () => [];
 export const getTestIdForCode = async () => null;
-export const checkTestStatus = async () => ({ status: 'new' });
+export const checkTestStatus = async (clientCode?: string) => ({ status: 'new' });
 export const fetchResultById = async (resultId: string): Promise<TestResult | null> => {
     const userId = getUserIdFromSession();
     const user = mockUsers.find(u => u.id === userId);
@@ -346,7 +347,7 @@ export const fetchResultById = async (resultId: string): Promise<TestResult | nu
 };
 export const getAiInterpretation = async () => ({ interpretation: 'Mock AI interpretation' });
 export const fetchTestVersions = async (canonicalId: string) => mockTests.filter(t => t.canonicalId === canonicalId);
-export const generateAccessCode = async (testId: string, expiresAt: Date) => ({ code: `MOCK-${Math.random().toString(36).substr(2, 8).toUpperCase()}`, testId, generatedByTherapistId: 'therapist-from-token', isUsed: false, expiresAt: expiresAt.toISOString(), createdAt: new Date().toISOString() });
+export const generateAccessCode = async (testId: string, expiresAt: Date) => ({ code: `MOCK-${Math.random().toString(36).substr(2, 8).toUpperCase()}`, testId, therapistId: getUserIdFromSession() || 'therapist-from-token', isUsed: false, expiresAt: expiresAt.toISOString(), createdAt: new Date().toISOString() });
 export const fetchActiveCodes = async (): Promise<AccessCode[]> => {
     const userId = getUserIdFromSession();
     const user = mockUsers.find(u => u.id === userId);

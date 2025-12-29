@@ -1,0 +1,100 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  username  String?
+  password  String?  // Nullable for now if using external auth, but keeping simple
+  role      String   @default("therapist") // 'admin' | 'therapist'
+  createdAt DateTime @default(now())
+  results   TestResult[]
+  accessCodes AccessCode[]
+  twoFactorSecret String?
+}
+
+model Test {
+  id               String    @id @default(uuid())
+  canonicalId      String    @unique
+  version          Int       @default(1)
+  title            String
+  description      String
+  instructions     String
+  questionsPerPage Int?
+  createdAt        DateTime  @default(now())
+  
+  scales           Scale[]
+  sections         Section[]
+  results          TestResult[]
+  pdfTemplates     PdfTemplate[]
+  accessCodes      AccessCode[]
+}
+
+model Scale {
+  id          String  @id @default(uuid())
+  testId      String
+  test        Test    @relation(fields: [testId], references: [id], onDelete: Cascade)
+  type        String  // 'standard' | 'calculated'
+  name        String
+  description String?
+  maxScore    Int?
+  formula     String?
+}
+
+model Section {
+  id        String     @id @default(uuid())
+  testId    String
+  test      Test       @relation(fields: [testId], references: [id], onDelete: Cascade)
+  title     String
+  questions Question[]
+}
+
+model Question {
+  id        String  @id @default(uuid())
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  text      String
+  type      String  // 'multiple-choice', 'multiple-select', 'likert-5'
+  options   String  // JSON: AnswerOption[]
+  scoring   String  // JSON: Record<string, ScoringRule[]>
+}
+
+model TestResult {
+  id               String   @id @default(uuid())
+  testId           String
+  test             Test     @relation(fields: [testId], references: [id])
+  therapistId      String
+  therapist        User     @relation(fields: [therapistId], references: [id])
+  clientIdentifier String
+  completedAt      DateTime @default(now())
+  scores           String   // JSON: Record<string, number>
+  answers          String   // JSON: Record<string, any>
+}
+
+model PdfTemplate {
+  id              String   @id @default(uuid())
+  testId          String
+  test            Test     @relation(fields: [testId], references: [id])
+  name            String
+  components      String   // JSON: ReportComponent[]
+}
+
+model AccessCode {
+  code            String   @id
+  testId          String
+  test            Test     @relation(fields: [testId], references: [id])
+  therapistId     String
+  therapist       User     @relation(fields: [therapistId], references: [id])
+  isUsed          Boolean  @default(false)
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+}

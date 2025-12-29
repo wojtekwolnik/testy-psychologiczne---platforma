@@ -95,7 +95,7 @@ async function drawBarChart(ctx: PdfContext, component: ReportComponent, result:
         const scaleInfo = test.scales.find(s => s.id === scaleId);
         if (score === undefined || !scaleInfo || scaleInfo.type !== 'standard') continue;
 
-        const maxScore = scaleInfo.maxScore > 0 ? scaleInfo.maxScore : 100; // Default to 100 if 0/missing to prevent Infinity
+        const maxScore = (scaleInfo.maxScore || 0) > 0 ? (scaleInfo.maxScore || 100) : 100;
         const barHeight = (score / maxScore) * 100; // Height capped at 100px
 
         // Draw Bar
@@ -135,7 +135,7 @@ async function drawRichText(ctx: PdfContext, component: ReportComponent) {
 export async function generatePdf(
     result: TestResult,
     test: Test,
-    branding: Branding,
+    branding: BrandingSettings,
     template: PdfTemplate | undefined,
     customInterpretation: string
 ): Promise<Uint8Array> {

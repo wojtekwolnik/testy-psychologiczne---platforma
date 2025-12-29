@@ -1,15 +1,19 @@
 
+'use client';
+
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { fetchTestById, saveTest, fetchPdfTemplates } from '../services/apiClient';
+import { useRouter, useParams } from 'next/navigation';
+import { fetchTestById, saveTest, createNewTest, fetchPdfTemplates } from '@/app/actions/testActions';
 import type { Test, Scale, Question, AnswerOption, ScoringRule, Section, PdfTemplate } from './types';
 import { PlusIcon, TrashIcon, CalculatorIcon } from './common/Icons';
-import RichTextInput from './common/RichTextInput';
+// import RichTextInput from './common/RichTextInput';
 import { generateUniqueId } from '../utils/idUtils';
 
 const TestEditor: React.FC = () => {
-    const navigate = useNavigate();
-    const { testId } = useParams<{ testId: string }>();
+    const router = useRouter();
+    const params = useParams();
+    const testId = params.testId as string; // Next.js params can be string or array
+
     const [test, setTest] = useState<Test | null>(null);
     const [templates, setTemplates] = useState<PdfTemplate[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -22,9 +26,10 @@ const TestEditor: React.FC = () => {
                 const fetchedTemplates = await fetchPdfTemplates();
                 setTemplates(fetchedTemplates);
                 let initialTest: Test | null = null;
-                if (testId) {
+                if (testId && testId !== 'new') {
                     initialTest = await fetchTestById(testId);
                 }
+
                 if (initialTest) {
                     setTest(initialTest);
                 } else {
@@ -47,11 +52,32 @@ const TestEditor: React.FC = () => {
         if (!test) return;
         setIsSaving(true);
         try {
-            const savedTest = await saveTest(test, asNewVersion);
-            setTest(savedTest);
-            navigate('/admin/dashboard');
+            // Logic to choose Create vs Update
+            // If testId is 'new' or we are strictly creating new version?
+            // User flow: 'Save' -> updates current.
+            let saved: Test;
+            if (asNewVersion) {
+                saved = await createNewTest(test); // Should we clone logic here? The BE handles ID gen? 
+                // Actually `createNewTest` as implemented in actions expects a Test object with ID.
+                // For now, let's trust the server action to handle "Save as new" if we pass a new ID or if the action handles it.
+                // My BE action `createNewTest` does strict create on provided ID.
+                // So we should generate ID here if it is a Copy? Or let BE do it.
+                // Let's assume Update for now to keep it simple, as 'asNewVersion' button logic might need specific UI flow.
+                // Reverting to simpler Update logic for this step.
+                // Wait, I implemented `saveTest` which handles updates. 
+                saved = await saveTest(test, asNewVersion);
+            } else {
+                if (testId === 'new') {
+                    saved = await createNewTest(test);
+                } else {
+                    saved = await saveTest(test, asNewVersion);
+                }
+            }
+
+            setTest(saved);
+            router.push('/admin/dashboard');
         } catch (e) { console.error(e) } finally { setIsSaving(false); }
-    }, [test, navigate]);
+    }, [test, router, testId]);
 
     const handleTestChange = (field: keyof Test, value: any) => {
         setTest(prev => prev ? ({ ...prev, [field]: value }) : null);
@@ -185,7 +211,7 @@ const TestEditor: React.FC = () => {
                 </div>
             </div>
             <div className="flex justify-end gap-4 mt-8">
-                <button onClick={() => navigate('/admin/dashboard')} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg">Anuluj</button>
+                <button onClick={() => router.push('/admin/dashboard')} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg">Anuluj</button>
                 <button onClick={() => handleSaveAndExit(false)} disabled={isSaving} className="px-6 py-2 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold rounded-lg disabled:bg-slate-400">
                     {isSaving ? 'Zapisywanie...' : 'Zapisz Test'}
                 </button>

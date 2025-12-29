@@ -5,14 +5,16 @@ Ten plik dokumentuje elementy systemu, które zostały zaimplementowane w uprosz
 
 ---
 
-### 1. Mock Backend / Warstwa Danych (`services/apiClient.ts`)
+### 1. Mock Backend / Brak Trwałości Danych (`services/apiClient.ts`)
 
-*   **Problem:** Cała warstwa danych aplikacji jest **symulowana z użyciem `localStorage`**. Oznacza to, że wszystkie testy, wyniki i szablony są przechowywane wyłącznie w pamięci podręcznej przeglądarki. Jest to rozwiązanie wyłącznie dla celów prototypu - dane nie są trwałe, bezpieczne, ani współdzielone między użytkownikami czy urządzeniami.
-*   **Ryzyko:** Krytyczne. Obecna implementacja uniemożliwia jakiekolwiek produkcyjne wdrożenie aplikacji. Utrata danych jest gwarantowana.
-*   **Kierunek Rozwoju (Idea):** Należy zastąpić cały mock backend prawdziwą architekturą klient-serwer.
-    1.  **Stworzyć serwer API:** Zbudować aplikację serwerową (np. w Node.js/Express, Python/Django), która będzie zarządzać logiką biznesową i dostępem do danych.
-    2.  **Zintegrować bazę danych:** Podłączyć serwer do trwałej bazy danych (np. PostgreSQL, MongoDB, Firebase Firestore) w celu przechowywania wszystkich zasobów.
-    3.  **Przepisać `apiClient.ts`:** Zaktualizować wszystkie funkcje w `apiClient.ts`, aby zamiast operować na `localStorage`, wysyłały zapytania HTTP (za pomocą `fetch` lub `axios`) do nowego serwera API.
+*   **Stan Faktyczny:** Aplikacja **nie posiada żadnej trwałej bazy danych**. Cały stan aplikacji (użytkownicy, wyniki testów, szablony) jest przechowywany w **zmiennych w pamięci RAM** (JavaScript variables).
+*   **Konsekwencje:** **Odświeżenie strony (F5) powoduje całkowity reset danych** do stanu początkowego (utrata zarejestrowanych klientów, wyników i stworzonych testów).
+    *   *Wyjątek:* Jedynie ustawienia wizualne (branding) są zapisywane w `localStorage`.
+*   **Ryzyko:** Krytyczne. Aplikacja w obecnym stanie jest **bezużyteczna produkcyjnie**. Służy jedynie do prezentacji interfejsu (demo high-fidelity).
+*   **Wymagana Akcja:**
+    1.  **Budowa Backend:** Należy stworzyć prawdziwy backend (Node.js/Python/Go).
+    2.  **Baza Danych:** Podłączenie PostgreSQL lub MongoDB.
+    3.  **Migracja API:** Przepisanie `apiClient.ts` na `fetch/axios` do komunikacji z nowym backendem.
 
 ---
 
@@ -20,13 +22,15 @@ Ten plik dokumentuje elementy systemu, które zostały zaimplementowane w uprosz
 
 #### a) Wizualizacja Wykresów (`drawBarChart`, `drawRadarChart`)
 
-*   **Problem:** Aktualna implementacja rysowania wykresów jest szczątkowa. `drawBarChart` renderuje proste prostokąty bez żadnych etykiet, osi wartości czy legendy. `drawRadarChart` to tylko atrapa.
-*   **Kierunek Rozwoju (Idea):** Zaimplementować pełne renderowanie wykresów lub zintegrować bibliotekę trzecią (np. `chart.js` z `node-canvas` po stronie serwera) do generowania profesjonalnie wyglądających wykresów jako obrazów i wstawiania ich do PDF.
+*   **Stan Faktyczny:** 
+    *   `drawBarChart`: Rysuje proste prostokąty, ale może brakować skalowania i legendy.
+    *   `drawRadarChart`: **TYLKO TEKSTOWY PLACEHOLDER**. Kod zawiera jedynie instrukcję wypisującą tekst "[Komponent Wykresu Radarowego...]", brak faktycznego rysowania wykresu pajęczynowego.
+*   **Wymagana Akcja:** Integracja biblioteki do wykresów (np. QuickChart.io API lub server-side rendering chart.js) lub ręczna implementacja skomplikowanej geometrii na canvasie PDF.
 
 #### b) Renderowanie Tekstu Sformatowanego (`drawRichText`)
 
-*   **Problem:** Funkcja `drawRichText` usuwa formatowanie HTML, przez co w PDF gubione jest pogrubienie, kursywa czy listy.
-*   **Kierunek Rozwoju (Idea):** Zaimplementować prosty parser, który będzie interpretował podstawowe tagi HTML (`<b>`, `<i>`, `<ul><li>`) i odpowiednio zmieniał czcionkę lub rysował punktory w pliku PDF.
+*   **Stan Faktyczny:** Funkcja jawnie **usuwa wszystkie tagi HTML** (`replace(/<[^>]+>/g, '')`). Wszelkie pogrubienia, kursywy czy listy z edytora WYSIWYG są tracone i renderowane jako lity blok tekstu.
+*   **Wymagana Akcja:** Implementacja parsera HTML-to-PDF lub użycie biblioteki wspierającej HTML w pdf-lib.
 
 ---
 
