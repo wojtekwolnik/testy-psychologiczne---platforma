@@ -7,9 +7,22 @@ import { fetchTestById, saveTest, createNewTest, fetchPdfTemplates } from '@/app
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import type { Test, Scale, Question, AnswerOption, ScoringRule, Section, PdfTemplate } from './types';
-import { PlusIcon, TrashIcon, CalculatorIcon, QuestionMarkCircleIcon } from './common/Icons';
+import { PlusIcon, TrashIcon, CalculatorIcon, QuestionMarkCircleIcon, ChevronLeftIcon } from './common/Icons';
 // import RichTextInput from './common/RichTextInput';
 import { generateUniqueId } from '../utils/idUtils';
+
+const LIKERT_5_LABELS = [
+    'Zdecydowanie nie zgadzam się',
+    'Raczej się nie zgadzam',
+    'Nie mam zdania/Średnio',
+    'Raczej się zgadzam',
+    'Zdecydowanie zgadzam się'
+];
+// Points for Likert 5: 1, 2, 3, 4, 5 (Normal) / 5, 4, 3, 2, 1 (Reversed)
+
+const YES_NO_LABELS = ['Tak', 'Nie'];
+// Points for Yes/No: Yes=1, No=0 (Normal) / Yes=0, No=1 (Reversed)
+
 
 const validateTest = (test: Test): string[] => {
     const errors: string[] = [];
@@ -40,7 +53,9 @@ const TestEditor: React.FC = () => {
     const [templates, setTemplates] = useState<PdfTemplate[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
-    const [showFormulaHelp, setShowFormulaHelp] = useState(false);
+    const [helpTopic, setHelpTopic] = useState<'formula' | 'sections' | 'reversed' | 'auto-score' | null>(null);
+    // Stores the ID of the currently expanded question. If null, all are collapsed.
+    const [expandedQuestionId, setExpandedQuestionId] = useState<string | null>(null);
 
     useEffect(() => {
         const loadInitialData = async () => {
@@ -231,6 +246,8 @@ const TestEditor: React.FC = () => {
             ...prev,
             sections: prev.sections.map(s => s.id === sectionId ? { ...s, questions: [...s.questions, newQuestion] } : s)
         }) : null);
+        // Ensure new question is expanded
+        setExpandedQuestionId(newQuestion.id);
     };
 
     const updateQuestion = (sectionId: string, questionId: string, updates: Partial<Question>) => {
@@ -251,18 +268,74 @@ const TestEditor: React.FC = () => {
                             // Auto-generate options if type changes to a fixed scale
                             if (updates.type) {
                                 if (updates.type === 'likert-5') {
-                                    newOptions = Array.from({ length: 5 }, (_, i) => ({ id: generateUniqueId('opt'), text: (i + 1).toString() }));
-                                    newScoring = {}; // Reset scoring on type change to avoid mismatch
+                                    newOptions = LIKERT_5_LABELS.map(text => ({ id: generateUniqueId('opt'), text }));
+                                    newScoring = {};
                                 } else if (updates.type === 'likert-7') {
                                     newOptions = Array.from({ length: 7 }, (_, i) => ({ id: generateUniqueId('opt'), text: (i + 1).toString() }));
                                     newScoring = {};
                                 } else if (updates.type === 'scale-1-10') {
                                     newOptions = Array.from({ length: 10 }, (_, i) => ({ id: generateUniqueId('opt'), text: (i + 1).toString() }));
                                     newScoring = {};
+                                } else if (updates.type === 'yes-no') {
+                                    newOptions = YES_NO_LABELS.map(text => ({ id: generateUniqueId('opt'), text }));
+                                    newScoring = {};
                                 }
                             }
 
-                            return { ...q, ...updates, options: updates.type ? newOptions : (updates.options || q.options), scoring: updates.type ? newScoring : (updates.scoring || q.scoring) };
+                            return {
+                                ...q,
+                                ...updates,
+                                options: updates.type ? newOptions : (updates.options || q.options),
+                                scoring: updates.type ? newScoring : (updates.scoring || q.scoring)
+                            };
+                        })
+                    };
+                })
+            };
+        });
+    };
+
+    const applyAutoScoring = (sectionId: string, questionId: string, scaleId: string, isReversed: boolean) => {
+        setTest(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                sections: prev.sections.map(s => {
+                    if (s.id !== sectionId) return s;
+                    return {
+                        ...s,
+                        questions: s.questions.map(q => {
+                            if (q.id !== questionId) return q;
+
+                            // Generate scoring based on type
+                            const newScoring: Record<string, ScoringRule[]> = {};
+
+                            q.options.forEach((opt, index) => {
+                                let points = 0;
+
+                                if (q.type === 'yes-no') {
+                                    // Index 0 = Tak, Index 1 = Nie
+                                    if (index === 0) points = isReversed ? 0 : 1;
+                                    else points = isReversed ? 1 : 0;
+                                } else if (q.type === 'likert-5') {
+                                    // 1..5
+                                    points = isReversed ? (5 - index) : (index + 1);
+                                } else if (q.type === 'scale-1-10') {
+                                    // 1..10
+                                    points = isReversed ? (10 - index) : (index + 1);
+                                } else {
+                                    // Default fallback logic for others (e.g. likert-7)
+                                    points = isReversed ? (q.options.length - index) : (index + 1);
+                                }
+
+                                newScoring[opt.id] = [{ scaleId, points }];
+                            });
+
+                            return {
+                                ...q,
+                                isReversed, // Ensure the reversed flag is set
+                                scoring: newScoring
+                            };
                         })
                     };
                 })
@@ -397,6 +470,10 @@ const TestEditor: React.FC = () => {
         });
     };
 
+    const toggleQuestionCollapse = (questionId: string) => {
+        setExpandedQuestionId(prevId => prevId === questionId ? null : questionId);
+    };
+
     if (isLoading || !test) return <div className="p-8 text-center">Ładowanie edytora testów...</div>;
 
     return (
@@ -446,7 +523,12 @@ const TestEditor: React.FC = () => {
                         <p className="text-xs text-slate-400 mt-1">Wersja jest aktualizowana automatycznie przy zapisie.</p>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Pytania na stronę</label>
+                        <div className="flex items-center gap-2 mb-1">
+                            <label className="block text-sm font-medium text-slate-700">Maksymalna liczba pytań w sekcji</label>
+                            <button onClick={() => setHelpTopic('sections')} className="text-slate-400 hover:text-[var(--primary-color)]">
+                                <QuestionMarkCircleIcon className="h-4 w-4" />
+                            </button>
+                        </div>
                         <input
                             type="number"
                             min={1}
@@ -454,6 +536,9 @@ const TestEditor: React.FC = () => {
                             onChange={e => handleTestChange('questionsPerPage', parseInt(e.target.value) || 10)}
                             className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] outline-none"
                         />
+                        <p className="text-xs text-slate-400 mt-1">
+                            To ustawienie pomaga kontrolować długość sekcji. W widoku klienta, każda sekcja to osobna strona.
+                        </p>
                     </div>
                 </div>
             </div>
@@ -490,7 +575,7 @@ const TestEditor: React.FC = () => {
                                     <div className="flex items-center gap-2 mb-1">
                                         <label className="text-sm font-medium text-orange-700">Formuła obliczeniowa:</label>
                                         <button
-                                            onClick={() => setShowFormulaHelp(true)}
+                                            onClick={() => setHelpTopic('formula')}
                                             className="text-orange-600 hover:text-orange-800 transition-colors"
                                             title="Jak tworzyć formuły?"
                                         >
@@ -531,120 +616,196 @@ const TestEditor: React.FC = () => {
                         </div>
 
                         <div className="space-y-6">
-                            {section.questions.map((question, qIndex) => (
-                                <div key={question.id} className="bg-slate-50 p-6 rounded-lg border border-slate-200 shadow-sm relative group">
-                                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => removeQuestion(section.id, question.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                                            <TrashIcon className="h-4 w-4" />
-                                        </button>
-                                    </div>
-
-                                    <div className="mb-4 pr-10">
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Pytanie {qIndex + 1}</label>
-                                        <input
-                                            type="text"
-                                            value={question.text}
-                                            onChange={e => updateQuestion(section.id, question.id, { text: e.target.value })}
-                                            className="w-full text-lg p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] focus:border-transparent"
-                                            placeholder="Treść pytania..."
-                                        />
-                                    </div>
-
-                                    <div className="mb-6">
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Typ Pytania</label>
-                                        <select
-                                            value={question.type}
-                                            onChange={e => updateQuestion(section.id, question.id, { type: e.target.value as any })}
-                                            className="w-full md:w-auto p-2 border border-slate-300 rounded-lg bg-white"
+                            {section.questions.map((question, qIndex) => {
+                                const isExpanded = expandedQuestionId === question.id;
+                                return (
+                                    <div key={question.id} className="bg-slate-50 border border-slate-200 shadow-sm rounded-lg overflow-hidden transition-all">
+                                        {/* Question Header / Toggle Bar */}
+                                        <div
+                                            className="bg-slate-100 p-4 flex items-center justify-between cursor-pointer hover:bg-slate-200 transition-colors"
+                                            onClick={() => toggleQuestionCollapse(question.id)}
                                         >
-                                            <option value="multiple-choice">Jednokrotny wybór</option>
-                                            <option value="multiple-select">Wielokrotny wybór</option>
-                                            <option value="likert-5">Skala Likerta (1-5)</option>
-                                            <option value="likert-7">Skala Likerta (1-7)</option>
-                                            <option value="scale-1-10">Skala Numeryczna (1-10)</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="space-y-3 pl-4 border-l-2 border-slate-200">
-                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Odpowiedzi</label>
-                                        {question.options.map((option) => (
-                                            <div key={option.id} className="bg-white p-4 rounded-lg border border-slate-200">
-                                                <div className="flex items-center gap-3 mb-3">
-                                                    <div className="h-4 w-4 rounded-full border-2 border-slate-300"></div>
-                                                    <input
-                                                        type="text"
-                                                        value={option.text}
-                                                        onChange={e => updateOption(section.id, question.id, option.id, e.target.value)}
-                                                        className="flex-grow p-2 border border-slate-200 rounded focus:border-[var(--primary-color)] outline-none bg-slate-50 focus:bg-white transition-colors"
-                                                        placeholder="Treść odpowiedzi..."
-                                                    />
-                                                    {!['likert-5', 'likert-7', 'scale-1-10'].includes(question.type) && (
-                                                        <button onClick={() => removeOption(section.id, question.id, option.id)} className="text-slate-400 hover:text-red-500">
-                                                            <TrashIcon className="h-4 w-4" />
-                                                        </button>
-                                                    )}
+                                            <div className="flex items-center gap-4 overflow-hidden">
+                                                <div className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : '-rotate-0'}`}>
+                                                    <ChevronLeftIcon className="h-5 w-5 text-slate-500" />
                                                 </div>
-
-                                                {/* Scoring Rules Interface */}
-                                                <div className="bg-slate-50 p-3 rounded text-sm">
-                                                    <div className="text-xs font-semibold text-slate-500 mb-2">PUNKTACJA:</div>
-                                                    {question.scoring[option.id]?.map((rule, rIndex) => (
-                                                        <div key={rIndex} className="flex gap-2 mb-2 items-center">
-                                                            <div className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-mono">
-                                                                {test.scales.find(s => s.id === rule.scaleId)?.name || rule.scaleId}
-                                                            </div>
-                                                            <div className="font-bold text-slate-700">+{rule.points} pkt</div>
-                                                            <button onClick={() => removeScoringRule(section.id, question.id, option.id, rIndex)} className="text-red-400 hover:text-red-600 ml-auto">
-                                                                &times;
-                                                            </button>
-                                                        </div>
-                                                    ))}
-
-                                                    <div className="flex gap-2 mt-2 items-center">
-                                                        <select
-                                                            className="text-xs p-1 border rounded max-w-[150px]"
-                                                            id={`scale-select-${option.id}`}
-                                                        >
-                                                            <option value="">Wybierz skalę...</option>
-                                                            {test.scales.filter(s => s.type === 'standard').map(s => (
-                                                                <option key={s.id} value={s.id}>{s.name}</option>
-                                                            ))}
-                                                        </select>
-                                                        <input
-                                                            type="number"
-                                                            className="text-xs p-1 border rounded w-16"
-                                                            placeholder="Pkt"
-                                                            id={`points-input-${option.id}`}
-                                                            defaultValue={1}
-                                                        />
-                                                        <button
-                                                            onClick={(e) => {
-                                                                const scaleSelect = document.getElementById(`scale-select-${option.id}`) as HTMLSelectElement;
-                                                                const pointsInput = document.getElementById(`points-input-${option.id}`) as HTMLInputElement;
-                                                                if (scaleSelect.value && pointsInput.value) {
-                                                                    addScoringRule(section.id, question.id, option.id, scaleSelect.value, parseInt(pointsInput.value));
-                                                                    scaleSelect.value = '';
-                                                                    pointsInput.value = '1';
-                                                                }
-                                                            }}
-                                                            className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded hover:bg-green-200 transition-colors"
-                                                        >
-                                                            + Dodaj
-                                                        </button>
-                                                    </div>
+                                                <div className="flex flex-col overflow-hidden">
+                                                    <span className="text-xs font-bold text-slate-500 uppercase">Pytanie {qIndex + 1}</span>
+                                                    <span className="text-sm font-medium text-slate-800 truncate max-w-[500px]">
+                                                        {question.text || <span className="italic text-slate-400">Bez treści...</span>}
+                                                    </span>
                                                 </div>
                                             </div>
-                                        ))}
-                                        <button
-                                            onClick={() => addOption(section.id, question.id)}
-                                            disabled={['likert-5', 'likert-7', 'scale-1-10'].includes(question.type)}
-                                            className={`text-sm font-semibold text-[var(--primary-color)] hover:underline flex items-center gap-1 mt-2 disabled:text-slate-400 disabled:no-underline disabled:cursor-not-allowed`}
-                                        >
-                                            <PlusIcon className="h-4 w-4" /> Dodaj opcję odpowiedzi
-                                        </button>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs px-2 py-1 bg-white border rounded text-slate-500 hidden sm:inline-block">
+                                                    {question.type === 'yes-no' ? 'Tak/Nie' :
+                                                        question.type === 'likert-5' ? 'Likert (1-5)' :
+                                                            question.type === 'scale-1-10' ? 'Skala (1-10)' :
+                                                                question.type === 'multiple-select' ? 'Wielokrotny' : 'Jednokrotny'}
+                                                </span>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        removeQuestion(section.id, question.id);
+                                                    }}
+                                                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Usuń pytanie"
+                                                >
+                                                    <TrashIcon className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Collapsible Body */}
+                                        <div className={`transition-all duration-300 ease-in-out ${!isExpanded ? 'max-h-0 opacity-0 overflow-hidden' : 'opacity-100 p-6'}`}>
+                                            <div className="mb-4 pr-10">
+                                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Treść Pytania</label>
+                                                <input
+                                                    type="text"
+                                                    value={question.text}
+                                                    onChange={e => updateQuestion(section.id, question.id, { text: e.target.value })}
+                                                    className="w-full text-lg p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] focus:border-transparent"
+                                                    placeholder="Treść pytania..."
+                                                />
+                                            </div>
+
+                                            <div className="mb-6">
+                                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Typ Pytania</label>
+                                                <div className="flex flex-wrap gap-4 items-end">
+                                                    <select
+                                                        value={question.type}
+                                                        onChange={e => updateQuestion(section.id, question.id, { type: e.target.value as any })}
+                                                        className="w-full md:w-auto p-2 border border-slate-300 rounded-lg bg-white"
+                                                    >
+                                                        <option value="multiple-choice">Jednokrotny wybór</option>
+                                                        <option value="multiple-select">Wielokrotny wybór</option>
+                                                        <option value="yes-no">Tak/Nie</option>
+                                                        <option value="likert-5">Skala Likerta (1-5)</option>
+                                                        <option value="scale-1-10">Skala Numeryczna (1-10)</option>
+                                                    </select>
+
+                                                    <div className="flex items-center gap-2 border-l pl-4 border-slate-300">
+                                                        <div className="flex items-center gap-2">
+                                                            <input
+                                                                type="checkbox"
+                                                                id={`reversed-${question.id}`}
+                                                                checked={question.isReversed || false}
+                                                                onChange={(e) => updateQuestion(section.id, question.id, { isReversed: e.target.checked })}
+                                                                className="h-4 w-4 text-[var(--primary-color)] rounded border-gray-300 focus:ring-[var(--primary-color)]"
+                                                            />
+                                                            <label htmlFor={`reversed-${question.id}`} className="text-sm text-slate-700 cursor-pointer select-none">Odwrócona punktacja</label>
+                                                            <button onClick={() => setHelpTopic('reversed')} className="text-slate-400 hover:text-[var(--primary-color)] ml-1">
+                                                                <QuestionMarkCircleIcon className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {['likert-5', 'scale-1-10', 'yes-no'].includes(question.type) && (
+                                                        <div className="flex items-center gap-2 ml-auto">
+                                                            <select
+                                                                className="text-sm p-2 border border-slate-300 rounded-lg bg-white w-auto min-w-[220px]"
+                                                                onChange={(e) => {
+                                                                    if (e.target.value) {
+                                                                        applyAutoScoring(section.id, question.id, e.target.value, question.isReversed || false);
+                                                                        e.target.value = ''; // Reset select
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <option value="">+ Przypisz punkty do skali...</option>
+                                                                {test.scales.filter(s => s.type === 'standard').map(s => (
+                                                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                                                ))}
+                                                            </select>
+                                                            <button onClick={() => setHelpTopic('auto-score')} className="text-slate-400 hover:text-[var(--primary-color)] ml-1">
+                                                                <QuestionMarkCircleIcon className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-3 pl-4 border-l-2 border-slate-200">
+                                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Odpowiedzi</label>
+                                                {question.options.map((option) => (
+                                                    <div key={option.id} className="bg-white p-4 rounded-lg border border-slate-200">
+                                                        <div className="flex items-center gap-3 mb-3">
+                                                            <div className="h-4 w-4 rounded-full border-2 border-slate-300"></div>
+                                                            <input
+                                                                type="text"
+                                                                value={option.text}
+                                                                onChange={e => updateOption(section.id, question.id, option.id, e.target.value)}
+                                                                className="flex-grow p-2 border border-slate-200 rounded focus:border-[var(--primary-color)] outline-none bg-slate-50 focus:bg-white transition-colors"
+                                                                placeholder="Treść odpowiedzi..."
+                                                            />
+                                                            {!['likert-5', 'likert-7', 'scale-1-10'].includes(question.type) && (
+                                                                <button onClick={() => removeOption(section.id, question.id, option.id)} className="text-slate-400 hover:text-red-500">
+                                                                    <TrashIcon className="h-4 w-4" />
+                                                                </button>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Scoring Rules Interface */}
+                                                        <div className="bg-slate-50 p-3 rounded text-sm">
+                                                            <div className="text-xs font-semibold text-slate-500 mb-2">PUNKTACJA (opcjonalne):</div>
+                                                            {question.scoring[option.id]?.map((rule, rIndex) => (
+                                                                <div key={rIndex} className="flex gap-2 mb-2 items-center">
+                                                                    <div className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-mono">
+                                                                        {test.scales.find(s => s.id === rule.scaleId)?.name || rule.scaleId}
+                                                                    </div>
+                                                                    <div className="font-bold text-slate-700">+{rule.points} pkt</div>
+                                                                    <button onClick={() => removeScoringRule(section.id, question.id, option.id, rIndex)} className="text-red-400 hover:text-red-600 ml-auto">
+                                                                        &times;
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+
+                                                            <div className="flex gap-2 mt-2 items-center">
+                                                                <select
+                                                                    className="text-xs p-1 border rounded max-w-[150px]"
+                                                                    id={`scale-select-${option.id}`}
+                                                                >
+                                                                    <option value="">Wybierz skalę...</option>
+                                                                    {test.scales.filter(s => s.type === 'standard').map(s => (
+                                                                        <option key={s.id} value={s.id}>{s.name}</option>
+                                                                    ))}
+                                                                </select>
+                                                                <input
+                                                                    type="number"
+                                                                    className="text-xs p-1 border rounded w-16"
+                                                                    placeholder="Pkt"
+                                                                    id={`points-input-${option.id}`}
+                                                                    defaultValue={1}
+                                                                />
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        const scaleSelect = document.getElementById(`scale-select-${option.id}`) as HTMLSelectElement;
+                                                                        const pointsInput = document.getElementById(`points-input-${option.id}`) as HTMLInputElement;
+                                                                        if (scaleSelect.value && pointsInput.value) {
+                                                                            addScoringRule(section.id, question.id, option.id, scaleSelect.value, parseInt(pointsInput.value));
+                                                                            scaleSelect.value = '';
+                                                                            pointsInput.value = '1';
+                                                                        }
+                                                                    }}
+                                                                    className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded hover:bg-green-200 transition-colors"
+                                                                >
+                                                                    + Dodaj
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                <button
+                                                    onClick={() => addOption(section.id, question.id)}
+                                                    disabled={['likert-5', 'likert-7', 'scale-1-10'].includes(question.type)}
+                                                    className={`text-sm font-semibold text-[var(--primary-color)] hover:underline flex items-center gap-1 mt-2 disabled:text-slate-400 disabled:no-underline disabled:cursor-not-allowed`}
+                                                >
+                                                    <PlusIcon className="h-4 w-4" /> Dodaj opcję odpowiedzi
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                             <button
                                 onClick={() => addQuestion(section.id)}
                                 className="w-full py-4 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 font-bold hover:border-[var(--primary-color)] hover:text-[var(--primary-color)] hover:bg-blue-50 transition-all flex justify-center items-center gap-2"
@@ -664,12 +825,19 @@ const TestEditor: React.FC = () => {
             </div>
 
             {/* Formula Help Modal */}
-            {showFormulaHelp && (
+            {
+    /* Generic Help Modal */}
+            {helpTopic && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold text-gray-800">Jak tworzyć formuły obliczeniowe?</h3>
-                            <button onClick={() => setShowFormulaHelp(false)} className="text-gray-500 hover:text-gray-700">
+                            <h3 className="text-xl font-bold text-gray-800">
+                                {helpTopic === 'formula' && "Jak tworzyć formuły obliczeniowe?"}
+                                {helpTopic === 'sections' && "Sekcje i Paginacja"}
+                                {helpTopic === 'reversed' && "Odwrócona Punktacja"}
+                                {helpTopic === 'auto-score' && "Automatyczne Przypisywanie Punktów"}
+                            </h3>
+                            <button onClick={() => setHelpTopic(null)} className="text-gray-500 hover:text-gray-700">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                 </svg>
@@ -677,56 +845,92 @@ const TestEditor: React.FC = () => {
                         </div>
 
                         <div className="space-y-4 text-sm text-gray-600">
-                            <p>
-                                Formuły pozwalają na automatyczne obliczanie wyników na podstawie innych skal.
-                                Możesz używać standardowych operatorów matematycznych oraz funkcji.
-                            </p>
+                            {helpTopic === 'formula' && (
+                                <>
+                                    <p>
+                                        Formuły pozwalają na automatyczne obliczanie wyników na podstawie innych skal.
+                                        Możesz używać standardowych operatorów matematycznych oraz funkcji.
+                                    </p>
+                                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                        <h4 className="font-semibold text-gray-800 mb-2">Dostępne Operatory:</h4>
+                                        <ul className="list-disc pl-5 space-y-1">
+                                            <li><code>+</code> (Dodawanie)</li>
+                                            <li><code>-</code> (Odejmowanie)</li>
+                                            <li><code>*</code> (Mnożenie)</li>
+                                            <li><code>/</code> (Dzielenie)</li>
+                                            <li><code>( )</code> (Nawiasy do grupowania)</li>
+                                        </ul>
+                                    </div>
+                                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                        <h4 className="font-semibold text-gray-800 mb-2">Zmienne (Skale):</h4>
+                                        <p className="mb-2">Aby użyć wyniku z innej skali, wstaw jej ID w nawiasach klamrowych, np. <code>{`{scale-123}`}</code>.</p>
+                                        <p className="text-xs text-gray-500">
+                                            Użyj przycisków "Wstaw ID skali" pod polem formuły, aby szybko dodać odpowiedni identyfikator.
+                                        </p>
+                                    </div>
+                                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                        <h4 className="font-semibold text-gray-800 mb-2">Przykłady:</h4>
+                                        <ul className="space-y-2 font-mono text-xs">
+                                            <li className="bg-white p-2 border rounded">
+                                                <div className="text-gray-500">// Suma dwóch skal</div>
+                                                {`{s-1234} + {s-5678}`}
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </>
+                            )}
 
-                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                <h4 className="font-semibold text-gray-800 mb-2">Dostępne Operatory:</h4>
-                                <ul className="list-disc pl-5 space-y-1">
-                                    <li><code>+</code> (Dodawanie)</li>
-                                    <li><code>-</code> (Odejmowanie)</li>
-                                    <li><code>*</code> (Mnożenie)</li>
-                                    <li><code>/</code> (Dzielenie)</li>
-                                    <li><code>( )</code> (Nawiasy do grupowania)</li>
-                                </ul>
-                            </div>
+                            {helpTopic === 'sections' && (
+                                <>
+                                    <p>
+                                        W edytorze testu <strong>każda sekcja odpowiada jednej stronie</strong> w widoku dla klienta.
+                                    </p>
+                                    <p>
+                                        Ustawienie "Maksymalna liczba pytań w sekcji" służy jako wskazówka i pomaga kontrolować długość testu, ale ostateczny podział na strony zależy od liczby utworzonych sekcji.
+                                    </p>
+                                    <p className="mt-2 text-indigo-600 font-semibold">
+                                        Dobra praktyka: Twórz nowe sekcje tematycznie lub co 5-10 pytań, aby nie przytłoczyć użytkownika zbyt długą stroną.
+                                    </p>
+                                </>
+                            )}
 
-                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                <h4 className="font-semibold text-gray-800 mb-2">Zmienne (Skale):</h4>
-                                <p className="mb-2">Aby użyć wyniku z innej skali, wstaw jej ID w nawiasach klamrowych, np. <code>{`{scale-123}`}</code>.</p>
-                                <p className="text-xs text-gray-500">
-                                    Użyj przycisków "Wstaw ID skali" pod polem formuły, aby szybko dodać odpowiedni identyfikator.
-                                </p>
-                            </div>
+                            {helpTopic === 'reversed' && (
+                                <>
+                                    <p>
+                                        <strong>Odwrócona punktacja</strong> jest używana w pytaniach, gdzie treść jest sformułowana negatywnie względem mierzonej cechy.
+                                    </p>
+                                    <p>
+                                        Gdy opcja jest zaznaczona:
+                                    </p>
+                                    <ul className="list-disc pl-5 space-y-2 mt-2">
+                                        <li>Dla pytań <strong>Tak/Nie</strong>: "Tak" = 0 pkt, "Nie" = 1 pkt.</li>
+                                        <li>Dla <strong>Skali Likerta (1-5)</strong>: Najniższa ocena dostaje 5 pkt, a najwyższa 1 pkt.</li>
+                                        <li>Dla <strong>Skali Numerycznej</strong>: Punkty są przydzielane odwrotnie do wartości liczbowej.</li>
+                                    </ul>
+                                    <p className="mt-4 text-xs text-gray-500">
+                                        Pamiętaj, aby po zmianie tego ustawienia ponownie kliknąć przycisk przypisywania punktów do skali, aby zaktualizować wartości.
+                                    </p>
+                                </>
+                            )}
 
-                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                <h4 className="font-semibold text-gray-800 mb-2">Przykłady:</h4>
-                                <ul className="space-y-2 font-mono text-xs">
-                                    <li className="bg-white p-2 border rounded">
-                                        <div className="text-gray-500">// Suma dwóch skal</div>
-                                        {`{s-1234} + {s-5678}`}
-                                    </li>
-                                    <li className="bg-white p-2 border rounded">
-                                        <div className="text-gray-500">// Średnia z trzech skal</div>
-                                        {`({s-1} + {s-2} + {s-3}) / 3`}
-                                    </li>
-                                    <li className="bg-white p-2 border rounded">
-                                        <div className="text-gray-500">// Różnica (np. Skala Lęku - Skala Spokoju)</div>
-                                        {`{s-lek} - {s-spokoj}`}
-                                    </li>
-                                </ul>
-                            </div>
-
-                            <div className="p-3 bg-yellow-50 text-yellow-800 rounded border border-yellow-200 text-xs">
-                                <strong>Uwaga:</strong> Upewnij się, że nie tworzysz pętli (np. Skala A zależy od Skali B, a Skala B zależy od Skali A), ponieważ może to uniemożliwić obliczenie wyników.
-                            </div>
+                            {helpTopic === 'auto-score' && (
+                                <>
+                                    <p>
+                                        To narzędzie pozwala na <strong>szybkie przypisanie punktów</strong> do wszystkich opcji w pytaniu jednocześnie.
+                                    </p>
+                                    <p>
+                                        Wybierz skalę z listy, a system automatycznie przydzieli punkty w zależności od typu pytania i ustawienia "Odwrócona punktacja".
+                                    </p>
+                                    <div className="bg-blue-50 p-3 rounded border border-blue-100 text-blue-800 mt-2">
+                                        <strong>Wskazówka:</strong> Jest to opcja opcjonalna. Jeśli potrzebujesz niestandardowej punktacji, możesz ręcznie edytować punkty przy każdej odpowiedzi poniżej.
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         <div className="mt-6 flex justify-end">
                             <button
-                                onClick={() => setShowFormulaHelp(false)}
+                                onClick={() => setHelpTopic(null)}
                                 className="px-4 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700"
                             >
                                 Rozumiem
@@ -735,6 +939,7 @@ const TestEditor: React.FC = () => {
                     </div>
                 </div>
             )}
+
 
             <div className="flex justify-end gap-4 mt-8">
                 <button onClick={() => router.push('/admin/dashboard')} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg">Anuluj</button>
@@ -762,7 +967,7 @@ const TestEditor: React.FC = () => {
                     {isSaving ? 'Zapisywanie...' : 'Opublikuj'}
                 </button>
             </div>
-        </div>
+        </div >
     );
 };
 

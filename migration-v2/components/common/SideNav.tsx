@@ -3,7 +3,7 @@ import React, { useContext, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { UserRole, User, Notification } from '../types';
-import { ClipboardListIcon, UserGroupIcon, CogIcon, UserManagementIcon, BrandingIcon, ChartPieIcon, LogoutIcon, DocumentationIcon, SparklesIcon, HeartIcon, BellIcon, EnvelopeIcon } from './Icons';
+import { ClipboardListIcon, UserGroupIcon, CogIcon, UserManagementIcon, BrandingIcon, ChartPieIcon, LogoutIcon, DocumentationIcon, SparklesIcon, HeartIcon, BellIcon, EnvelopeIcon, ChartBarIcon } from './Icons';
 import { BrandingContext } from '../../contexts/BrandingContext';
 import { markNotificationsAsRead } from '../../services/apiClient';
 
@@ -104,6 +104,7 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
     const adminLinks = [
         { to: '/admin/dashboard', label: 'Panel Główny', icon: <CogIcon className="h-5 w-5" /> },
         { to: '/admin/users', label: 'Użytkownicy', icon: <UserManagementIcon /> },
+        { to: '/therapist/dashboard', label: 'Wyniki Testów', icon: <ChartBarIcon /> },
         { to: '/admin/branding', label: 'Branding', icon: <BrandingIcon /> },
         // { to: '/admin/settings/email', label: 'Ustawienia E-mail', icon: <EnvelopeIcon /> },
         { to: '/admin/templates', label: 'Szablony PDF', icon: <ClipboardListIcon className="h-5 w-5" /> },

@@ -67,6 +67,7 @@ model Question {
   type      String  // 'multiple-choice', 'multiple-select', 'likert-5'
   options   String  // JSON: AnswerOption[]
   scoring   String  // JSON: Record<string, ScoringRule[]>
+  isReversed Boolean @default(false)
 }
 
 model TestResult {

@@ -16,9 +16,10 @@ export interface ScoringRule {
 export interface Question {
   id: string;
   text: string;
-  type: 'multiple-choice' | 'multiple-select' | 'likert-5' | 'likert-7' | 'scale-1-10';
+  type: 'multiple-choice' | 'multiple-select' | 'likert-5' | 'likert-7' | 'scale-1-10' | 'yes-no';
   options: AnswerOption[];
   scoring: Record<string, ScoringRule[]>; // Maps AnswerOption ID to an array of scoring rules
+  isReversed?: boolean;
 }
 
 export interface Section {

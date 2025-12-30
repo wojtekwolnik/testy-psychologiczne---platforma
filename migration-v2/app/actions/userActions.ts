@@ -45,3 +45,27 @@ export async function deleteUser(userId: string): Promise<void> {
         throw new Error('Failed to delete user');
     }
 }
+
+export async function createUser(data: { email: string; username: string; password: string; role: 'admin' | 'therapist' }): Promise<UserData> {
+    try {
+        const newUser = await prisma.user.create({
+            data: {
+                email: data.email,
+                username: data.username,
+                password: data.password, // Plain text for prototype as per instructions
+                role: data.role,
+            },
+            select: {
+                id: true,
+                email: true,
+                username: true,
+                role: true,
+                createdAt: true,
+            },
+        });
+        return newUser;
+    } catch (error) {
+        console.error('Failed to create user:', error);
+        throw new Error('Failed to create user');
+    }
+}

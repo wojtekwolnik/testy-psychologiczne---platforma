@@ -210,8 +210,19 @@ export async function triggerAnalysis(resultId: string): Promise<string | null> 
     return analysis;
 }
 
+import { checkAuth } from './authActions';
+
 export async function fetchResults(): Promise<TestResult[]> {
+    const user = await checkAuth();
+    if (!user) return [];
+
+    const where: any = {};
+    if (user.role !== 'admin') {
+        where.therapistId = user.id;
+    }
+
     const results = await prisma.testResult.findMany({
+        where,
         orderBy: { completedAt: 'desc' },
         include: { test: true } // Include test to get title/version
     });

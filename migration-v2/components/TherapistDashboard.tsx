@@ -1,16 +1,17 @@
+'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchTests } from '@/app/actions/testActions';
 import { fetchResults, deleteResult } from '@/app/actions/resultActions';
 import { generateAccessCode, fetchActiveCodes } from '@/app/actions/accessCodeActions';
-import { type TestResult, type Test, type AccessCode } from './types';
+import { fetchTests } from '@/app/actions/testActions';
+import { getUsers, UserData } from '@/app/actions/userActions';
+import { TestResult, Test, AccessCode } from './types';
 import { ChartBarIcon, TrashIcon, PlusIcon, ClipboardCopyIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
+import { useAuth } from '@/contexts/AuthContext';
 
-import { useAuth } from '../contexts/AuthContext';
-
-const TherapistDashboard: React.FC = () => {
+const TherapistDashboard = () => {
   const { user } = useAuth();
   const router = useRouter();
   const [results, setResults] = useState<TestResult[]>([]);
@@ -20,24 +21,35 @@ const TherapistDashboard: React.FC = () => {
   const [expiryDate, setExpiryDate] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copySuccess, setCopySuccess] = useState('');
+  const [copySuccess, setCopySuccess] = useState<string>('');
   const [resultToDelete, setResultToDelete] = useState<string | null>(null);
 
-  // Filter states
+  // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTest, setFilterTest] = useState('all');
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
 
-  // Hardcoded therapist ID is REMOVED. The server will identify the user via token.
-  // const THERAPIST_ID = 'user-2';
+  const [therapists, setTherapists] = useState<UserData[]>([]);
+  const [selectedTherapistId, setSelectedTherapistId] = useState<string>('');
 
   useEffect(() => {
     loadData();
     const defaultExpiry = new Date();
     defaultExpiry.setDate(defaultExpiry.getDate() + 7);
     setExpiryDate(defaultExpiry.toISOString().split('T')[0]);
-  }, []);
+
+    if (user?.role === 'admin') {
+      getUsers().then(users => {
+        // Filter to show only therapists + admin (or all)
+        // Assuming we want to assign to anyone who can have a dashboard
+        setTherapists(users);
+        if (user) setSelectedTherapistId(user.id);
+      });
+    } else if (user) {
+      setSelectedTherapistId(user.id);
+    }
+  }, [user]);
 
   const loadData = async () => {
     try {
@@ -80,12 +92,22 @@ const TherapistDashboard: React.FC = () => {
     const expiry = new Date(expiryDate);
     expiry.setHours(23, 59, 59, 999);
 
-    // therapistId is passed explicitly from auth context
     if (!user) return;
-    const newCode = await generateAccessCode(selectedTest, expiry, user.id);
-    setActiveCodes(prev => [newCode, ...prev]);
-    // Note: fetchActiveCodes could also be called to refresh, but local update is faster.
+    // Use selectedTherapistId if admin, otherwise user.id 
+    // (Actually user.id is safe if not admin, but consistent usage is better)
+    const targetTherapistId = user.role === 'admin' && selectedTherapistId ? selectedTherapistId : user.id;
+
+    try {
+      const newCode = await generateAccessCode(selectedTest, expiry, targetTherapistId);
+      if (newCode) {
+        setActiveCodes(prev => [newCode, ...prev]);
+      }
+    } catch (err) {
+      console.error("Error generating code:", err);
+      // Optional: setError("Wystąpił błąd podczas generowania kodu.");
+    }
   };
+
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code).then(() => {
@@ -145,11 +167,29 @@ const TherapistDashboard: React.FC = () => {
 
         {/* Code Generator */}
         <div className="bg-[var(--secondary-color)] rounded-xl shadow-lg p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-4">Generator kodów dostępu</h2>
           <div className="flex flex-col sm:flex-row items-stretch gap-4 mb-4">
             <select value={selectedTest} onChange={e => setSelectedTest(e.target.value)} className="flex-grow p-3 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]">
               {tests.map(t => <option key={t.id} value={t.id}>{t.title} (v{t.version})</option>)}
             </select>
+
+            {user?.role === 'admin' && (
+              <div className="flex-grow">
+                <label htmlFor="therapist-select" className="block text-xs font-medium text-slate-500 mb-1">Przypisz do</label>
+                <select
+                  id="therapist-select"
+                  value={selectedTherapistId}
+                  onChange={e => setSelectedTherapistId(e.target.value)}
+                  className="w-full p-3 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]"
+                >
+                  {therapists.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.username || t.email} ({t.role === 'admin' ? 'Admin' : 'Terapeuta'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="flex-grow">
               <label htmlFor="expiry-date" className="block text-xs font-medium text-slate-500 mb-1">Data ważności</label>
               <input
@@ -169,7 +209,7 @@ const TherapistDashboard: React.FC = () => {
             <div>
               <h3 className="text-md font-semibold opacity-80">Aktywne kody (ważne i nieużyte):</h3>
               <ul className="mt-2 space-y-1 text-sm opacity-70">
-                {activeCodes.map(code => {
+                {activeCodes.filter(c => c && c.code).map(code => {
                   const associatedTest = tests.find(t => t.id === code.testId);
                   return (
                     <li key={code.code} className="font-mono bg-[var(--background-color)] px-2 py-1 rounded flex justify-between items-center">
@@ -298,7 +338,7 @@ const TherapistDashboard: React.FC = () => {
             </div>
           )}
         </div>
-      </div>
+      </div >
       <ActionConfirmModal
         isOpen={!!resultToDelete}
         onCancel={() => setResultToDelete(null)}

@@ -84,18 +84,19 @@ export default function ClientTestView(props: ClientTestViewProps) {
 
     const allQuestions = useMemo(() => test?.sections.flatMap(s => s.questions) || [], [test]);
 
+    // Pagination now follows Sections: 1 Section = 1 Page
     const paginatedQuestions = useMemo(() => {
-        if (!test || !test.questionsPerPage || test.questionsPerPage <= 0) {
-            return [allQuestions]; // No pagination
-        }
-        const pages = [];
-        for (let i = 0; i < allQuestions.length; i += test.questionsPerPage) {
-            pages.push(allQuestions.slice(i, i + test.questionsPerPage));
-        }
-        return pages.length > 0 ? pages : [[]];
-    }, [test, allQuestions]);
+        if (!test) return [];
+        return test.sections.map(section => section.questions);
+    }, [test]);
 
     const currentQuestions = paginatedQuestions[currentPage] || [];
+
+    // Calculate global question index offset for the current page
+    const questionStartIndex = useMemo(() => {
+        if (currentPage === 0) return 0;
+        return paginatedQuestions.slice(0, currentPage).reduce((acc, page) => acc + page.length, 0);
+    }, [paginatedQuestions, currentPage]);
 
     const handleAnswerChange = (questionId: string, questionType: Question['type'], optionId: string) => {
         setValidationError(null);
@@ -245,7 +246,7 @@ export default function ClientTestView(props: ClientTestViewProps) {
                         <div className="space-y-8">
                             {currentQuestions.map((q, index) => (
                                 <div key={q.id} className="border-b border-slate-200 pb-8">
-                                    <div className="text-lg font-semibold mb-4 prose max-w-none" dangerouslySetInnerHTML={{ __html: `${currentPage * (test.questionsPerPage || 0) + index + 1}. ${q.text}` }}></div>
+                                    <div className="text-lg font-semibold mb-4 prose max-w-none" dangerouslySetInnerHTML={{ __html: `${questionStartIndex + index + 1}. ${q.text}` }}></div>
                                     <div className="space-y-3">
                                         {['likert-5', 'likert-7', 'scale-1-10'].includes(q.type) ? (
                                             <div className="flex flex-wrap items-start justify-center gap-2 sm:gap-4 mt-2">

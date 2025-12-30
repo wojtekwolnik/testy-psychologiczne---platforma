@@ -5,6 +5,8 @@ import type { AccessCode } from '@/components/types';
 import { revalidatePath } from 'next/cache';
 import { generateUniqueId } from '@/utils/idUtils';
 
+import { checkAuth } from './authActions';
+
 export async function generateAccessCode(testId: string, expiresAt: Date, therapistId: string): Promise<AccessCode> {
     const code = `AC-${Math.random().toString(36).substr(2, 6).toUpperCase()}`; // Simple code gen
 
@@ -26,9 +28,16 @@ export async function generateAccessCode(testId: string, expiresAt: Date, therap
 }
 
 export async function fetchActiveCodes(): Promise<AccessCode[]> {
-    // TODO: Filter by therapist
+    const user = await checkAuth();
+    if (!user) return [];
+
+    const where: any = { isUsed: false };
+    if (user.role !== 'admin') {
+        where.therapistId = user.id;
+    }
+
     const codes = await prisma.accessCode.findMany({
-        where: { isUsed: false }, // Only active? Or all? Mock fetched active.
+        where,
         orderBy: { createdAt: 'desc' }
     });
 
