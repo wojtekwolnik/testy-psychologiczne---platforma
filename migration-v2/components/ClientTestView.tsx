@@ -247,23 +247,54 @@ export default function ClientTestView(props: ClientTestViewProps) {
                                 <div key={q.id} className="border-b border-slate-200 pb-8">
                                     <div className="text-lg font-semibold mb-4 prose max-w-none" dangerouslySetInnerHTML={{ __html: `${currentPage * (test.questionsPerPage || 0) + index + 1}. ${q.text}` }}></div>
                                     <div className="space-y-3">
-                                        {q.options.map(option => (
-                                            <label key={option.id} className="flex items-center p-4 rounded-lg border border-slate-300 has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-500 transition-all cursor-pointer shadow-sm">
-                                                <input
-                                                    type={q.type === 'multiple-select' ? 'checkbox' : 'radio'}
-                                                    name={q.id}
-                                                    value={option.id}
-                                                    checked={
-                                                        q.type === 'multiple-select'
-                                                            ? (answers[q.id]?.selectedOptionIds || []).includes(option.id)
-                                                            : answers[q.id]?.selectedOptionId === option.id
-                                                    }
-                                                    onChange={() => handleAnswerChange(q.id, q.type, option.id)}
-                                                    className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-                                                />
-                                                <div className="ml-4 prose max-w-none" dangerouslySetInnerHTML={{ __html: option.text }}></div>
-                                            </label>
-                                        ))}
+                                        {['likert-5', 'likert-7', 'scale-1-10'].includes(q.type) ? (
+                                            <div className="flex flex-wrap items-start justify-center gap-2 sm:gap-4 mt-2">
+                                                {q.options.map((option, idx) => {
+                                                    const isSelected = answers[q.id]?.selectedOptionId === option.id;
+                                                    const isNumber = /^\d+$/.test(option.text);
+                                                    return (
+                                                        <label key={option.id} className="flex flex-col items-center cursor-pointer group">
+                                                            <input
+                                                                type="radio"
+                                                                name={q.id}
+                                                                value={option.id}
+                                                                checked={isSelected}
+                                                                onChange={() => handleAnswerChange(q.id, q.type, option.id)}
+                                                                className="sr-only"
+                                                            />
+                                                            <div className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full border-2 transition-all font-bold text-lg
+                                                                ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg scale-110' : 'bg-white border-slate-300 text-slate-600 group-hover:border-indigo-400 group-hover:bg-indigo-50'}
+                                                            `}>
+                                                                {/* If text is just a number, show it. Otherwise show index + 1 */}
+                                                                {isNumber ? option.text : (idx + 1)}
+                                                            </div>
+                                                            {/* Show text label if it's NOT just a number (e.g. "Strongly Agree") */}
+                                                            {!isNumber && (
+                                                                <span className="text-xs text-center mt-2 max-w-[80px] text-slate-600 font-medium leading-tight">{option.text}</span>
+                                                            )}
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            q.options.map(option => (
+                                                <label key={option.id} className="flex items-center p-4 rounded-lg border border-slate-300 has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-500 transition-all cursor-pointer shadow-sm">
+                                                    <input
+                                                        type={q.type === 'multiple-select' ? 'checkbox' : 'radio'}
+                                                        name={q.id}
+                                                        value={option.id}
+                                                        checked={
+                                                            q.type === 'multiple-select'
+                                                                ? (answers[q.id]?.selectedOptionIds || []).includes(option.id)
+                                                                : answers[q.id]?.selectedOptionId === option.id
+                                                        }
+                                                        onChange={() => handleAnswerChange(q.id, q.type, option.id)}
+                                                        className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                                                    />
+                                                    <div className="ml-4 prose max-w-none" dangerouslySetInnerHTML={{ __html: option.text }}></div>
+                                                </label>
+                                            ))
+                                        )}
                                     </div>
                                 </div>
                             ))}

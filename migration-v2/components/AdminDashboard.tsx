@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchTests, fetchTestById, fetchTestVersions } from '@/app/actions/testActions';
+import { fetchTests, fetchTestById, fetchTestVersions, updateTestStatus } from '@/app/actions/testActions';
 import { type Test } from './types';
 import { EditIcon, PlusIcon, DownloadIcon, UploadIcon, ClockIcon } from './common/Icons';
+import { toast } from 'react-toastify';
 
 const AdminDashboard: React.FC = () => {
   const router = useRouter();
@@ -112,6 +113,23 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleStatusChange = async (testId: string, newStatus: 'DRAFT' | 'PUBLISHED') => {
+    // Confirmation
+    const action = newStatus === 'PUBLISHED' ? 'opublikować' : 'przywrócić do szkicu';
+    if (!window.confirm(`Czy na pewno chcesz ${action} ten test?`)) {
+      return;
+    }
+
+    try {
+      await updateTestStatus(testId, newStatus);
+      // Optimistic update
+      setTests(prev => prev.map(t => t.id === testId ? { ...t, status: newStatus } : t));
+      toast.success(`Status zmieniony na: ${newStatus === 'PUBLISHED' ? 'Opublikowany' : 'Szkic'}`);
+    } catch (err) {
+      toast.error("Nie udało się zmienić statusu.");
+    }
+  };
+
   const filteredTests = useMemo(() => {
     // Display only the latest version of each test (by canonicalId)
     const latestVersions = new Map<string, Test>();
@@ -204,12 +222,26 @@ const AdminDashboard: React.FC = () => {
                       <h3 className="font-bold text-lg flex items-center gap-2">
                         {test.title}
                         <span className="text-xs font-mono bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">v{test.version}</span>
+                        {test.status === 'DRAFT' && <span className="text-xs font-bold uppercase tracking-wider px-2 py-1 rounded" style={{ backgroundColor: 'var(--warning-color)', color: 'white' }}>Szkic</span>}
+                        {test.status === 'PUBLISHED' && <span className="text-xs font-bold uppercase tracking-wider px-2 py-1 rounded" style={{ backgroundColor: 'var(--success-color)', color: 'white' }}>Opublikowany</span>}
                       </h3>
                       <p className="opacity-70 text-sm">
                         {test.sections.reduce((acc, s) => acc + s.questions.length, 0)} Pytań, {test.scales.length} Skal
                       </p>
                     </div>
                     <div className="flex items-center gap-2 self-end sm:self-center">
+                      <select
+                        value={test.status}
+                        onChange={(e) => handleStatusChange(test.id, e.target.value as 'DRAFT' | 'PUBLISHED')}
+                        className="text-sm font-bold uppercase tracking-wider px-2 py-1.5 rounded border-none outline-none cursor-pointer"
+                        style={{
+                          backgroundColor: test.status === 'PUBLISHED' ? 'var(--success-color)' : 'var(--warning-color)',
+                          color: 'white'
+                        }}
+                      >
+                        <option value="DRAFT">Szkic</option>
+                        <option value="PUBLISHED">Opublikowany</option>
+                      </select>
                       <button
                         onClick={() => handleShowHistory(test.canonicalId)}
                         className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-700 font-semibold rounded-md hover:bg-slate-200 text-sm" title="Historia wersji"

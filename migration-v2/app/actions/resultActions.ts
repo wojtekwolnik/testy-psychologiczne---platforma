@@ -232,3 +232,21 @@ export async function deleteResult(resultId: string): Promise<void> {
     });
     revalidatePath('/therapist/dashboard');
 }
+
+export async function fetchResultById(resultId: string): Promise<TestResult | null> {
+    const result = await prisma.testResult.findUnique({
+        where: { id: resultId },
+        include: { test: true }
+    });
+
+    if (!result) return null;
+
+    return {
+        ...result,
+        testTitle: result.test.title,
+        testVersion: result.test.version,
+        completedAt: result.completedAt.toISOString(),
+        scores: JSON.parse(result.scores as string),
+        answers: JSON.parse(result.answers as string)
+    };
+}

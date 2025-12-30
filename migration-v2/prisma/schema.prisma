@@ -29,6 +29,7 @@ model Test {
   title            String
   description      String
   instructions     String
+  status           String    @default("DRAFT") // 'DRAFT' | 'PUBLISHED'
   questionsPerPage Int?
   createdAt        DateTime  @default(now())
   

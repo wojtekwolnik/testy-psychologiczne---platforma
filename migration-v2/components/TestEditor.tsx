@@ -4,10 +4,32 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { fetchTestById, saveTest, createNewTest, fetchPdfTemplates } from '@/app/actions/testActions';
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import type { Test, Scale, Question, AnswerOption, ScoringRule, Section, PdfTemplate } from './types';
-import { PlusIcon, TrashIcon, CalculatorIcon } from './common/Icons';
+import { PlusIcon, TrashIcon, CalculatorIcon, QuestionMarkCircleIcon } from './common/Icons';
 // import RichTextInput from './common/RichTextInput';
 import { generateUniqueId } from '../utils/idUtils';
+
+const validateTest = (test: Test): string[] => {
+    const errors: string[] = [];
+    if (!test.title || test.title.trim() === '') errors.push('Tytuł testu jest wymagany');
+    if (test.sections.length === 0) errors.push('Test musi zawierać przynajmniej jedną sekcję');
+
+    test.sections.forEach((section, index) => {
+        if (section.questions.length === 0) errors.push(`Sekcja "${section.title}" nie zawiera pytań`);
+        section.questions.forEach((q, qIndex) => {
+            if (!q.text || q.text.trim() === '') errors.push(`Pytanie ${qIndex + 1} w sekcji "${section.title}" nie ma treści`);
+        });
+    });
+
+    test.scales.forEach((scale, index) => {
+        if (!scale.name || scale.name.trim() === '') errors.push(`Skala #${index + 1} nie ma nazwy`);
+    });
+
+    return errors;
+};
+
 
 const TestEditor: React.FC = () => {
     const router = useRouter();
@@ -18,6 +40,7 @@ const TestEditor: React.FC = () => {
     const [templates, setTemplates] = useState<PdfTemplate[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [showFormulaHelp, setShowFormulaHelp] = useState(false);
 
     useEffect(() => {
         const loadInitialData = async () => {
@@ -36,7 +59,7 @@ const TestEditor: React.FC = () => {
                     const newTest: Test = {
                         id: generateUniqueId('new'),
                         canonicalId: generateUniqueId('tid'), version: 1, title: 'Nowy Test',
-                        description: '', instructions: '', questionsPerPage: 10, scales: [],
+                        description: '', instructions: '', status: 'DRAFT', questionsPerPage: 10, scales: [],
                         sections: [{ id: generateUniqueId('sec'), title: 'Sekcja 1', questions: [] }],
                         defaultTemplateId: null, createdAt: new Date().toISOString(),
                     };
@@ -48,35 +71,47 @@ const TestEditor: React.FC = () => {
         loadInitialData();
     }, [testId]);
 
-    const handleSaveAndExit = useCallback(async (asNewVersion: boolean) => {
+    const handleSave = useCallback(async (isPublishing: boolean) => {
         if (!test) return;
+
+        // If publishing, validate. If draft, skip validation.
+        if (isPublishing) {
+            const errors = validateTest(test);
+            if (errors.length > 0) {
+                toast.error(
+                    <div>
+                        <strong>Nie można opublikować testu:</strong>
+                        <ul className="list-disc pl-4 mt-2">
+                            {errors.map((err, i) => <li key={i}>{err}</li>)}
+                        </ul>
+                    </div>,
+                    { autoClose: 5000 }
+                );
+                return;
+            }
+        }
+
         setIsSaving(true);
         try {
-            // Logic to choose Create vs Update
-            // If testId is 'new' or we are strictly creating new version?
-            // User flow: 'Save' -> updates current.
+            // Update status based on action
+            const testToSave = { ...test, status: isPublishing ? 'PUBLISHED' : 'DRAFT' } as Test;
+
             let saved: Test;
-            if (asNewVersion) {
-                saved = await createNewTest(test); // Should we clone logic here? The BE handles ID gen? 
-                // Actually `createNewTest` as implemented in actions expects a Test object with ID.
-                // For now, let's trust the server action to handle "Save as new" if we pass a new ID or if the action handles it.
-                // My BE action `createNewTest` does strict create on provided ID.
-                // So we should generate ID here if it is a Copy? Or let BE do it.
-                // Let's assume Update for now to keep it simple, as 'asNewVersion' button logic might need specific UI flow.
-                // Reverting to simpler Update logic for this step.
-                // Wait, I implemented `saveTest` which handles updates. 
-                saved = await saveTest(test, asNewVersion);
+            if (testId === 'new') {
+                saved = await createNewTest(testToSave);
             } else {
-                if (testId === 'new') {
-                    saved = await createNewTest(test);
-                } else {
-                    saved = await saveTest(test, asNewVersion);
-                }
+                saved = await saveTest(testToSave, false);
             }
 
             setTest(saved);
-            router.push('/admin/dashboard');
-        } catch (e) { console.error(e) } finally { setIsSaving(false); }
+            toast.success(isPublishing ? "Test opublikowany pomyślnie!" : "Szkic zapisany pomyślnie!");
+            setTimeout(() => {
+                router.push('/admin/dashboard');
+            }, 1000);
+        } catch (e) {
+            console.error(e);
+            toast.error("Wystąpił błąd podczas zapisywania testu.");
+        } finally { setIsSaving(false); }
     }, [test, router, testId]);
 
     const handleTestChange = (field: keyof Test, value: any) => {
@@ -160,11 +195,269 @@ const TestEditor: React.FC = () => {
         }
     }
 
+    // --- Section Management ---
+    const addSection = () => {
+        setTest(prev => prev ? ({
+            ...prev,
+            sections: [...prev.sections, { id: generateUniqueId('sec'), title: `Sekcja ${prev.sections.length + 1}`, questions: [] }]
+        }) : null);
+    };
+
+    const updateSection = (sectionId: string, updates: Partial<Section>) => {
+        setTest(prev => prev ? ({
+            ...prev,
+            sections: prev.sections.map(s => s.id === sectionId ? { ...s, ...updates } : s)
+        }) : null);
+    };
+
+    const removeSection = (sectionId: string) => {
+        setTest(prev => prev ? ({
+            ...prev,
+            sections: prev.sections.filter(s => s.id !== sectionId)
+        }) : null);
+    };
+
+    // --- Question Management ---
+    const addQuestion = (sectionId: string) => {
+        const newQuestion: Question = {
+            id: generateUniqueId('q'),
+            text: 'Nowe Pytanie',
+            type: 'multiple-choice', // default
+            options: [],
+            scoring: {}
+        };
+
+        setTest(prev => prev ? ({
+            ...prev,
+            sections: prev.sections.map(s => s.id === sectionId ? { ...s, questions: [...s.questions, newQuestion] } : s)
+        }) : null);
+    };
+
+    const updateQuestion = (sectionId: string, questionId: string, updates: Partial<Question>) => {
+        setTest(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                sections: prev.sections.map(s => {
+                    if (s.id !== sectionId) return s;
+                    return {
+                        ...s,
+                        questions: s.questions.map(q => {
+                            if (q.id !== questionId) return q;
+
+                            let newOptions = q.options;
+                            let newScoring = q.scoring;
+
+                            // Auto-generate options if type changes to a fixed scale
+                            if (updates.type) {
+                                if (updates.type === 'likert-5') {
+                                    newOptions = Array.from({ length: 5 }, (_, i) => ({ id: generateUniqueId('opt'), text: (i + 1).toString() }));
+                                    newScoring = {}; // Reset scoring on type change to avoid mismatch
+                                } else if (updates.type === 'likert-7') {
+                                    newOptions = Array.from({ length: 7 }, (_, i) => ({ id: generateUniqueId('opt'), text: (i + 1).toString() }));
+                                    newScoring = {};
+                                } else if (updates.type === 'scale-1-10') {
+                                    newOptions = Array.from({ length: 10 }, (_, i) => ({ id: generateUniqueId('opt'), text: (i + 1).toString() }));
+                                    newScoring = {};
+                                }
+                            }
+
+                            return { ...q, ...updates, options: updates.type ? newOptions : (updates.options || q.options), scoring: updates.type ? newScoring : (updates.scoring || q.scoring) };
+                        })
+                    };
+                })
+            };
+        });
+    };
+
+    const removeQuestion = (sectionId: string, questionId: string) => {
+        setTest(prev => prev ? ({
+            ...prev,
+            sections: prev.sections.map(s => {
+                if (s.id !== sectionId) return s;
+                return { ...s, questions: s.questions.filter(q => q.id !== questionId) };
+            })
+        }) : null);
+    };
+
+    // --- Option Management ---
+    const addOption = (sectionId: string, questionId: string) => {
+        const newOption: AnswerOption = { id: generateUniqueId('opt'), text: 'Nowa Opcja' };
+        setTest(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                sections: prev.sections.map(s => {
+                    if (s.id !== sectionId) return s;
+                    return {
+                        ...s,
+                        questions: s.questions.map(q => {
+                            if (q.id !== questionId) return q;
+                            return { ...q, options: [...q.options, newOption] };
+                        })
+                    };
+                })
+            };
+        });
+    };
+
+    const updateOption = (sectionId: string, questionId: string, optionId: string, text: string) => {
+        setTest(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                sections: prev.sections.map(s => {
+                    if (s.id !== sectionId) return s;
+                    return {
+                        ...s,
+                        questions: s.questions.map(q => {
+                            if (q.id !== questionId) return q;
+                            return {
+                                ...q,
+                                options: q.options.map(o => o.id === optionId ? { ...o, text } : o)
+                            };
+                        })
+                    };
+                })
+            };
+        });
+    };
+
+    const removeOption = (sectionId: string, questionId: string, optionId: string) => {
+        setTest(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                sections: prev.sections.map(s => {
+                    if (s.id !== sectionId) return s;
+                    return {
+                        ...s,
+                        questions: s.questions.map(q => {
+                            if (q.id !== questionId) return q;
+                            const newScoring = { ...q.scoring };
+                            delete newScoring[optionId]; // Remove scoring for this option
+                            return {
+                                ...q,
+                                options: q.options.filter(o => o.id !== optionId),
+                                scoring: newScoring
+                            };
+                        })
+                    };
+                })
+            };
+        });
+    };
+
+    // --- Scoring Management ---
+    const addScoringRule = (sectionId: string, questionId: string, optionId: string, scaleId: string, points: number) => {
+        setTest(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                sections: prev.sections.map(s => {
+                    if (s.id !== sectionId) return s;
+                    return {
+                        ...s,
+                        questions: s.questions.map(q => {
+                            if (q.id !== questionId) return q;
+                            const currentRules = q.scoring[optionId] || [];
+                            const newRules = [...currentRules, { scaleId, points }];
+                            return {
+                                ...q,
+                                scoring: { ...q.scoring, [optionId]: newRules }
+                            };
+                        })
+                    };
+                })
+            };
+        });
+    };
+
+    const removeScoringRule = (sectionId: string, questionId: string, optionId: string, ruleIndex: number) => {
+        setTest(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                sections: prev.sections.map(s => {
+                    if (s.id !== sectionId) return s;
+                    return {
+                        ...s,
+                        questions: s.questions.map(q => {
+                            if (q.id !== questionId) return q;
+                            const currentRules = q.scoring[optionId] || [];
+                            const newRules = currentRules.filter((_, idx) => idx !== ruleIndex);
+                            return {
+                                ...q,
+                                scoring: { ...q.scoring, [optionId]: newRules }
+                            };
+                        })
+                    };
+                })
+            };
+        });
+    };
+
     if (isLoading || !test) return <div className="p-8 text-center">Ładowanie edytora testów...</div>;
 
     return (
         <div className="p-4 sm:p-8 max-w-5xl mx-auto">
             <h1 className="text-4xl font-bold mb-6">Edytor Testu</h1>
+
+            {/* Metadata Section */}
+            <div className="bg-white p-6 rounded-xl shadow-lg mb-8 border border-slate-200">
+                <h2 className="text-2xl font-semibold mb-4">Informacje Podstawowe</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Tytuł Testu</label>
+                        <input
+                            type="text"
+                            value={test.title}
+                            onChange={e => handleTestChange('title', e.target.value)}
+                            className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] outline-none text-lg font-semibold"
+                            placeholder="Wprowadź tytuł testu..."
+                        />
+                    </div>
+                    <div className="col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Opis (widoczny dla klienta)</label>
+                        <textarea
+                            value={test.description}
+                            onChange={e => handleTestChange('description', e.target.value)}
+                            className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] outline-none min-h-[80px]"
+                            placeholder="Wprowadź opis testu..."
+                        />
+                    </div>
+                    <div className="col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Instrukcje (widoczne przed rozpoczęciem)</label>
+                        <textarea
+                            value={test.instructions}
+                            onChange={e => handleTestChange('instructions', e.target.value)}
+                            className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] outline-none min-h-[80px]"
+                            placeholder="Wprowadź instrukcje..."
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Wersja</label>
+                        <input
+                            type="number"
+                            value={test.version}
+                            readOnly
+                            className="w-full p-2 border border-slate-200 rounded-lg bg-slate-100 text-slate-500 cursor-not-allowed"
+                        />
+                        <p className="text-xs text-slate-400 mt-1">Wersja jest aktualizowana automatycznie przy zapisie.</p>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Pytania na stronę</label>
+                        <input
+                            type="number"
+                            min={1}
+                            value={test.questionsPerPage || 10}
+                            onChange={e => handleTestChange('questionsPerPage', parseInt(e.target.value) || 10)}
+                            className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] outline-none"
+                        />
+                    </div>
+                </div>
+            </div>
+
             <div className="bg-[var(--secondary-color)] p-6 rounded-xl shadow-lg mb-8">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-2xl font-semibold">Skale Oceny</h2>
@@ -194,7 +487,16 @@ const TestEditor: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className="mt-3 p-3 bg-orange-400/10 rounded-md">
-                                    <label className="text-sm font-medium text-orange-700">Formuła obliczeniowa:</label>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <label className="text-sm font-medium text-orange-700">Formuła obliczeniowa:</label>
+                                        <button
+                                            onClick={() => setShowFormulaHelp(true)}
+                                            className="text-orange-600 hover:text-orange-800 transition-colors"
+                                            title="Jak tworzyć formuły?"
+                                        >
+                                            <QuestionMarkCircleIcon className="h-5 w-5" />
+                                        </button>
+                                    </div>
                                     <input type="text" placeholder="np. ({scale-id1} + {scale-id2}) / 2" value={scale.formula || ''} onChange={e => updateScale(i, { formula: e.target.value })} className="w-full p-2 mt-1 border border-orange-300 rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
                                     <div className="mt-2 text-xs">
                                         <span className="font-semibold">Wstaw ID skali:</span>
@@ -210,14 +512,259 @@ const TestEditor: React.FC = () => {
                     ))}
                 </div>
             </div>
+
+            <div className="space-y-8">
+                {test.sections.map((section, sIndex) => (
+                    <div key={section.id} className="bg-white p-6 rounded-xl shadow-lg border border-slate-200">
+                        <div className="flex justify-between items-center mb-6">
+                            <input
+                                type="text"
+                                value={section.title}
+                                onChange={e => updateSection(section.id, { title: e.target.value })}
+                                className="text-2xl font-bold bg-transparent border-b-2 border-transparent hover:border-slate-300 focus:border-[var(--primary-color)] outline-none px-2 py-1 flex-grow mr-4"
+                            />
+                            <div className="flex gap-2">
+                                <button onClick={() => removeSection(section.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Usuń sekcję">
+                                    <TrashIcon />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            {section.questions.map((question, qIndex) => (
+                                <div key={question.id} className="bg-slate-50 p-6 rounded-lg border border-slate-200 shadow-sm relative group">
+                                    <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => removeQuestion(section.id, question.id)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                                            <TrashIcon className="h-4 w-4" />
+                                        </button>
+                                    </div>
+
+                                    <div className="mb-4 pr-10">
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Pytanie {qIndex + 1}</label>
+                                        <input
+                                            type="text"
+                                            value={question.text}
+                                            onChange={e => updateQuestion(section.id, question.id, { text: e.target.value })}
+                                            className="w-full text-lg p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] focus:border-transparent"
+                                            placeholder="Treść pytania..."
+                                        />
+                                    </div>
+
+                                    <div className="mb-6">
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Typ Pytania</label>
+                                        <select
+                                            value={question.type}
+                                            onChange={e => updateQuestion(section.id, question.id, { type: e.target.value as any })}
+                                            className="w-full md:w-auto p-2 border border-slate-300 rounded-lg bg-white"
+                                        >
+                                            <option value="multiple-choice">Jednokrotny wybór</option>
+                                            <option value="multiple-select">Wielokrotny wybór</option>
+                                            <option value="likert-5">Skala Likerta (1-5)</option>
+                                            <option value="likert-7">Skala Likerta (1-7)</option>
+                                            <option value="scale-1-10">Skala Numeryczna (1-10)</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="space-y-3 pl-4 border-l-2 border-slate-200">
+                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Odpowiedzi</label>
+                                        {question.options.map((option) => (
+                                            <div key={option.id} className="bg-white p-4 rounded-lg border border-slate-200">
+                                                <div className="flex items-center gap-3 mb-3">
+                                                    <div className="h-4 w-4 rounded-full border-2 border-slate-300"></div>
+                                                    <input
+                                                        type="text"
+                                                        value={option.text}
+                                                        onChange={e => updateOption(section.id, question.id, option.id, e.target.value)}
+                                                        className="flex-grow p-2 border border-slate-200 rounded focus:border-[var(--primary-color)] outline-none bg-slate-50 focus:bg-white transition-colors"
+                                                        placeholder="Treść odpowiedzi..."
+                                                    />
+                                                    {!['likert-5', 'likert-7', 'scale-1-10'].includes(question.type) && (
+                                                        <button onClick={() => removeOption(section.id, question.id, option.id)} className="text-slate-400 hover:text-red-500">
+                                                            <TrashIcon className="h-4 w-4" />
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                {/* Scoring Rules Interface */}
+                                                <div className="bg-slate-50 p-3 rounded text-sm">
+                                                    <div className="text-xs font-semibold text-slate-500 mb-2">PUNKTACJA:</div>
+                                                    {question.scoring[option.id]?.map((rule, rIndex) => (
+                                                        <div key={rIndex} className="flex gap-2 mb-2 items-center">
+                                                            <div className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-mono">
+                                                                {test.scales.find(s => s.id === rule.scaleId)?.name || rule.scaleId}
+                                                            </div>
+                                                            <div className="font-bold text-slate-700">+{rule.points} pkt</div>
+                                                            <button onClick={() => removeScoringRule(section.id, question.id, option.id, rIndex)} className="text-red-400 hover:text-red-600 ml-auto">
+                                                                &times;
+                                                            </button>
+                                                        </div>
+                                                    ))}
+
+                                                    <div className="flex gap-2 mt-2 items-center">
+                                                        <select
+                                                            className="text-xs p-1 border rounded max-w-[150px]"
+                                                            id={`scale-select-${option.id}`}
+                                                        >
+                                                            <option value="">Wybierz skalę...</option>
+                                                            {test.scales.filter(s => s.type === 'standard').map(s => (
+                                                                <option key={s.id} value={s.id}>{s.name}</option>
+                                                            ))}
+                                                        </select>
+                                                        <input
+                                                            type="number"
+                                                            className="text-xs p-1 border rounded w-16"
+                                                            placeholder="Pkt"
+                                                            id={`points-input-${option.id}`}
+                                                            defaultValue={1}
+                                                        />
+                                                        <button
+                                                            onClick={(e) => {
+                                                                const scaleSelect = document.getElementById(`scale-select-${option.id}`) as HTMLSelectElement;
+                                                                const pointsInput = document.getElementById(`points-input-${option.id}`) as HTMLInputElement;
+                                                                if (scaleSelect.value && pointsInput.value) {
+                                                                    addScoringRule(section.id, question.id, option.id, scaleSelect.value, parseInt(pointsInput.value));
+                                                                    scaleSelect.value = '';
+                                                                    pointsInput.value = '1';
+                                                                }
+                                                            }}
+                                                            className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded hover:bg-green-200 transition-colors"
+                                                        >
+                                                            + Dodaj
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        <button
+                                            onClick={() => addOption(section.id, question.id)}
+                                            disabled={['likert-5', 'likert-7', 'scale-1-10'].includes(question.type)}
+                                            className={`text-sm font-semibold text-[var(--primary-color)] hover:underline flex items-center gap-1 mt-2 disabled:text-slate-400 disabled:no-underline disabled:cursor-not-allowed`}
+                                        >
+                                            <PlusIcon className="h-4 w-4" /> Dodaj opcję odpowiedzi
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                            <button
+                                onClick={() => addQuestion(section.id)}
+                                className="w-full py-4 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 font-bold hover:border-[var(--primary-color)] hover:text-[var(--primary-color)] hover:bg-blue-50 transition-all flex justify-center items-center gap-2"
+                            >
+                                <PlusIcon /> Dodaj Pytanie
+                            </button>
+                        </div>
+                    </div>
+                ))}
+
+                <button
+                    onClick={addSection}
+                    className="w-full py-6 bg-white shadow-lg border border-slate-200 rounded-xl text-xl font-bold text-slate-600 hover:text-[var(--primary-color)] hover:shadow-xl transition-all flex justify-center items-center gap-3"
+                >
+                    <PlusIcon className="h-8 w-8" /> Dodaj Nową Sekcję
+                </button>
+            </div>
+
+            {/* Formula Help Modal */}
+            {showFormulaHelp && (
+                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold text-gray-800">Jak tworzyć formuły obliczeniowe?</h3>
+                            <button onClick={() => setShowFormulaHelp(false)} className="text-gray-500 hover:text-gray-700">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div className="space-y-4 text-sm text-gray-600">
+                            <p>
+                                Formuły pozwalają na automatyczne obliczanie wyników na podstawie innych skal.
+                                Możesz używać standardowych operatorów matematycznych oraz funkcji.
+                            </p>
+
+                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                <h4 className="font-semibold text-gray-800 mb-2">Dostępne Operatory:</h4>
+                                <ul className="list-disc pl-5 space-y-1">
+                                    <li><code>+</code> (Dodawanie)</li>
+                                    <li><code>-</code> (Odejmowanie)</li>
+                                    <li><code>*</code> (Mnożenie)</li>
+                                    <li><code>/</code> (Dzielenie)</li>
+                                    <li><code>( )</code> (Nawiasy do grupowania)</li>
+                                </ul>
+                            </div>
+
+                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                <h4 className="font-semibold text-gray-800 mb-2">Zmienne (Skale):</h4>
+                                <p className="mb-2">Aby użyć wyniku z innej skali, wstaw jej ID w nawiasach klamrowych, np. <code>{`{scale-123}`}</code>.</p>
+                                <p className="text-xs text-gray-500">
+                                    Użyj przycisków "Wstaw ID skali" pod polem formuły, aby szybko dodać odpowiedni identyfikator.
+                                </p>
+                            </div>
+
+                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                <h4 className="font-semibold text-gray-800 mb-2">Przykłady:</h4>
+                                <ul className="space-y-2 font-mono text-xs">
+                                    <li className="bg-white p-2 border rounded">
+                                        <div className="text-gray-500">// Suma dwóch skal</div>
+                                        {`{s-1234} + {s-5678}`}
+                                    </li>
+                                    <li className="bg-white p-2 border rounded">
+                                        <div className="text-gray-500">// Średnia z trzech skal</div>
+                                        {`({s-1} + {s-2} + {s-3}) / 3`}
+                                    </li>
+                                    <li className="bg-white p-2 border rounded">
+                                        <div className="text-gray-500">// Różnica (np. Skala Lęku - Skala Spokoju)</div>
+                                        {`{s-lek} - {s-spokoj}`}
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div className="p-3 bg-yellow-50 text-yellow-800 rounded border border-yellow-200 text-xs">
+                                <strong>Uwaga:</strong> Upewnij się, że nie tworzysz pętli (np. Skala A zależy od Skali B, a Skala B zależy od Skali A), ponieważ może to uniemożliwić obliczenie wyników.
+                            </div>
+                        </div>
+
+                        <div className="mt-6 flex justify-end">
+                            <button
+                                onClick={() => setShowFormulaHelp(false)}
+                                className="px-4 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700"
+                            >
+                                Rozumiem
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="flex justify-end gap-4 mt-8">
                 <button onClick={() => router.push('/admin/dashboard')} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg">Anuluj</button>
-                <button onClick={() => handleSaveAndExit(false)} disabled={isSaving} className="px-6 py-2 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold rounded-lg disabled:bg-slate-400">
-                    {isSaving ? 'Zapisywanie...' : 'Zapisz Test'}
+                <button
+                    onClick={() => handleSave(false)}
+                    disabled={isSaving}
+                    className="px-6 py-2 border font-bold rounded-lg transition-colors disabled:opacity-50"
+                    style={{
+                        backgroundColor: 'var(--warning-color)',
+                        color: 'white',
+                        borderColor: 'var(--warning-color)'
+                    }}
+                >
+                    {isSaving ? 'Zapisywanie...' : 'Zapisz Szkic'}
+                </button>
+                <button
+                    onClick={() => handleSave(true)}
+                    disabled={isSaving}
+                    className="px-6 py-2 font-bold rounded-lg transition-colors disabled:opacity-50"
+                    style={{
+                        backgroundColor: 'var(--success-color)',
+                        color: 'white'
+                    }}
+                >
+                    {isSaving ? 'Zapisywanie...' : 'Opublikuj'}
                 </button>
             </div>
         </div>
     );
 };
+
 
 export default TestEditor;

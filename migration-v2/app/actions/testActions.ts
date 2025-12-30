@@ -8,6 +8,7 @@ import { revalidatePath } from 'next/cache';
 const serializeTest = (prismaTest: any): Test => {
     return {
         ...prismaTest,
+        status: prismaTest.status || 'DRAFT', // Default to DRAFT if null (legacy data)
         createdAt: prismaTest.createdAt.toISOString(),
         scales: prismaTest.scales.map((s: any) => ({ ...s, maxScore: s.maxScore ?? undefined, formula: s.formula ?? undefined })),
         sections: prismaTest.sections.map((sec: any) => ({
@@ -148,13 +149,20 @@ export async function saveTest(testData: Test, asNewVersion: boolean): Promise<T
 
 export async function createNewTest(testData: Test): Promise<Test> {
     // Similar to save but 'create'
-    const { id, scales, sections, ...basicInfo } = testData;
+    const { id, scales, sections, defaultTemplateId, createdAt, ...basicInfo } = testData;
 
     await prisma.test.create({
         data: {
             id: id,
-            ...basicInfo,
-            // We can use nested create here!
+            // Explicitly map fields to avoid "Unknown argument" errors for extra props like defaultTemplateId
+            title: basicInfo.title,
+            description: basicInfo.description,
+            instructions: basicInfo.instructions,
+            questionsPerPage: basicInfo.questionsPerPage,
+            version: basicInfo.version,
+            canonicalId: basicInfo.canonicalId,
+            createdAt: new Date(createdAt), // Ensure Date type
+
             scales: {
                 create: scales.map(s => ({
                     id: s.id,
@@ -199,6 +207,72 @@ export async function fetchPdfTemplates(): Promise<PdfTemplate[]> {
     }));
 }
 
+export async function fetchPdfTemplateById(id: string): Promise<PdfTemplate | null> {
+    const template = await prisma.pdfTemplate.findUnique({
+        where: { id },
+        include: { test: { select: { canonicalId: true } } }
+    });
+    if (!template) return null;
+    return {
+        ...template,
+        testCanonicalId: template.test.canonicalId,
+        components: JSON.parse(template.components as string)
+    };
+}
+
+export async function savePdfTemplate(template: PdfTemplate): Promise<PdfTemplate> {
+    // Upsert logic
+    const { id, name, testCanonicalId, components } = template;
+
+    // Find test by canonicalId to get internal ID (Prisma relation needs unique ID or connect by unique)
+    // Actually our schema relates PdfTemplate to Test via Test's `id` or `canonicalId`?
+    // Let's check Schema. Usually relation is on `testId`.
+    // Wait, the types say `testCanonicalId` but Prisma might use `testId`.
+    // The `fetchPdfTemplates` above includes `test: { select: { canonicalId: true } }`.
+    // This implies the relation exists. 
+    // We need to connect by `canonicalId` if the schema supports it, or look up the test.
+    // Let's look up the latest test version for this canonicalId to connect? 
+    // OR we connect to a specific Test ID?
+    // The legacy app likely connected to the canonical ID concept.
+    // Let's check what `prisma.pdfTemplate` expects.
+
+    // Assuming schema: PdfTemplate { id, name, components, testId, test -> Test }
+    // We need to find the Test ID.
+    const test = await prisma.test.findFirst({
+        where: { canonicalId: testCanonicalId },
+        orderBy: { version: 'desc' } // Link to latest version?
+    });
+
+    if (!test) throw new Error("Linked test not found");
+
+    const saved = await prisma.pdfTemplate.upsert({
+        where: { id },
+        create: {
+            id,
+            name,
+            components: JSON.stringify(components),
+            testId: test.id // Connect to specific test row
+        },
+        update: {
+            name,
+            components: JSON.stringify(components),
+            testId: test.id
+        }
+    });
+
+    revalidatePath('/admin/templates');
+    return {
+        ...saved,
+        testCanonicalId: test.canonicalId,
+        components: JSON.parse(saved.components as string)
+    };
+}
+
+export async function deletePdfTemplate(id: string): Promise<void> {
+    await prisma.pdfTemplate.delete({ where: { id } });
+    revalidatePath('/admin/templates');
+}
+
 export async function fetchTestVersions(canonicalId: string): Promise<Test[]> {
     const tests = await prisma.test.findMany({
         where: { canonicalId },
@@ -213,4 +287,16 @@ export async function fetchTestVersions(canonicalId: string): Promise<Test[]> {
         },
     });
     return tests.map(serializeTest);
+}
+
+export async function updateTestStatus(testId: string, newStatus: 'DRAFT' | 'PUBLISHED'): Promise<Test> {
+    await prisma.test.update({
+        where: { id: testId },
+        data: { status: newStatus }
+    });
+
+    revalidatePath('/admin/dashboard');
+    const updated = await fetchTestById(testId);
+    if (!updated) throw new Error("Failed to update test status.");
+    return updated;
 }

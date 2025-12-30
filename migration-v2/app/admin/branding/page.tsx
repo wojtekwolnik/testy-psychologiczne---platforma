@@ -201,10 +201,6 @@ export default function BrandingPage() {
 
                         {currentPalette ? (
                             <>
-                                <div className="mb-4 p-4 bg-gray-100 rounded text-xs overflow-auto font-mono max-h-40 border border-gray-300">
-                                    <strong>DEBUG PALETTE:</strong>
-                                    {JSON.stringify(currentPalette, null, 2)}
-                                </div>
                                 <div>
                                     <h3 className="font-bold text-lg mb-4 text-slate-700 border-b pb-2">Główne Elementy ({themeMode === 'light' ? 'Jasny' : 'Ciemny'})</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -16,7 +16,7 @@ export interface ScoringRule {
 export interface Question {
   id: string;
   text: string;
-  type: 'multiple-choice' | 'multiple-select' | 'likert-5';
+  type: 'multiple-choice' | 'multiple-select' | 'likert-5' | 'likert-7' | 'scale-1-10';
   options: AnswerOption[];
   scoring: Record<string, ScoringRule[]>; // Maps AnswerOption ID to an array of scoring rules
 }
@@ -43,6 +43,7 @@ export interface Test {
   title: string;
   description: string;
   instructions: string;
+  status: 'DRAFT' | 'PUBLISHED';
   questionsPerPage: number | null;
   sections: Section[];
   scales: Scale[];
