@@ -33,7 +33,7 @@ export const StaffLoginPage: React.FC = () => {
         <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--background-color)] p-4 text-[var(--text-color)]">
             <div className="w-full max-w-sm">
                 <header className="text-center mb-8">
-                    {branding.logoUrl && <img src={branding.logoUrl} alt="Logo" className="h-16 w-auto mx-auto mb-4 object-contain" />}
+                    {branding.logoUrl && <img src={branding.logoUrl} alt="Logo" className="h-16 w-auto max-w-[250px] mx-auto mb-4 object-contain" />}
                     <h1 className="text-4xl font-extrabold tracking-tight">
                         Logowanie personelu
                     </h1>

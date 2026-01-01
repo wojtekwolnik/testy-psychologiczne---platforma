@@ -37,6 +37,7 @@ model Test {
   sections         Section[]
   results          TestResult[]
   pdfTemplates     PdfTemplate[]
+  defaultTemplateId String?
   accessCodes      AccessCode[]
 }
 

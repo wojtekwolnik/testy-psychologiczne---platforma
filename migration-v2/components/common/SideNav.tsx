@@ -1,6 +1,6 @@
 
 import React, { useContext, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { UserRole, User, Notification } from '../types';
 import { ClipboardListIcon, UserGroupIcon, CogIcon, UserManagementIcon, BrandingIcon, ChartPieIcon, LogoutIcon, DocumentationIcon, SparklesIcon, HeartIcon, BellIcon, EnvelopeIcon, ChartBarIcon } from './Icons';
@@ -99,15 +99,16 @@ const NotificationBell: React.FC<Pick<SideNavProps, 'user' | 'notifications' | '
 const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications, onLogout }) => {
     const { branding } = useContext(BrandingContext);
     const router = useRouter();
+    const pathname = usePathname();
 
     // Mapping from abstract view to concrete URL path
     const adminLinks = [
         { to: '/admin/dashboard', label: 'Panel Główny', icon: <CogIcon className="h-5 w-5" /> },
         { to: '/admin/users', label: 'Użytkownicy', icon: <UserManagementIcon /> },
-        { to: '/therapist/dashboard', label: 'Wyniki Testów', icon: <ChartBarIcon /> },
+        { to: '/admin/results', label: 'Wyniki Testów', icon: <ChartBarIcon /> },
         { to: '/admin/branding', label: 'Branding', icon: <BrandingIcon /> },
         // { to: '/admin/settings/email', label: 'Ustawienia E-mail', icon: <EnvelopeIcon /> },
-        { to: '/admin/templates', label: 'Szablony PDF', icon: <ClipboardListIcon className="h-5 w-5" /> },
+        { to: '/admin/templates', label: 'Konfiguracja Raportów', icon: <ClipboardListIcon className="h-5 w-5" /> },
         // { to: '/admin/data', label: 'Dane Zbiorcze', icon: <ChartPieIcon /> },
         { to: '/admin/docs', label: 'Dokumentacja', icon: <DocumentationIcon /> },
         // { to: '/admin/settings/ai', label: 'Ustawienia AI', icon: <SparklesIcon className="h-6 w-6" /> },
@@ -140,7 +141,7 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
                 <div className="flex items-center gap-3 flex-shrink min-w-0">
                     {branding.logoUrl ? (
                         <div className="bg-white/10 p-2 rounded-lg backdrop-blur-sm">
-                            <img src={branding.logoUrl} alt="Logo" className="h-8 w-auto flex-shrink-0" />
+                            <img src={branding.logoUrl} alt="Logo" className="h-8 w-auto max-w-[120px] object-contain flex-shrink-0" />
                         </div>
                     ) : (
                         <div className="h-10 w-10 bg-gradient-to-br from-[var(--primary-color)] to-[var(--accent-color)] rounded-lg flex items-center justify-center text-white font-bold text-lg">
@@ -163,16 +164,24 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
 
             <div className="flex-grow space-y-1 relative">
                 <p className="px-4 text-xs font-semibold opacity-50 uppercase tracking-wider mb-2">Menu</p>
-                {links.map(link => (
-                    <NavLink
-                        key={link.to}
-                        label={link.label}
-                        icon={link.icon}
-                        to={link.to}
-                        isActive={window.location.pathname === link.to}
-                        colors={sidebarColors}
-                    />
-                ))}
+                {links.map(link => {
+                    const isReportView = pathname?.startsWith('/report/');
+                    const isResultLink = link.to === '/admin/results' || link.to === '/therapist/dashboard';
+                    const isActive = (pathname === link.to) ||
+                        (link.to !== '/' && pathname?.startsWith(link.to)) ||
+                        (isReportView && isResultLink);
+
+                    return (
+                        <NavLink
+                            key={link.to}
+                            label={link.label}
+                            icon={link.icon}
+                            to={link.to}
+                            isActive={isActive}
+                            colors={sidebarColors}
+                        />
+                    );
+                })}
             </div>
 
             <div className="mt-auto relative">

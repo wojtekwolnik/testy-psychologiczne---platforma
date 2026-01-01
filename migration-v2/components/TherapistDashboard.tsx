@@ -162,7 +162,7 @@ const TherapistDashboard = () => {
   return (
     <>
       <div className="p-8 max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold mb-2">Panel terapeuty</h1>
+        <h1 className="text-4xl font-bold mb-2">{user?.role === 'admin' ? 'Zarządzanie Wynikami' : 'Panel terapeuty'}</h1>
         <p className="opacity-80 mb-8">Przeglądaj wyniki, generuj kody dostępu i zarządzaj danymi klientów.</p>
 
         {/* Code Generator */}

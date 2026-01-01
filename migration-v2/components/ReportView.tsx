@@ -7,7 +7,7 @@ import { fetchPdfTemplates, fetchTestById } from '@/app/actions/testActions';
 import type { TestResult, Test, PdfTemplate, Question } from './types';
 import { DownloadIcon, SparklesIcon, ChevronLeftIcon } from './common/Icons';
 import { BrandingContext } from '@/contexts/BrandingContext';
-import RichTextInput from './common/RichTextInput'; // Use our simple version
+import RichTextInput from './common/RichTextInput';
 import { toast } from 'react-toastify';
 
 interface ReportViewProps {
@@ -51,7 +51,14 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                 setTest(fetchedTest);
 
                 const templates = await fetchPdfTemplates();
-                setPdfTemplates(templates.filter(t => t.testCanonicalId === fetchedTest.canonicalId));
+                const testTemplates = templates.filter(t => t.testCanonicalId === fetchedTest.canonicalId);
+                setPdfTemplates(testTemplates);
+
+                if (fetchedTest.defaultTemplateId) {
+                    setSelectedTemplate(fetchedTest.defaultTemplateId);
+                } else if (testTemplates.length > 0) {
+                    // Fallback to first if no default set but template exists (optional, maybe keep 'default' hardcoded)
+                }
 
             } catch (err: any) {
                 console.error(err);
@@ -88,9 +95,25 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
         }
     };
 
-    // AI Interpretation placeholder logic
     const handleGetAiInterpretation = async () => {
-        toast.info("Funkcja AI w przygotowaniu.");
+        if (!result) return;
+        setIsInterpretationLoading(true);
+        setAiInterpretation(null);
+        try {
+            const { triggerAnalysis } = await import('@/app/actions/resultActions');
+            const analysis = await triggerAnalysis(result.id);
+            if (analysis) {
+                setAiInterpretation(analysis);
+                toast.success("Interpretacja AI wygenerowana.");
+            } else {
+                toast.warning("Nie udało się wygenerować analizy. Sprawdź konfigurację AI w ustawieniach.");
+            }
+        } catch (error) {
+            console.error('Błąd pobierania interpretacji AI:', error);
+            toast.error("Wystąpił błąd podczas komunikacji z AI.");
+        } finally {
+            setIsInterpretationLoading(false);
+        }
     };
 
     const questionsMap = useMemo(() => {

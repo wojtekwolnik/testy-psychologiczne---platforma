@@ -4,7 +4,7 @@ import React, { useContext, useState, useEffect } from 'react';
 import { BrandingContext } from '@/contexts/BrandingContext';
 import { saveBrandingSettings } from '@/app/actions/brandingActions';
 import { Tab } from '@headlessui/react';
-import { FaPalette, FaGlobe, FaEnvelope, FaRobot, FaCog, FaSun, FaMoon, FaDesktop } from 'react-icons/fa';
+import { FaPalette, FaGlobe, FaEnvelope, FaRobot, FaCog, FaSun, FaMoon, FaUpload, FaTrash } from 'react-icons/fa';
 import { ThemePalette } from '@/components/types';
 
 function classNames(...classes: string[]) {
@@ -17,6 +17,29 @@ export default function BrandingPage() {
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState('');
     const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
+    const [logoError, setLogoError] = useState('');
+
+    const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        setLogoError('');
+
+        if (!file) return;
+
+        if (file.size > 500 * 1024) { // 500KB strict limit
+            setLogoError('Plik jest za duży! Maksymalny rozmiar to 500KB.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const result = reader.result as string;
+            updateSetting('logoUrl', result);
+        };
+        reader.onerror = () => {
+            setLogoError('Błąd podczas odczytu pliku.');
+        };
+        reader.readAsDataURL(file);
+    };
 
     // Sync localSettings when branding context updates (async load from server)
     useEffect(() => {
@@ -44,7 +67,7 @@ export default function BrandingPage() {
         setLocalSettings(prev => ({
             ...prev,
             [parent]: {
-                ...(prev[parent as keyof typeof prev] || {}),
+                ...(prev[parent as keyof typeof prev] as object || {}),
                 [key]: value
             }
         }));
@@ -104,12 +127,20 @@ export default function BrandingPage() {
         <div className="p-8 max-w-6xl mx-auto">
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold text-slate-800">Ustawienia Platformy</h1>
-                <button
-                    onClick={handleSave}
-                    className="px-6 py-2 bg-[var(--primary-color)] text-white rounded hover:opacity-90 font-bold shadow-sm transition-all"
-                >
-                    {saved ? 'Zapisano!' : 'Zapisz Zmiany'}
-                </button>
+                <div className="flex gap-4">
+                    <button
+                        onClick={() => setLocalSettings(branding)} // Reset to last saved
+                        className="px-6 py-2 bg-slate-200 text-slate-700 rounded hover:bg-slate-300 font-bold shadow-sm transition-all"
+                    >
+                        Anuluj
+                    </button>
+                    <button
+                        onClick={handleSave}
+                        className="px-6 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 font-bold shadow-sm transition-all"
+                    >
+                        {saved ? 'Zapisano!' : 'Zapisz Zmiany'}
+                    </button>
+                </div>
             </div>
 
             {error && <div className="bg-red-100 text-red-700 p-4 rounded mb-4">{error}</div>}
@@ -142,8 +173,41 @@ export default function BrandingPage() {
                                 <input type="text" className="w-full p-2 border rounded" value={localSettings.appName} onChange={e => updateSetting('appName', e.target.value)} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Logo URL (Szerokie)</label>
-                                <input type="text" className="w-full p-2 border rounded" value={localSettings.logoUrl} onChange={e => updateSetting('logoUrl', e.target.value)} />
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Logo Aplikacji</label>
+                                <div className="flex items-center gap-4">
+                                    {localSettings.logoUrl && (
+                                        <div className="relative group">
+                                            <img
+                                                src={localSettings.logoUrl}
+                                                alt="Logo Preview"
+                                                className="h-12 w-auto object-contain border rounded p-1"
+                                            />
+                                            <button
+                                                onClick={() => updateSetting('logoUrl', '')}
+                                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600"
+                                                title="Usuń logo"
+                                            >
+                                                <FaTrash size={10} />
+                                            </button>
+                                        </div>
+                                    )}
+                                    <div className="flex-1">
+                                        <label className="cursor-pointer inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-slate-700 hover:bg-slate-50 shadow-sm transition-all">
+                                            <FaUpload className="mr-2" />
+                                            {localSettings.logoUrl ? 'Zmień Logo' : 'Wgraj Logo'}
+                                            <input
+                                                type="file"
+                                                className="hidden"
+                                                accept="image/png, image/jpeg, image/jpg, image/webp, image/svg+xml"
+                                                onChange={handleLogoUpload}
+                                            />
+                                        </label>
+                                        <p className="text-xs text-slate-500 mt-1">
+                                            Maks. 500KB. Zalecane: PNG, SVG, WebP. (Wymiary ok. 200x50px)
+                                        </p>
+                                        {logoError && <p className="text-xs text-red-600 mt-1 font-bold">{logoError}</p>}
+                                    </div>
+                                </div>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Tryb Domyślny</label>

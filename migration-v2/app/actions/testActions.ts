@@ -3,6 +3,8 @@
 import { prisma } from '@/lib/prisma';
 import type { Test, Question, Scale, Section, PdfTemplate } from '@/components/types';
 import { revalidatePath } from 'next/cache';
+import crypto from 'crypto';
+
 
 // Helper to parse JSON fields from Prisma (SQLite) to Frontend Types
 const serializeTest = (prismaTest: any): Test => {
@@ -147,22 +149,37 @@ export async function saveTest(testData: Test, asNewVersion: boolean): Promise<T
     return updated;
 }
 
+// Helper to generate a standardized default template
+const generateDefaultTemplate = (test: Test, testId: string): PdfTemplate => {
+    return {
+        id: crypto.randomUUID(),
+        name: `${test.title} - Widok Standardowy`,
+        testCanonicalId: test.canonicalId,
+        components: [
+            { id: crypto.randomUUID(), type: 'Header', options: { title: 'Raport Wyniku Testu', subtitle: test.title, showLogo: true } },
+            { id: crypto.randomUUID(), type: 'RichText', options: { content: '## Dane Klienta\n\nPoniżej znajdują się szczegółowe wyniki przeprowadzonego badania.' } },
+            { id: crypto.randomUUID(), type: 'ScoresTable', options: { showDescriptions: true } },
+            { id: crypto.randomUUID(), type: 'BarChart', options: { title: 'Profil Wyników' } },
+            { id: crypto.randomUUID(), type: 'RichText', options: { content: '---\n*Raport wygenerowany automatycznie przez Platformę Testów Psychologicznych.*' } }
+        ]
+    };
+};
+
 export async function createNewTest(testData: Test): Promise<Test> {
-    // Similar to save but 'create'
     const { id, scales, sections, defaultTemplateId, createdAt, ...basicInfo } = testData;
 
+    // 1. Create the Test first
     await prisma.test.create({
         data: {
             id: id,
-            // Explicitly map fields to avoid "Unknown argument" errors for extra props like defaultTemplateId
             title: basicInfo.title,
             description: basicInfo.description,
             instructions: basicInfo.instructions,
             questionsPerPage: basicInfo.questionsPerPage,
             version: basicInfo.version,
             canonicalId: basicInfo.canonicalId,
-            createdAt: new Date(createdAt), // Ensure Date type
-
+            createdAt: new Date(createdAt),
+            status: basicInfo.status || 'DRAFT',
             scales: {
                 create: scales.map(s => ({
                     id: s.id,
@@ -191,9 +208,67 @@ export async function createNewTest(testData: Test): Promise<Test> {
         }
     });
 
+    // 2. Generate and Save Default Template
+    const defaultTemplate = generateDefaultTemplate(testData, id);
+    await prisma.pdfTemplate.create({
+        data: {
+            id: defaultTemplate.id,
+            name: defaultTemplate.name,
+            testId: id,
+            components: JSON.stringify(defaultTemplate.components)
+        }
+    });
+
+    // 3. Update Test with Default Template ID
+    await prisma.test.update({
+        where: { id },
+        data: { defaultTemplateId: defaultTemplate.id }
+    });
+
     const created = await fetchTestById(id);
     if (!created) throw new Error("Failed to create test.");
     return created;
+}
+
+export async function setDefaultTemplate(testId: string, templateId: string): Promise<void> {
+    await prisma.test.update({
+        where: { id: testId },
+        data: { defaultTemplateId: templateId }
+    });
+    revalidatePath('/admin/templates');
+    revalidatePath(`/test/${testId}`);
+}
+
+export async function createDefaultTemplatesForExistingTests(): Promise<{ count: number }> {
+    const tests = await prisma.test.findMany({
+        where: { defaultTemplateId: null },
+        include: { scales: true, sections: { include: { questions: true } } }
+    });
+
+    let count = 0;
+    for (const test of tests) {
+        // Serialize to match Test type expected by helper (optional, strictly helper needs title/canonicalId)
+        const serialized = serializeTest(test); // Only needed if helper uses complex fields, but simpler wrapper works
+        const template = generateDefaultTemplate(serialized, test.id);
+
+        await prisma.pdfTemplate.create({
+            data: {
+                id: template.id,
+                name: template.name,
+                testId: test.id,
+                components: JSON.stringify(template.components)
+            }
+        });
+
+        await prisma.test.update({
+            where: { id: test.id },
+            data: { defaultTemplateId: template.id }
+        });
+        count++;
+    }
+
+    revalidatePath('/admin/templates');
+    return { count };
 }
 
 export async function fetchPdfTemplates(): Promise<PdfTemplate[]> {
@@ -224,23 +299,10 @@ export async function savePdfTemplate(template: PdfTemplate): Promise<PdfTemplat
     // Upsert logic
     const { id, name, testCanonicalId, components } = template;
 
-    // Find test by canonicalId to get internal ID (Prisma relation needs unique ID or connect by unique)
-    // Actually our schema relates PdfTemplate to Test via Test's `id` or `canonicalId`?
-    // Let's check Schema. Usually relation is on `testId`.
-    // Wait, the types say `testCanonicalId` but Prisma might use `testId`.
-    // The `fetchPdfTemplates` above includes `test: { select: { canonicalId: true } }`.
-    // This implies the relation exists. 
-    // We need to connect by `canonicalId` if the schema supports it, or look up the test.
-    // Let's look up the latest test version for this canonicalId to connect? 
-    // OR we connect to a specific Test ID?
-    // The legacy app likely connected to the canonical ID concept.
-    // Let's check what `prisma.pdfTemplate` expects.
-
-    // Assuming schema: PdfTemplate { id, name, components, testId, test -> Test }
-    // We need to find the Test ID.
+    // Find test to connect
     const test = await prisma.test.findFirst({
         where: { canonicalId: testCanonicalId },
-        orderBy: { version: 'desc' } // Link to latest version?
+        orderBy: { version: 'desc' }
     });
 
     if (!test) throw new Error("Linked test not found");
@@ -251,7 +313,7 @@ export async function savePdfTemplate(template: PdfTemplate): Promise<PdfTemplat
             id,
             name,
             components: JSON.stringify(components),
-            testId: test.id // Connect to specific test row
+            testId: test.id
         },
         update: {
             name,
@@ -300,3 +362,4 @@ export async function updateTestStatus(testId: string, newStatus: 'DRAFT' | 'PUB
     if (!updated) throw new Error("Failed to update test status.");
     return updated;
 }
+
