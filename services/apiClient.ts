@@ -145,13 +145,19 @@ export const logout = async (): Promise<void> => {
 // A safe, simple function to evaluate mathematical formulas from strings.
 const evaluateFormula = (formula: string, availableScores: Record<string, number>): number => {
     // Replace {scale-id} with the actual score
-    const populatedFormula = formula.replace(/\{(\w+?-\w+?)\}/g, (match, scaleId) => {
+    const populatedFormula = formula.replace(/\{([a-zA-Z0-9_-]+)\}/g, (match, scaleId) => {
         return availableScores[scaleId]?.toString() || '0';
     });
 
+    // Security Fix: Prevent Code Injection
+    // Only allow numbers, math operators, spaces, and decimals.
+    if (!/^[0-9\+\-\*\/\(\)\.\s]*$/.test(populatedFormula)) {
+        console.error(`[Formula Error] Unsafe characters detected in formula: "${populatedFormula}"`);
+        return 0;
+    }
+
     try {
-        // For safety in a real app, use a dedicated math parsing library like `math.js`.
-        // For this mock, we create a Function constructor, which is safer than direct eval.
+        // Since we sanitize the input string against unauthorized chars, new Function is safe here
         const calculate = new Function(`return ${populatedFormula}`);
         const result = calculate();
 
