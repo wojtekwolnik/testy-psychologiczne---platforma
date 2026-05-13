@@ -5,6 +5,8 @@ import { cookies } from 'next/headers';
 import type { User, UserRole } from '@/components/types';
 import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
 
 const COOKIE_NAME = 'auth_token';
 const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret-for-development-only');
@@ -86,12 +88,16 @@ export async function logout() {
 
 export async function verify2FA(userId: string, code: string): Promise<{ success: boolean; user?: User; error?: string }> {
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return { success: false, error: 'User not found' };
+    if (!user || !user.twoFactorSecret) return { success: false, error: 'User not found or 2FA not enabled' };
 
-    // Stub Verification Logic (Prototype)
-    // Accept '123456' as valid code
-    if (code !== '123456') {
-        return { success: false, error: 'Nieprawidłowy kod weryfikacyjny (Prototyp: użyj 123456)' };
+    const isValid = speakeasy.totp.verify({
+        secret: user.twoFactorSecret,
+        encoding: 'base32',
+        token: code
+    });
+
+    if (!isValid) {
+        return { success: false, error: 'Nieprawidłowy kod weryfikacyjny' };
     }
 
     // Set Cookie on success
@@ -110,6 +116,36 @@ export async function verify2FA(userId: string, code: string): Promise<{ success
             twoFactorSecret: undefined
         }
     };
+}
+
+export async function generate2FASecret(userId: string): Promise<{ secret: string; qrCodeDataUrl: string } | { error: string }> {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return { error: 'User not found' };
+
+    const secretObj = speakeasy.generateSecret({ name: `Platforma Testów (${user.email})` });
+    const secret = secretObj.base32;
+    const qrCodeDataUrl = await QRCode.toDataURL(secretObj.otpauth_url || '');
+
+    return { secret, qrCodeDataUrl };
+}
+
+export async function verifyAndEnable2FA(userId: string, secret: string, code: string): Promise<{ success: boolean; error?: string }> {
+    const isValid = speakeasy.totp.verify({
+        secret,
+        encoding: 'base32',
+        token: code
+    });
+
+    if (!isValid) {
+        return { success: false, error: 'Nieprawidłowy kod weryfikacyjny' };
+    }
+
+    await prisma.user.update({
+        where: { id: userId },
+        data: { twoFactorSecret: secret }
+    });
+
+    return { success: true };
 }
 
 export async function checkAuth(): Promise<User | null> {

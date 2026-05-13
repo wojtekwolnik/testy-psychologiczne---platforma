@@ -1,35 +1,47 @@
 
 import React, { useState, useEffect } from 'react';
 import { getAllUsers, saveUser, deleteUser } from '@/app/actions/userActions';
+import { generate2FASecret, verifyAndEnable2FA } from '@/app/actions/authActions';
 import type { User } from './types';
 import { UserRole } from './types';
-import { PlusIcon, EditIcon, TrashIcon, ShieldCheckIcon } from './common/Icons'; // NOWY IMPORT
+import { PlusIcon, EditIcon, TrashIcon, ShieldCheckIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
 
 // ZALĄŻEK MODALA DO KONFIGURACJI 2FA
 const Enable2FAModal: React.FC<{ user: User; onClose: () => void; }> = ({ user, onClose }) => {
   const [qrCode, setQrCode] = useState('');
+  const [secret, setSecret] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // TODO: Zaimplementować endpoint `generate2FASecret(userId)` w apiClient
-    // Ten endpoint powinien zwrócić { secret, qrCodeDataUrl }
     const fetch2FAData = async () => {
-      // Symulacja: w rzeczywistości serwer wygeneruje kod QR
-      setQrCode('https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=otpauth://totp/TwojaAplikacja:admin@example.com?secret=JBSWY3DPEHPK3PXP&issuer=TwojaAplikacja');
+      try {
+        const result = await generate2FASecret(user.id);
+        if ('error' in result) {
+          setError(result.error);
+        } else {
+          setQrCode(result.qrCodeDataUrl);
+          setSecret(result.secret);
+        }
+      } catch (err) {
+        setError('Failed to generate 2FA secret.');
+      }
     };
     fetch2FAData();
   }, [user.id]);
 
   const handleVerifyAndEnable = async () => {
-    // TODO: Zaimplementować endpoint `verifyAndEnable2FA({ userId, code })`
-    // Serwer weryfikuje kod i jeśli jest poprawny, oznacza 2FA jako aktywne dla użytkownika.
-    if (/^\d{6}$/.test(verificationCode)) {
-      alert("2FA zostało aktywowane! (Symulacja)");
+    if (!secret) {
+        setError("Secret not loaded yet.");
+        return;
+    }
+    const result = await verifyAndEnable2FA(user.id, secret, verificationCode);
+    if (result.success) {
+      alert("2FA zostało pomyślnie aktywowane!");
       onClose();
     } else {
-      setError("Nieprawidłowy kod weryfikacyjny.");
+      setError(result.error || "Nieprawidłowy kod weryfikacyjny.");
     }
   };
 
