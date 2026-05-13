@@ -176,7 +176,7 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                                                     <div className="bg-indigo-600 h-2.5 rounded-full" style={{ width: `${percentage}%` }}></div>
                                                 </div>
                                             )}
-                                            <p className="text-gray-600 text-sm mt-2">{description}</p>
+                                            <div className="text-gray-600 text-sm mt-2 prose max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(description || '') }} />
                                         </div>
                                     );
                                 })}
