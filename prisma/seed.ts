@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcryptjs';
+
 const prisma = new PrismaClient()
 
 async function main() {
@@ -9,19 +11,19 @@ async function main() {
         create: {
             email: 'admin@example.com',
             username: 'Admin User',
-            password: 'admin-password',
+            password: await bcrypt.hash('admin-password', 10),
             role: 'admin',
         },
     })
 
     // Create Therapist
     const therapist = await prisma.user.upsert({
-        where: { email: 'user@example.com' }, // Matching the login credentials used in E2E
+        where: { email: 'user@example.com' },
         update: {},
         create: {
             email: 'user@example.com',
             username: 'Therapist User',
-            password: 'password123',
+            password: await bcrypt.hash('password123', 10),
             role: 'therapist',
         },
     })

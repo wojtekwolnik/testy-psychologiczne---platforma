@@ -8,9 +8,6 @@ const nextConfig = {
         // ignoreBuildErrors: true, 
         // No, I want type safety. But if tsc passes, build should pass type check.
     },
-    experimental: {
-        serverActions: true,
-    },
 };
 
 module.exports = nextConfig;

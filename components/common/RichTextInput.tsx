@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { BoldIcon, ItalicIcon, UnderlineIcon, LinkIcon } from './Icons';
+import DOMPurify from 'isomorphic-dompurify';
 
 interface Tag {
     name: string;
@@ -90,7 +91,7 @@ const RichTextInput: React.FC<RichTextInputProps> = ({ value, onChange, label, p
                     ref={editorRef}
                     contentEditable
                     onInput={handleInput}
-                    dangerouslySetInnerHTML={{ __html: value }}
+                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(value) }}
                     data-placeholder={placeholder}
                     className="w-full p-4 min-h-[120px] max-h-[400px] overflow-y-auto text-[var(--input-text-color)] prose prose-sm max-w-none focus:outline-none bg-[var(--input-background-color)]"
                     style={{ minHeight: '120px' }}

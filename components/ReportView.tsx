@@ -9,6 +9,7 @@ import { DownloadIcon, SparklesIcon, ChevronLeftIcon } from './common/Icons';
 import { BrandingContext } from '@/contexts/BrandingContext';
 import RichTextInput from './common/RichTextInput';
 import { toast } from 'react-toastify';
+import DOMPurify from 'isomorphic-dompurify';
 
 interface ReportViewProps {
     resultId: string;
@@ -243,7 +244,7 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
 
                                 return (
                                     <div key={questionId} className="text-sm">
-                                        <p className="font-semibold text-gray-700" dangerouslySetInnerHTML={{ __html: question.text }} />
+                                        <p className="font-semibold text-gray-700" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(question.text) }} />
                                         <p className="text-gray-600 pl-4">Odpowiedź: {answerText}</p>
                                     </div>
                                 );

@@ -5,6 +5,7 @@ import { submitTest } from '@/app/actions/resultActions';
 import { validateAccessCode } from '@/app/actions/accessCodeActions';
 import type { Test, ClientAnswer, Question, TestResult } from './types';
 import { BrandingContext } from '../contexts/BrandingContext';
+import DOMPurify from 'isomorphic-dompurify';
 
 interface ClientTestViewProps {
     testId?: string;
@@ -231,9 +232,9 @@ export default function ClientTestView(props: ClientTestViewProps) {
             <div className="w-full max-w-3xl">
                 <div className="bg-white rounded-xl shadow-2xl overflow-hidden border border-slate-200">
                     <div className="p-8 prose max-w-none">
-                        <h1 className="text-3xl font-bold" dangerouslySetInnerHTML={{ __html: test.title }}></h1>
-                        <div className="mt-2 opacity-80" dangerouslySetInnerHTML={{ __html: test.description }}></div>
-                        <div className="mt-2 text-sm opacity-60" dangerouslySetInnerHTML={{ __html: test.instructions }}></div>
+                        <h1 className="text-3xl font-bold" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(test.title) }}></h1>
+                        <div className="mt-2 opacity-80" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(test.description) }}></div>
+                        <div className="mt-2 text-sm opacity-60" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(test.instructions) }}></div>
                     </div>
 
                     {totalPages > 1 && (
@@ -246,7 +247,7 @@ export default function ClientTestView(props: ClientTestViewProps) {
                         <div className="space-y-8">
                             {currentQuestions.map((q, index) => (
                                 <div key={q.id} className="border-b border-slate-200 pb-8">
-                                    <div className="text-lg font-semibold mb-4 prose max-w-none" dangerouslySetInnerHTML={{ __html: `${questionStartIndex + index + 1}. ${q.text}` }}></div>
+                                    <div className="text-lg font-semibold mb-4 prose max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(`${questionStartIndex + index + 1}. ${q.text}`) }}></div>
                                     <div className="space-y-3">
                                         {['likert-5', 'likert-7', 'scale-1-10'].includes(q.type) ? (
                                             <div className="flex flex-wrap items-start justify-center gap-2 sm:gap-4 mt-2">
@@ -292,7 +293,7 @@ export default function ClientTestView(props: ClientTestViewProps) {
                                                         onChange={() => handleAnswerChange(q.id, q.type, option.id)}
                                                         className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300"
                                                     />
-                                                    <div className="ml-4 prose max-w-none" dangerouslySetInnerHTML={{ __html: option.text }}></div>
+                                                    <div className="ml-4 prose max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(option.text) }}></div>
                                                 </label>
                                             ))
                                         )}

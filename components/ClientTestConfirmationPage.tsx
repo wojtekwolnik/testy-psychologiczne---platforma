@@ -3,6 +3,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { fetchTestById } from '@/app/actions/testActions';
 import { type Test } from './types';
 import { BrandingContext } from '../contexts/BrandingContext';
+import DOMPurify from 'isomorphic-dompurify';
 
 const ClientTestConfirmationPage: React.FC = () => {
   const router = useRouter();
@@ -78,8 +79,8 @@ const ClientTestConfirmationPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-100 to-slate-200 flex items-center justify-center p-4 transition-all duration-500 text-[var(--text-color)]">
       <div className="bg-white/70 backdrop-blur-md rounded-2xl shadow-2xl p-8 sm:p-12 text-center max-w-2xl w-full border border-slate-200">
-        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4" dangerouslySetInnerHTML={{ __html: formattedTitle }}></h1>
-        <div className="text-base md:text-lg mb-6 prose max-w-none mx-auto opacity-80" dangerouslySetInnerHTML={{ __html: formattedMessage }}></div>
+        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedTitle) }}></h1>
+        <div className="text-base md:text-lg mb-6 prose max-w-none mx-auto opacity-80" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedMessage) }}></div>
 
         <div className="bg-slate-100 border border-slate-300 rounded-lg p-4 my-6">
           <p className="text-sm text-slate-600">Twój identyfikator testu to:</p>

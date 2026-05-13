@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import type { User, UserRole } from '@/components/types';
+import bcrypt from 'bcryptjs';
 
 const COOKIE_NAME = 'auth_token'; // Simple cookie for now
 
@@ -16,8 +17,12 @@ export async function login(email: string, password: string): Promise<{ success:
         return { success: false, error: 'Nieprawidłowy email lub hasło.' };
     }
 
-    // 2. Check password (Simple text check for migration prototype, use bcrypt later)
-    if (user.password !== password) {
+    // 2. Verify password with bcrypt
+    if (!user.password) {
+        return { success: false, error: 'Nieprawidłowy email lub hasło.' };
+    }
+    const passwordValid = await bcrypt.compare(password, user.password);
+    if (!passwordValid) {
         return { success: false, error: 'Nieprawidłowy email lub hasło.' };
     }
 

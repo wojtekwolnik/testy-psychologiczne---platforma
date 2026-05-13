@@ -4,6 +4,10 @@ import { prisma } from '@/lib/prisma';
 import type { User } from '@/components/types';
 import { UserRole } from '@/components/types';
 import { revalidatePath } from 'next/cache';
+import bcrypt from 'bcryptjs';
+
+// Backwards-compatible type alias for consumers that still reference UserData
+export type UserData = User;
 
 export async function getAllUsers(): Promise<User[]> {
     try {
@@ -49,31 +53,27 @@ export async function deleteUser(userId: string): Promise<void> {
     }
 }
 
-export async function saveUser(user: Partial<User>): Promise<User> {
+export async function saveUser(user: Partial<User>, hashedPassword?: string): Promise<User> {
     try {
         const dataToSave = {
             email: user.email!,
             username: user.fullName || user.username || '',
             role: user.role || 'therapist',
-            // if new user, password can be set to something default or sent via email. 
-            // For now, we'll leave password alone on update, or set a dummy on create
         };
 
         let savedUser;
         if (user.id) {
-            // Update
+            // Update — never touch the password unless explicitly provided
             savedUser = await prisma.user.update({
                 where: { id: user.id },
                 data: dataToSave,
                 select: { id: true, email: true, username: true, role: true, createdAt: true, twoFactorSecret: true },
             });
         } else {
-            // Create
+            // Create — require a hashed password
+            if (!hashedPassword) throw new Error('Password is required when creating a new user');
             savedUser = await prisma.user.create({
-                data: {
-                    ...dataToSave,
-                    password: 'password123', // Dummy password for newly created users via admin panel
-                },
+                data: { ...dataToSave, password: hashedPassword },
                 select: { id: true, email: true, username: true, role: true, createdAt: true, twoFactorSecret: true },
             });
         }
@@ -93,4 +93,17 @@ export async function saveUser(user: Partial<User>): Promise<User> {
         console.error('Failed to save user:', error);
         throw new Error('Failed to save user');
     }
+}
+
+// Backwards-compatible aliases
+export const getUsers = getAllUsers;
+
+export async function createUser(data: { email: string; username: string; password: string; role: 'admin' | 'therapist' }): Promise<User> {
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+    return saveUser({
+        email: data.email,
+        fullName: data.username,
+        username: data.username,
+        role: data.role as UserRole,
+    }, hashedPassword);
 }

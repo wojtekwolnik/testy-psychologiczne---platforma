@@ -20,6 +20,7 @@ model User {
   results   TestResult[]
   accessCodes AccessCode[]
   twoFactorSecret String?
+  notifications Notification[]
 }
 
 model Test {
@@ -107,4 +108,14 @@ model SystemSettings {
   id        String   @id @default("default") // Singleton
   branding  String   // JSON string of BrandingSettings
   updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String
+  isRead    Boolean  @default(false)
+  context   String?  // JSON: { view: string, params: any }
+  createdAt DateTime @default(now())
 }

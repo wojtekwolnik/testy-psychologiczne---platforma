@@ -40,7 +40,7 @@ const TherapistDashboard = () => {
     setExpiryDate(defaultExpiry.toISOString().split('T')[0]);
 
     if (user?.role === 'admin') {
-      getUsers().then(users => {
+      getUsers().then((users: UserData[]) => {
         // Filter to show only therapists + admin (or all)
         // Assuming we want to assign to anyone who can have a dashboard
         setTherapists(users);

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { validateAccessCode } from '@/app/actions/accessCodeActions';
 import { BrandingContext } from '@/contexts/BrandingContext';
 import { SpinnerIcon } from './common/Icons';
+import DOMPurify from 'isomorphic-dompurify';
 
 const ClientCodeEntry: React.FC = () => {
     const [clientCode, setClientCode] = useState('');
@@ -45,8 +46,8 @@ const ClientCodeEntry: React.FC = () => {
             <div className="w-full max-w-md">
                 <main className="bg-white/60 backdrop-blur-sm border border-slate-200 rounded-2xl shadow-xl p-8 md:p-12 text-center">
                     {branding.logoUrl && <img src={branding.logoUrl} alt="Logo" className="h-16 w-auto mx-auto mb-6 object-contain" />}
-                    <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight" dangerouslySetInnerHTML={{ __html: branding.clientPageTitle }}></h1>
-                    <div className="mt-4 text-base lg:text-lg opacity-80 max-w-xl mx-auto prose" dangerouslySetInnerHTML={{ __html: branding.clientPageDescription }}></div>
+                    <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(branding.clientPageTitle) }}></h1>
+                    <div className="mt-4 text-base lg:text-lg opacity-80 max-w-xl mx-auto prose" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(branding.clientPageDescription) }}></div>
 
                     <div className="mt-8">
                         <form onSubmit={handleStartTest} className="space-y-4">
