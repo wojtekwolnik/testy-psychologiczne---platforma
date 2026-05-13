@@ -2,6 +2,21 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import type { TestResult, Test, PdfTemplate, ReportComponent, BrandingSettings } from './types';
 
+function safeText(str: string | undefined | null): string {
+    if (!str) return '';
+    return str
+        .replace(/ą/g, 'a').replace(/Ą/g, 'A')
+        .replace(/ć/g, 'c').replace(/Ć/g, 'C')
+        .replace(/ę/g, 'e').replace(/Ę/g, 'E')
+        .replace(/ł/g, 'l').replace(/Ł/g, 'L')
+        .replace(/ń/g, 'n').replace(/Ń/g, 'N')
+        .replace(/ó/g, 'o').replace(/Ó/g, 'O')
+        .replace(/ś/g, 's').replace(/Ś/g, 'S')
+        .replace(/ź/g, 'z').replace(/Ź/g, 'Z')
+        .replace(/ż/g, 'z').replace(/Ż/g, 'Z')
+        .replace(/[^\x00-\x7F]/g, '');
+}
+
 // Helper to manage page and y-position
 class PdfContext {
     page: any;
@@ -33,7 +48,7 @@ class PdfContext {
 async function drawHeader(ctx: PdfContext, component: ReportComponent) {
     ctx.checkNewPage(40);
     const font = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    ctx.page.drawText(component.options.text || 'Nagłówek', {
+    ctx.page.drawText(safeText(component.options.text || 'Nagłówek'), {
         x: 50,
         y: ctx.y,
         size: component.options.fontSize || 18,
@@ -49,7 +64,7 @@ async function drawScoresTable(ctx: PdfContext, component: ReportComponent, resu
 
     // Title for the table
     if (component.title) {
-        ctx.page.drawText(component.title, { x: 50, y: ctx.y, size: 14, font: headerFont });
+        ctx.page.drawText(safeText(component.title), { x: 50, y: ctx.y, size: 14, font: headerFont });
         ctx.moveDown(25);
     }
 
@@ -69,9 +84,9 @@ async function drawScoresTable(ctx: PdfContext, component: ReportComponent, resu
     };
 
     // Header
-    ctx.page.drawText('Skala', { x: 55, y: ctx.y, font: headerFont, size: 10 });
-    ctx.page.drawText('Wynik', { x: 320, y: ctx.y, font: headerFont, size: 10 });
-    ctx.page.drawText('Poziom', { x: 420, y: ctx.y, font: headerFont, size: 10 });
+    ctx.page.drawText(safeText('Skala'), { x: 55, y: ctx.y, font: headerFont, size: 10 });
+    ctx.page.drawText(safeText('Wynik'), { x: 320, y: ctx.y, font: headerFont, size: 10 });
+    ctx.page.drawText(safeText('Poziom'), { x: 420, y: ctx.y, font: headerFont, size: 10 });
     ctx.moveDown(20);
 
     // Body
@@ -83,9 +98,9 @@ async function drawScoresTable(ctx: PdfContext, component: ReportComponent, resu
         const levelText = getScoreLevel(score, scaleInfo);
 
         ctx.checkNewPage(20);
-        ctx.page.drawText(scaleInfo.name, { x: 55, y: ctx.y, font: bodyFont, size: 10 });
-        ctx.page.drawText(`${score}${scaleInfo.maxScore ? ` / ${scaleInfo.maxScore}` : ''}`, { x: 320, y: ctx.y, font: bodyFont, size: 10 });
-        ctx.page.drawText(levelText, { x: 420, y: ctx.y, font: bodyFont, size: 10 });
+        ctx.page.drawText(safeText(scaleInfo.name), { x: 55, y: ctx.y, font: bodyFont, size: 10 });
+        ctx.page.drawText(safeText(`${score}${scaleInfo.maxScore ? ` / ${scaleInfo.maxScore}` : ''}`), { x: 320, y: ctx.y, font: bodyFont, size: 10 });
+        ctx.page.drawText(safeText(levelText), { x: 420, y: ctx.y, font: bodyFont, size: 10 });
         ctx.moveDown(20);
     }
     ctx.moveDown(10); // Margin after table
@@ -96,7 +111,7 @@ async function drawBarChart(ctx: PdfContext, component: ReportComponent, result:
     const headerFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
     if (component.title) {
-        ctx.page.drawText(component.title, { x: 50, y: ctx.y, size: 14, font: headerFont });
+        ctx.page.drawText(safeText(component.title), { x: 50, y: ctx.y, size: 14, font: headerFont });
         ctx.moveDown(25);
     }
 
@@ -122,7 +137,7 @@ async function drawBarChart(ctx: PdfContext, component: ReportComponent, result:
             color: rgb(0.2, 0.4, 0.8)
         });
         // Draw Label
-        ctx.page.drawText(scaleInfo.name.substring(0, 5), {
+        ctx.page.drawText(safeText(scaleInfo.name.substring(0, 5)), {
             x: currentX + 5,
             y: ctx.y - barHeight - 15,
             size: 8
@@ -139,7 +154,7 @@ async function drawRadarChart(ctx: PdfContext, component: ReportComponent, resul
     const labelFont = await ctx.pdfDoc.embedFont(StandardFonts.Helvetica);
 
     if (component.title) {
-        ctx.page.drawText(component.title, { x: 50, y: ctx.y, size: 14, font: headerFont });
+        ctx.page.drawText(safeText(component.title), { x: 50, y: ctx.y, size: 14, font: headerFont });
         ctx.moveDown(25);
     }
 
@@ -147,7 +162,7 @@ async function drawRadarChart(ctx: PdfContext, component: ReportComponent, resul
     const scalesToDraw = scaleIds.map((id: string) => test.scales.find((s: any) => s.id === id)).filter((s: any) => !!s) as typeof test.scales;
 
     if (scalesToDraw.length < 3) {
-        ctx.page.drawText('Wykres radarowy wymaga co najmniej 3 skal.', { x: 50, y: ctx.y, size: 10, font: labelFont });
+        ctx.page.drawText(safeText('Wykres radarowy wymaga co najmniej 3 skal.'), { x: 50, y: ctx.y, size: 10, font: labelFont });
         ctx.moveDown(20);
         return;
     }
@@ -191,7 +206,7 @@ async function drawRadarChart(ctx: PdfContext, component: ReportComponent, resul
             color: rgb(0.6, 0.6, 0.6)
         });
 
-        const label = scalesToDraw[i].name.substring(0, 15);
+        const label = safeText(scalesToDraw[i].name.substring(0, 15));
         const labelWidth = labelFont.widthOfTextAtSize(label, 8);
         const labelX = centerX + (radius + 15) * Math.cos(angle) - (labelWidth / 2);
         const labelY = centerY - (radius + 15) * Math.sin(angle) - 3;
@@ -263,7 +278,8 @@ async function drawRichText(ctx: PdfContext, component: ReportComponent) {
             else if (isBold) currentFont = boldFont;
             else if (isItalic) currentFont = italicFont;
 
-            const wordWidth = currentFont.widthOfTextAtSize(word, fontSize);
+            const cleanWord = safeText(word);
+            const wordWidth = currentFont.widthOfTextAtSize(cleanWord, fontSize);
             
             if (currentX + wordWidth > marginX + maxWidth && word.trim() !== '') {
                 ctx.moveDown(lineHeight);
@@ -273,7 +289,7 @@ async function drawRichText(ctx: PdfContext, component: ReportComponent) {
             }
 
             if (word.trim() !== '' || currentX !== marginX) {
-                ctx.page.drawText(word, { x: currentX, y: ctx.y, size: fontSize, font: currentFont });
+                ctx.page.drawText(cleanWord, { x: currentX, y: ctx.y, size: fontSize, font: currentFont });
                 currentX += wordWidth;
             }
         }
@@ -345,7 +361,7 @@ export async function generatePdf(
     ];
 
     // Page Header
-    ctx.page.drawText(`${branding.appName || 'Platforma'}`, { x: 50, y: ctx.height - 30, size: 10 });
+    ctx.page.drawText(safeText(branding.appName || 'Platforma'), { x: 50, y: ctx.height - 30, size: 10 });
 
     for (const component of componentsToRender) {
         switch (component.type) {
@@ -373,7 +389,7 @@ export async function generatePdf(
     if (customInterpretation) {
         ctx.checkNewPage(40);
         const headerFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
-        ctx.page.drawText('Interpretacja Terapeuty', { x: 50, y: ctx.y, size: 14, font: headerFont });
+        ctx.page.drawText(safeText('Interpretacja Terapeuty'), { x: 50, y: ctx.y, size: 14, font: headerFont });
         ctx.moveDown(25);
         await drawRichText(ctx, { id: 'cust-int', type: 'RichText', options: { content: customInterpretation } });
     }
