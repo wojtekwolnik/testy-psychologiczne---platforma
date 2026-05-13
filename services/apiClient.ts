@@ -1,6 +1,7 @@
 
 import { type User, type Test, type TestResult, type AccessCode, type PdfTemplate, type Scale, type Question, UserRole } from '../components/types';
 import { generateUniqueId } from '../utils/idUtils';
+import { evaluate } from 'mathjs';
 
 // In-memory "database" for mock data
 const mockUsers: User[] = [
@@ -41,6 +42,7 @@ let mockTests: Test[] = [
             { type: 'calculated', id: "scale-consc-extra", name: "Wskaźnik Sumienność-Ekstrawersja", description: "Złożony wskaźnik...", formula: "{scale-c} + {scale-e}" },
         ],
         sections: [],
+        status: 'PUBLISHED',
         createdAt: new Date().toISOString()
     }
 ];
@@ -151,10 +153,7 @@ const evaluateFormula = (formula: string, availableScores: Record<string, number
     });
 
     try {
-        // For safety in a real app, use a dedicated math parsing library like `math.js`.
-        // For this mock, we create a Function constructor, which is safer than direct eval.
-        const calculate = new Function(`return ${populatedFormula}`);
-        const result = calculate();
+        const result = evaluate(populatedFormula);
 
         if (typeof result !== 'number' || !isFinite(result) || isNaN(result)) {
             return 0;
