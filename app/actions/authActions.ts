@@ -4,8 +4,27 @@ import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import type { User, UserRole } from '@/components/types';
 import bcrypt from 'bcryptjs';
+import { SignJWT, jwtVerify } from 'jose';
 
-const COOKIE_NAME = 'auth_token'; // Simple cookie for now
+const COOKIE_NAME = 'auth_token';
+const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret-for-development-only');
+
+async function signToken(payload: any) {
+    return new SignJWT(payload)
+        .setProtectedHeader({ alg: 'HS256' })
+        .setIssuedAt()
+        .setExpirationTime('24h')
+        .sign(SECRET_KEY);
+}
+
+export async function verifyToken(token: string) {
+    try {
+        const { payload } = await jwtVerify(token, SECRET_KEY);
+        return payload;
+    } catch (error) {
+        return null;
+    }
+}
 
 export async function login(email: string, password: string): Promise<{ success: boolean; user?: User; error?: string; needs2FA?: boolean }> {
     // 1. Find user
@@ -43,8 +62,9 @@ export async function login(email: string, password: string): Promise<{ success:
         };
     }
 
-    // 4. Set Cookie (Mock Session) if no 2FA
-    cookies().set(COOKIE_NAME, user.id, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+    // 4. Set Cookie (JWT Session) if no 2FA
+    const token = await signToken({ userId: user.id, role: user.role });
+    cookies().set(COOKIE_NAME, token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/' });
 
     return {
         success: true,
@@ -75,7 +95,8 @@ export async function verify2FA(userId: string, code: string): Promise<{ success
     }
 
     // Set Cookie on success
-    cookies().set(COOKIE_NAME, user.id, { httpOnly: true, secure: process.env.NODE_ENV === 'production' });
+    const token = await signToken({ userId: user.id, role: user.role });
+    cookies().set(COOKIE_NAME, token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/' });
 
     return {
         success: true,
@@ -93,9 +114,14 @@ export async function verify2FA(userId: string, code: string): Promise<{ success
 
 export async function checkAuth(): Promise<User | null> {
     const cookieStore = cookies();
-    const userId = cookieStore.get(COOKIE_NAME)?.value;
+    const token = cookieStore.get(COOKIE_NAME)?.value;
 
-    if (!userId) return null;
+    if (!token) return null;
+
+    const payload = await verifyToken(token);
+    if (!payload || !payload.userId) return null;
+
+    const userId = payload.userId as string;
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return null;
