@@ -54,7 +54,6 @@ async function drawScoresTable(ctx: PdfContext, component: ReportComponent, resu
     }
 
     const scaleIds = component.options.scaleIds || Object.keys(result.scores);
-    const tableTop = ctx.y;
 
     // Header
     ctx.page.drawText('Skala', { x: 55, y: ctx.y, font: headerFont, size: 10 });
@@ -78,7 +77,6 @@ async function drawScoresTable(ctx: PdfContext, component: ReportComponent, resu
 async function drawBarChart(ctx: PdfContext, component: ReportComponent, result: TestResult, test: Test) {
     ctx.checkNewPage(150); // Reserve space for chart
     const headerFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const bodyFont = await ctx.pdfDoc.embedFont(StandardFonts.Helvetica);
 
     if (component.title) {
         ctx.page.drawText(component.title, { x: 50, y: ctx.y, size: 14, font: headerFont });
@@ -95,8 +93,8 @@ async function drawBarChart(ctx: PdfContext, component: ReportComponent, result:
         const scaleInfo = test.scales.find(s => s.id === scaleId);
         if (score === undefined || !scaleInfo || scaleInfo.type !== 'standard') continue;
 
-        const maxScore = scaleInfo.maxScore > 0 ? scaleInfo.maxScore : 100; // Default to 100 if 0/missing to prevent Infinity
-        const barHeight = (score / maxScore) * 100; // Height capped at 100px
+        const maxScore = scaleInfo.maxScore && scaleInfo.maxScore > 0 ? scaleInfo.maxScore : 100; // Default to 100 if 0/missing
+        const barHeight = (score / maxScore) * 100; // Height capped at 100px relative
 
         // Draw Bar
         ctx.page.drawRectangle({
@@ -135,7 +133,7 @@ async function drawRichText(ctx: PdfContext, component: ReportComponent) {
 export async function generatePdf(
     result: TestResult,
     test: Test,
-    branding: Branding,
+    branding: BrandingSettings,
     template: PdfTemplate | undefined,
     customInterpretation: string
 ): Promise<Uint8Array> {
@@ -144,7 +142,7 @@ export async function generatePdf(
     const ctx = new PdfContext(pdfDoc);
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-    const componentsToRender: ReportComponent[] = template ? template.components : [
+    const componentsToRender: ReportComponent[] = template && template.components && template.components.length > 0 ? template.components : [
         { id: 'def-h1', type: 'Header', options: { text: `Raport: ${test.title}` } },
         { id: 'def-st', type: 'ScoresTable', title: 'Wyniki surowe', options: {} },
         { id: 'def-barchart', type: 'BarChart', title: 'Profil podstawowy', options: { scaleIds: test.scales.filter(s => s.type === 'standard').map(s => s.id) } },
@@ -170,11 +168,20 @@ export async function generatePdf(
                 ctx.moveDown(30);
                 break;
             case 'RichText':
-                // Use customInterpretation if the component is marked for it
-                const content = component.options.isTherapistNote ? customInterpretation : component.options.content;
+                // Use customInterpretation if the component is marked for it (future feature), for now just content
+                const content = component.options.content;
                 await drawRichText(ctx, { ...component, options: { ...component.options, content } });
                 break;
         }
+    }
+
+    // Add Custom Interpretation if provided and not handled by RichText
+    if (customInterpretation) {
+        ctx.checkNewPage(40);
+        const headerFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        ctx.page.drawText('Interpretacja Terapeuty', { x: 50, y: ctx.y, size: 14, font: headerFont });
+        ctx.moveDown(25);
+        await drawRichText(ctx, { id: 'cust-int', type: 'RichText', options: { content: customInterpretation } });
     }
 
     return pdfDoc.save();

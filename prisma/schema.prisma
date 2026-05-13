@@ -1,4 +1,3 @@
-
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -7,123 +6,105 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
-// ENUMS
-
-enum UserRole {
-  ADMIN
-  THERAPIST
-}
-
-// MODELS
-
-// Model for user accounts (Admins and Therapists)
 model User {
-  id               String        @id @default(cuid())
-  name             String
-  email            String        @unique
-  passwordHash     String
-  role             UserRole
-  twoFactorEnabled Boolean       @default(false)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-
-  accessCodes      AccessCode[]
-  testResults      TestResult[]
-  notifications    Notification[]
+  id        String   @id @default(uuid())
+  email     String   @unique
+  username  String?
+  password  String?  // Nullable for now if using external auth, but keeping simple
+  role      String   @default("therapist") // 'admin' | 'therapist'
+  createdAt DateTime @default(now())
+  results   TestResult[]
+  accessCodes AccessCode[]
+  twoFactorSecret String?
 }
 
-// Model for a Test blueprint. Tests are versioned.
 model Test {
-  id                String        @id @default(cuid())
-  canonicalId       String        // ID shared across all versions of a test
-  version           Int
-  title             String
-  description       String
-  instructions      String
-  questionsPerPage  Int?
-  defaultTemplateId String?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-
-  // JSON fields to hold complex, nested data structures
-  scales            Json
-  sections          Json
-
-  accessCodes       AccessCode[]
-  results           TestResult[]
+  id               String    @id @default(uuid())
+  canonicalId      String    @unique
+  version          Int       @default(1)
+  title            String
+  description      String
+  instructions     String
+  status           String    @default("DRAFT") // 'DRAFT' | 'PUBLISHED'
+  questionsPerPage Int?
+  createdAt        DateTime  @default(now())
   
-  defaultTemplate   PdfTemplate? @relation(fields: [defaultTemplateId], references: [id])
-
-  @@unique([canonicalId, version]) // Ensures each version of a test is unique
+  scales           Scale[]
+  sections         Section[]
+  results          TestResult[]
+  pdfTemplates     PdfTemplate[]
+  defaultTemplateId String?
+  accessCodes      AccessCode[]
 }
 
-// Model for single-use access codes for clients
-model AccessCode {
-  code        String   @id @default(cuid())
-  isUsed      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  expiresAt   DateTime
-
+model Scale {
+  id          String  @id @default(uuid())
   testId      String
-  test        Test     @relation(fields: [testId], references: [id])
-
-  generatedById String
-  generatedBy   User     @relation(fields: [generatedById], references: [id])
+  test        Test    @relation(fields: [testId], references: [id], onDelete: Cascade)
+  type        String  // 'standard' | 'calculated'
+  name        String
+  description String?
+  maxScore    Int?
+  formula     String?
 }
 
-// Model for storing the results of a completed test
+model Section {
+  id        String     @id @default(uuid())
+  testId    String
+  test      Test       @relation(fields: [testId], references: [id], onDelete: Cascade)
+  title     String
+  questions Question[]
+}
+
+model Question {
+  id        String  @id @default(uuid())
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  text      String
+  type      String  // 'multiple-choice', 'multiple-select', 'likert-5'
+  options   String  // JSON: AnswerOption[]
+  scoring   String  // JSON: Record<string, ScoringRule[]>
+  isReversed Boolean @default(false)
+}
+
 model TestResult {
-  id               String   @id @default(cuid())
-  clientIdentifier String   // The access code used
-  completedAt      DateTime @default(now())
-
-  // JSON fields to store the specific state of the test and answers
-  testTitle        String
-  testVersion      Int
-  answers          Json
-  scores           Json
-
+  id               String   @id @default(uuid())
   testId           String
   test             Test     @relation(fields: [testId], references: [id])
-
   therapistId      String
   therapist        User     @relation(fields: [therapistId], references: [id])
+  clientIdentifier String
+  completedAt      DateTime @default(now())
+  scores           String   // JSON: Record<string, number>
+  answers          String   // JSON: Record<string, any>
+  analysis         String?  // AI generated analysis (Markdown)
 }
 
-// Model for PDF report templates
 model PdfTemplate {
-  id                     String  @id @default(cuid())
-  name                   String
-  includeBarChart        Boolean @default(true)
-  includePieChart        Boolean @default(true)
-  includeDetailedAnswers Boolean @default(true)
-  includeHeader          Boolean @default(true)
-  includeClientInfo      Boolean @default(true)
-  includeScoresTable     Boolean @default(true)
-  customHeaderText       String  @default("Poufny Raport Psychologiczny")
-
-  tests                  Test[]
+  id              String   @id @default(uuid())
+  testId          String
+  test            Test     @relation(fields: [testId], references: [id])
+  name            String
+  components      String   // JSON: ReportComponent[]
 }
 
-// Model for user notifications
-model Notification {
-  id        String   @id @default(cuid())
-  message   String
-  isRead    Boolean  @default(false)
-  createdAt DateTime @default(now())
-  context   Json?    // To store context like { "view": "ReportView", "params": { "resultId": "..." } }
-
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
+model AccessCode {
+  code            String   @id
+  testId          String
+  test            Test     @relation(fields: [testId], references: [id])
+  therapistId     String
+  therapist       User     @relation(fields: [therapistId], references: [id])
+  isUsed          Boolean  @default(false)
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
 }
 
-// A simple model to store key-value settings for the application
-// This will hold branding, AI, and email settings as a single JSON object
-model AppSettings {
-  id      String @id @default("singleton") // Ensures only one row of settings exists
-  content Json
+model SystemSettings {
+  id        String   @id @default("default") // Singleton
+  branding  String   // JSON string of BrandingSettings
+  updatedAt DateTime @updatedAt
 }

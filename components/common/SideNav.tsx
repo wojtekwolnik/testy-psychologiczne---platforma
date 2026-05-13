@@ -1,8 +1,9 @@
 
 import React, { useContext, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { UserRole, User, Notification } from '../types';
-import { ClipboardListIcon, UserGroupIcon, CogIcon, UserManagementIcon, BrandingIcon, ChartPieIcon, LogoutIcon, DocumentationIcon, SparklesIcon, HeartIcon, BellIcon, EnvelopeIcon } from './Icons';
+import { ClipboardListIcon, UserGroupIcon, CogIcon, UserManagementIcon, BrandingIcon, ChartPieIcon, LogoutIcon, DocumentationIcon, SparklesIcon, HeartIcon, BellIcon, EnvelopeIcon, ChartBarIcon } from './Icons';
 import { BrandingContext } from '../../contexts/BrandingContext';
 import { markNotificationsAsRead } from '../../services/apiClient';
 
@@ -13,15 +14,34 @@ interface SideNavProps {
     onLogout: () => void;
 }
 
-// NavLink is now a wrapper around React Router's Link component
-const NavLink: React.FC<{ icon: React.ReactNode, label: string, to: string }> = ({ icon, label, to }) => (
-    <Link to={to} className="w-full flex items-center gap-3 px-4 py-3 text-slate-200 hover:bg-slate-700 rounded-md transition-colors text-left">
-        {icon}
-        <span className="font-medium">{label}</span>
-    </Link>
-);
+const NavLink: React.FC<{ icon: React.ReactNode, label: string, to: string, isActive: boolean, colors: any }> = ({ icon, label, to, isActive, colors }) => {
+    return (
+        <Link href={to}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-md transition-all text-left group"
+            style={{
+                backgroundColor: isActive ? colors.activeBg : 'transparent',
+                color: isActive ? colors.activeText : colors.text
+            }}
+            onMouseEnter={(e) => {
+                if (!isActive) {
+                    e.currentTarget.style.backgroundColor = colors.hoverBg;
+                    e.currentTarget.style.color = colors.hoverText;
+                }
+            }}
+            onMouseLeave={(e) => {
+                if (!isActive) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = colors.text;
+                }
+            }}
+        >
+            <span className={`${isActive ? '' : 'opacity-80 group-hover:opacity-100'}`}>{icon}</span>
+            <span className="font-medium">{label}</span>
+        </Link>
+    );
+};
 
-const NotificationBell: React.FC<Pick<SideNavProps, 'user' | 'notifications' | 'setNotifications'> & { onNavigate: (path: string, state?: any) => void }> = ({ user, notifications, setNotifications, onNavigate }) => {
+const NotificationBell: React.FC<Pick<SideNavProps, 'user' | 'notifications' | 'setNotifications'> & { onNavigate: (path: string) => void }> = ({ user, notifications, setNotifications, onNavigate }) => {
     const [isOpen, setIsOpen] = useState(false);
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -35,16 +55,14 @@ const NotificationBell: React.FC<Pick<SideNavProps, 'user' | 'notifications' | '
             });
         }
     };
-    
+
     const handleNotificationClick = (notification: Notification) => {
         setIsOpen(false);
-        if (notification.context && notification.context.view) { // Legacy context support
-            // This part needs a robust mapping from old View enum to new URL paths
-            // For now, we will handle a specific case, e.g., ReportView
+        if (notification.context && notification.context.view) {
             const { view, params } = notification.context;
             if (view === 'ReportView' && params.resultId) {
                 onNavigate(`/report/${params.resultId}`);
-            } // Add other mappings here as needed
+            }
         }
     };
 
@@ -80,64 +98,111 @@ const NotificationBell: React.FC<Pick<SideNavProps, 'user' | 'notifications' | '
 
 const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications, onLogout }) => {
     const { branding } = useContext(BrandingContext);
-    const navigate = useNavigate();
+    const router = useRouter();
+    const pathname = usePathname();
 
     // Mapping from abstract view to concrete URL path
     const adminLinks = [
-        { to: '/admin/dashboard', label: 'Panel Główny', icon: <CogIcon className="h-5 w-5"/> },
+        { to: '/admin/dashboard', label: 'Panel Główny', icon: <CogIcon className="h-5 w-5" /> },
         { to: '/admin/users', label: 'Użytkownicy', icon: <UserManagementIcon /> },
+        { to: '/admin/results', label: 'Wyniki Testów', icon: <ChartBarIcon /> },
         { to: '/admin/branding', label: 'Branding', icon: <BrandingIcon /> },
-        { to: '/admin/settings/email', label: 'Ustawienia E-mail', icon: <EnvelopeIcon /> },
-        { to: '/admin/templates', label: 'Szablony PDF', icon: <ClipboardListIcon className="h-5 w-5" /> },
-        { to: '/admin/data', label: 'Dane Zbiorcze', icon: <ChartPieIcon /> },
+        // { to: '/admin/settings/email', label: 'Ustawienia E-mail', icon: <EnvelopeIcon /> },
+        { to: '/admin/templates', label: 'Konfiguracja Raportów', icon: <ClipboardListIcon className="h-5 w-5" /> },
+        // { to: '/admin/data', label: 'Dane Zbiorcze', icon: <ChartPieIcon /> },
         { to: '/admin/docs', label: 'Dokumentacja', icon: <DocumentationIcon /> },
-        { to: '/admin/settings/ai', label: 'Ustawienia AI', icon: <SparklesIcon className="h-6 w-6" /> },
-        { to: '/admin/health', label: 'Stan Systemu', icon: <HeartIcon /> },
+        // { to: '/admin/settings/ai', label: 'Ustawienia AI', icon: <SparklesIcon className="h-6 w-6" /> },
+        // { to: '/admin/health', label: 'Stan Systemu', icon: <HeartIcon /> },
     ];
-    
+
     const therapistLinks = [
-         { to: '/therapist/dashboard', label: 'Panel Główny', icon: <UserGroupIcon className="h-5 w-5"/> },
-         { to: '/therapist-docs', label: 'Instrukcja', icon: <DocumentationIcon /> },
+        { to: '/therapist/dashboard', label: 'Panel Główny', icon: <UserGroupIcon className="h-5 w-5" /> },
+        { to: '/therapist-docs', label: 'Instrukcja', icon: <DocumentationIcon /> },
     ];
 
     const links = user.role === UserRole.Admin ? adminLinks : therapistLinks;
 
+    const sidebarColors = {
+        bg: branding.sidebarBackground || '#1e293b',
+        text: branding.sidebarTextColor || '#f1f5f9',
+        activeBg: branding.sidebarActiveBackground || '#334155',
+        activeText: branding.sidebarActiveText || '#ffffff',
+        hoverBg: branding.sidebarHoverBackground || '#334155',
+        hoverText: branding.sidebarHoverText || '#ffffff',
+    };
+
     return (
-        <nav className="w-64 bg-slate-800 text-white flex flex-col p-4 shadow-lg h-full">
-            <div className="flex items-center justify-between p-2 mb-6 border-b border-slate-700 pb-4">
+        <nav className="w-64 flex flex-col p-4 shadow-lg h-full transition-colors duration-300 relative"
+            style={{ backgroundColor: sidebarColors.bg, color: sidebarColors.text }}>
+
+            <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundColor: branding.primaryColor }}></div>
+
+            <div className="relative flex items-center justify-between p-2 mb-8 border-b border-white/10 pb-6">
                 <div className="flex items-center gap-3 flex-shrink min-w-0">
-                    {branding.logoUrl && <img src={branding.logoUrl} alt="Logo" className="h-8 w-auto flex-shrink-0" />}
-                    <h1 className="text-xl font-bold truncate">{branding.appName}</h1>
+                    {branding.logoUrl ? (
+                        <div className="bg-white/10 p-2 rounded-lg backdrop-blur-sm">
+                            <img src={branding.logoUrl} alt="Logo" className="h-8 w-auto max-w-[120px] object-contain flex-shrink-0" />
+                        </div>
+                    ) : (
+                        <div className="h-10 w-10 bg-gradient-to-br from-[var(--primary-color)] to-[var(--accent-color)] rounded-lg flex items-center justify-center text-white font-bold text-lg">
+                            {branding.appName.substring(0, 1)}
+                        </div>
+                    )}
+                    <h1 className="text-lg font-bold truncate leading-tight tracking-tight">{branding.appName}</h1>
                 </div>
                 {user.role === UserRole.Therapist && (
-                   <div className="flex-shrink-0">
-                     <NotificationBell 
-                        user={user} 
-                        notifications={notifications} 
-                        setNotifications={setNotifications} 
-                        onNavigate={(path, state) => navigate(path, { state })} // Pass navigate function
-                     />
-                   </div>
+                    <div className="flex-shrink-0">
+                        <NotificationBell
+                            user={user}
+                            notifications={notifications}
+                            setNotifications={setNotifications}
+                            onNavigate={(path) => router.push(path)}
+                        />
+                    </div>
                 )}
             </div>
-            <div className="flex-grow space-y-2">
-                {links.map(link => (
-                    <NavLink
-                        key={link.to}
-                        label={link.label}
-                        icon={link.icon}
-                        to={link.to} // Use the `to` prop for the Link component
-                    />
-                ))}
+
+            <div className="flex-grow space-y-1 relative">
+                <p className="px-4 text-xs font-semibold opacity-50 uppercase tracking-wider mb-2">Menu</p>
+                {links.map(link => {
+                    const isReportView = pathname?.startsWith('/report/');
+                    const isResultLink = link.to === '/admin/results' || link.to === '/therapist/dashboard';
+                    const isActive = (pathname === link.to) ||
+                        (link.to !== '/' && pathname?.startsWith(link.to)) ||
+                        (isReportView && isResultLink);
+
+                    return (
+                        <NavLink
+                            key={link.to}
+                            label={link.label}
+                            icon={link.icon}
+                            to={link.to}
+                            isActive={isActive}
+                            colors={sidebarColors}
+                        />
+                    );
+                })}
             </div>
-             <div className="mt-auto">
-                <button
-                    onClick={onLogout}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-slate-200 hover:bg-slate-700 rounded-md transition-colors text-left"
-                >
-                    <LogoutIcon />
-                    <span className="font-medium">Wyloguj</span>
-                </button>
+
+            <div className="mt-auto relative">
+                <div className="border-t border-gray-700/50 pt-4">
+                    <div className="flex items-center gap-3 px-4 py-2 mb-2">
+                        <div className="h-8 w-8 rounded-full bg-slate-600 flex items-center justify-center text-xs">
+                            {user.username ? user.username.substring(0, 2).toUpperCase() : 'U'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{user.username}</p>
+                            <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onLogout}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-red-300 hover:bg-slate-700/50 hover:text-red-200 rounded-md transition-colors text-left text-sm"
+                    >
+                        <LogoutIcon />
+                        <span className="font-medium">Wyloguj</span>
+                    </button>
+                </div>
             </div>
         </nav>
     );

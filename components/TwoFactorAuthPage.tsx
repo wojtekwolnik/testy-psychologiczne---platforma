@@ -1,81 +1,113 @@
-
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../contexts/AuthContext';
-import { BrandingContext } from '../contexts/BrandingContext';
+import { ShieldCheckIcon } from './common/Icons';
 
-const TwoFactorAuthPage: React.FC = () => {
-  const { verify2FA, userFor2FA, isLoading, cancel2FA } = useAuth();
-  const { branding } = React.useContext(BrandingContext);
-  const navigate = useNavigate();
+const TwoFactorAuthPage = () => {
+  const [code, setCode] = useState(['', '', '', '', '', '']);
+  const [error, setError] = useState<string | null>(null);
+  const { verify2FA, cancel2FA, userFor2FA, isLoading } = useAuth();
+  const router = useRouter();
 
-  const [code, setCode] = useState('');
-  const [error, setError] = useState('');
-
+  // Redirect if no user pending 2FA
   useEffect(() => {
-    // If there is no user pending 2FA, redirect to login
-    if (!userFor2FA) {
-      navigate('/login');
+    if (!userFor2FA && !isLoading) {
+      router.push('/login');
     }
-  }, [userFor2FA, navigate]);
+  }, [userFor2FA, isLoading, router]);
+
+  const handleChange = (element: HTMLInputElement, index: number) => {
+    if (isNaN(Number(element.value))) return false;
+
+    const newCode = [...code];
+    newCode[index] = element.value;
+    setCode(newCode);
+
+    // Auto-focus next input
+    if (element.nextSibling && element.value !== '') {
+      (element.nextSibling as HTMLInputElement).focus();
+    }
+  };
+
+  const handleBackspace = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.key === 'Backspace' && !code[index] && index > 0) {
+      const inputs = document.querySelectorAll('input[name="auth-code"]');
+      if (inputs[index - 1]) (inputs[index - 1] as HTMLInputElement).focus();
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    if (!/^\d{6}$/.test(code)) {
-      setError('Kod musi składać się z 6 cyfr.');
+    setError(null);
+    const fullCode = code.join('');
+    if (fullCode.length !== 6) {
+      setError("Wprowadź pełny 6-cyfrowy kod.");
       return;
     }
 
     try {
-      await verify2FA(code);
-      // On success, AuthProvider will handle navigation
-    } catch (apiError: any) {
-      setError(apiError.message || 'Wystąpił błąd serwera podczas weryfikacji kodu.');
-      setCode(''); // Clear input on error
+      await verify2FA(fullCode);
+      // Success is handled by context (redirect)
+    } catch (err: any) {
+      setError(err?.message || "Błąd weryfikacji dwuetapowej.");
     }
   };
 
-  if (!userFor2FA) {
-    return null; // or a loading indicator, since the effect will redirect
-  }
+  if (!userFor2FA) return null; // Or loader
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--background-color)] p-4 text-[var(--text-color)]">
-      <div className="w-full max-w-md">
-        <div className="bg-[var(--secondary-color)] rounded-xl shadow-lg p-8 text-center">
-          {branding.logoUrl && <img src={branding.logoUrl} alt="Logo" className="h-16 w-auto mx-auto mb-4 object-contain" />}
-          <h1 className="text-2xl font-bold mb-2">Weryfikacja dwuetapowa</h1>
-          <p className="opacity-80 mb-6">Wprowadź 6-cyfrowy kod z aplikacji uwierzytelniającej dla konta <strong className='font-bold'>{userFor2FA.email}</strong>.</p>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <input
-              type="tel"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              maxLength={6}
-              className="w-full p-4 text-center text-2xl tracking-[.5em] font-mono border-2 border-[var(--border-color)] rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] focus:border-[var(--primary-color)] transition bg-[var(--input-background-color)] text-[var(--input-text-color)]"
-              placeholder="------"
-              autoFocus
-              inputMode="numeric"
-            />
-            {error && <p className="text-[var(--error-color)]">{error}</p>}
+    <div className="min-h-screen bg-[var(--background-color)] flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="mx-auto bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mb-4 text-indigo-600">
+            <ShieldCheckIcon />
+          </div>
+          <h1 className="text-2xl font-bold text-[var(--text-color)]">Weryfikacja dwuetapowa</h1>
+          <p className="text-sm text-slate-500 mt-2">
+            Wprowadź 6-cyfrowy kod z aplikacji uwierzytelniającej, aby zalogować się jako <strong>{userFor2FA.email}</strong>
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm text-center border border-red-200">
+              {error}
+            </div>
+          )}
+
+          <div className="flex justify-center gap-2">
+            {code.map((digit, index) => (
+              <input
+                key={index}
+                name="auth-code"
+                type="text"
+                maxLength={1}
+                value={digit}
+                onChange={e => handleChange(e.target, index)}
+                onKeyDown={e => handleBackspace(e, index)}
+                className="w-12 h-14 text-center text-2xl font-bold border rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
+                autoFocus={index === 0}
+              />
+            ))}
+          </div>
+
+          <div className="space-y-3">
             <button
               type="submit"
-              disabled={isLoading || code.length !== 6}
-              className="w-full px-8 py-3 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold rounded-lg shadow-md hover:opacity-90 disabled:bg-slate-400 transition-colors duration-300"
+              disabled={isLoading}
+              className="w-full py-3 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] rounded-lg font-semibold hover:opacity-90 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Weryfikowanie...' : 'Zweryfikuj'}
+              {isLoading ? 'Weryfikacja...' : 'Zaloguj się'}
             </button>
             <button
               type="button"
               onClick={cancel2FA}
-              disabled={isLoading}
-              className="w-full text-sm opacity-80 hover:opacity-100 mt-2 disabled:opacity-50"
+              className="w-full py-2 text-sm text-slate-500 hover:text-slate-800 transition-colors"
             >
-              Powrót do logowania
+              Anuluj
             </button>
-          </form>
-        </div>
+          </div>
+        </form>
       </div>
     </div>
   );

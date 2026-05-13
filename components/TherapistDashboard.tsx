@@ -1,13 +1,19 @@
+'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { fetchResults, fetchTests, generateAccessCode, fetchActiveCodes, deleteResult } from '../services/apiClient';
-import { type TestResult, type Test, type AccessCode } from './types';
+import { useRouter } from 'next/navigation';
+import { fetchResults, deleteResult } from '@/app/actions/resultActions';
+import { generateAccessCode, fetchActiveCodes } from '@/app/actions/accessCodeActions';
+import { fetchTests } from '@/app/actions/testActions';
+import { getUsers, UserData } from '@/app/actions/userActions';
+import { TestResult, Test, AccessCode } from './types';
 import { ChartBarIcon, TrashIcon, PlusIcon, ClipboardCopyIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
+import { useAuth } from '@/contexts/AuthContext';
 
-const TherapistDashboard: React.FC = () => {
-  const navigate = useNavigate();
+const TherapistDashboard = () => {
+  const { user } = useAuth();
+  const router = useRouter();
   const [results, setResults] = useState<TestResult[]>([]);
   const [tests, setTests] = useState<Test[]>([]);
   const [activeCodes, setActiveCodes] = useState<AccessCode[]>([]);
@@ -15,24 +21,35 @@ const TherapistDashboard: React.FC = () => {
   const [expiryDate, setExpiryDate] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copySuccess, setCopySuccess] = useState('');
+  const [copySuccess, setCopySuccess] = useState<string>('');
   const [resultToDelete, setResultToDelete] = useState<string | null>(null);
 
-  // Filter states
+  // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTest, setFilterTest] = useState('all');
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
 
-  // Hardcoded therapist ID is REMOVED. The server will identify the user via token.
-  // const THERAPIST_ID = 'user-2';
+  const [therapists, setTherapists] = useState<UserData[]>([]);
+  const [selectedTherapistId, setSelectedTherapistId] = useState<string>('');
 
   useEffect(() => {
     loadData();
     const defaultExpiry = new Date();
     defaultExpiry.setDate(defaultExpiry.getDate() + 7);
     setExpiryDate(defaultExpiry.toISOString().split('T')[0]);
-  }, []);
+
+    if (user?.role === 'admin') {
+      getUsers().then(users => {
+        // Filter to show only therapists + admin (or all)
+        // Assuming we want to assign to anyone who can have a dashboard
+        setTherapists(users);
+        if (user) setSelectedTherapistId(user.id);
+      });
+    } else if (user) {
+      setSelectedTherapistId(user.id);
+    }
+  }, [user]);
 
   const loadData = async () => {
     try {
@@ -40,16 +57,16 @@ const TherapistDashboard: React.FC = () => {
       // API calls no longer need therapistId, the server handles it.
       const [fetchedResults, fetchedTests, fetchedCodes] = await Promise.all([
         fetchResults(),
-        fetchTests(true), 
+        fetchTests(),
         fetchActiveCodes()
       ]);
-      
+
       fetchedResults.sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
       setResults(fetchedResults);
       setTests(fetchedTests);
       setActiveCodes(fetchedCodes);
-      
-      if(fetchedTests.length > 0 && !selectedTest) {
+
+      if (fetchedTests.length > 0 && !selectedTest) {
         setSelectedTest(fetchedTests[0].id);
       }
     } catch (err) {
@@ -58,45 +75,57 @@ const TherapistDashboard: React.FC = () => {
       setIsLoading(false);
     }
   };
-  
+
   const getDaysUntilDeletion = (date: Date | string) => {
-      const completionDate = new Date(date);
-      const deletionDate = new Date(completionDate);
-      deletionDate.setDate(deletionDate.getDate() + 60);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      deletionDate.setHours(0,0,0,0);
-      const diffTime = deletionDate.getTime() - today.getTime();
-      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const completionDate = new Date(date);
+    const deletionDate = new Date(completionDate);
+    deletionDate.setDate(deletionDate.getDate() + 60);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    deletionDate.setHours(0, 0, 0, 0);
+    const diffTime = deletionDate.getTime() - today.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   }
 
   const handleGenerateCode = async () => {
     if (!selectedTest || !expiryDate) return;
     const expiry = new Date(expiryDate);
     expiry.setHours(23, 59, 59, 999);
-    
-    // therapistId is no longer passed. Server associates it via token.
-    const newCode = await generateAccessCode(selectedTest, expiry);
-    setActiveCodes(prev => [...prev, newCode]);
+
+    if (!user) return;
+    // Use selectedTherapistId if admin, otherwise user.id 
+    // (Actually user.id is safe if not admin, but consistent usage is better)
+    const targetTherapistId = user.role === 'admin' && selectedTherapistId ? selectedTherapistId : user.id;
+
+    try {
+      const newCode = await generateAccessCode(selectedTest, expiry, targetTherapistId);
+      if (newCode) {
+        setActiveCodes(prev => [newCode, ...prev]);
+      }
+    } catch (err) {
+      console.error("Error generating code:", err);
+      // Optional: setError("Wystąpił błąd podczas generowania kodu.");
+    }
   };
+
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code).then(() => {
-        setCopySuccess(code);
-        setTimeout(() => setCopySuccess(''), 2000);
+      setCopySuccess(code);
+      setTimeout(() => setCopySuccess(''), 2000);
     });
   };
-  
+
   const confirmDeleteResult = async (resultId: string) => {
     try {
-        await deleteResult(resultId);
-        // Reload all data to reflect the change
-        await loadData();
+      await deleteResult(resultId);
+      // Reload all data to reflect the change
+      await loadData();
     } catch {
-        setError("Nie udało się usunąć wyniku.");
+      setError("Nie udało się usunąć wyniku.");
     }
   };
-  
+
   const clearFilters = () => {
     setSearchTerm('');
     setFilterTest('all');
@@ -106,46 +135,64 @@ const TherapistDashboard: React.FC = () => {
 
   const filteredResults = useMemo(() => {
     return results.filter(result => {
-        const matchesSearch = result.clientIdentifier.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesTest = filterTest === 'all' || result.testId === filterTest;
+      const matchesSearch = result.clientIdentifier.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesTest = filterTest === 'all' || result.testId === filterTest;
 
-        const completedDate = new Date(result.completedAt);
-        completedDate.setHours(0, 0, 0, 0);
+      const completedDate = new Date(result.completedAt);
+      completedDate.setHours(0, 0, 0, 0);
 
-        let matchesStartDate = true;
-        if (filterStartDate) {
-            const startDate = new Date(filterStartDate);
-            startDate.setHours(0, 0, 0, 0);
-            matchesStartDate = completedDate >= startDate;
-        }
+      let matchesStartDate = true;
+      if (filterStartDate) {
+        const startDate = new Date(filterStartDate);
+        startDate.setHours(0, 0, 0, 0);
+        matchesStartDate = completedDate >= startDate;
+      }
 
-        let matchesEndDate = true;
-        if (filterEndDate) {
-            const endDate = new Date(filterEndDate);
-            endDate.setHours(0, 0, 0, 0);
-            matchesEndDate = completedDate <= endDate;
-        }
+      let matchesEndDate = true;
+      if (filterEndDate) {
+        const endDate = new Date(filterEndDate);
+        endDate.setHours(0, 0, 0, 0);
+        matchesEndDate = completedDate <= endDate;
+      }
 
-        return matchesSearch && matchesTest && matchesStartDate && matchesEndDate;
+      return matchesSearch && matchesTest && matchesStartDate && matchesEndDate;
     });
   }, [results, searchTerm, filterTest, filterStartDate, filterEndDate]);
 
   return (
     <>
-    <div className="p-8 max-w-7xl mx-auto">
-      <h1 className="text-4xl font-bold mb-2">Panel terapeuty</h1>
-      <p className="opacity-80 mb-8">Przeglądaj wyniki, generuj kody dostępu i zarządzaj danymi klientów.</p>
+      <div className="p-8 max-w-7xl mx-auto">
+        <h1 className="text-4xl font-bold mb-2">{user?.role === 'admin' ? 'Zarządzanie Wynikami' : 'Panel terapeuty'}</h1>
+        <p className="opacity-80 mb-8">Przeglądaj wyniki, generuj kody dostępu i zarządzaj danymi klientów.</p>
 
-      {/* Code Generator */}
-      <div className="bg-[var(--secondary-color)] rounded-xl shadow-lg p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-4">Generator kodów dostępu</h2>
-        <div className="flex flex-col sm:flex-row items-stretch gap-4 mb-4">
-          <select value={selectedTest} onChange={e => setSelectedTest(e.target.value)} className="flex-grow p-3 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]">
-            {tests.map(t => <option key={t.id} value={t.id}>{t.title} (v{t.version})</option>)}
-          </select>
-          <div className="flex-grow">
+        {/* Code Generator */}
+        <div className="bg-[var(--secondary-color)] rounded-xl shadow-lg p-6 mb-8">
+          <div className="flex flex-col sm:flex-row items-stretch gap-4 mb-4">
+            <select value={selectedTest} onChange={e => setSelectedTest(e.target.value)} className="flex-grow p-3 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]">
+              {tests.map(t => <option key={t.id} value={t.id}>{t.title} (v{t.version})</option>)}
+            </select>
+
+            {user?.role === 'admin' && (
+              <div className="flex-grow">
+                <label htmlFor="therapist-select" className="block text-xs font-medium text-slate-500 mb-1">Przypisz do</label>
+                <select
+                  id="therapist-select"
+                  value={selectedTherapistId}
+                  onChange={e => setSelectedTherapistId(e.target.value)}
+                  className="w-full p-3 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]"
+                >
+                  {therapists.map(t => (
+                    <option key={t.id} value={t.id}>
+                      {t.username || t.email} ({t.role === 'admin' ? 'Admin' : 'Terapeuta'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="flex-grow">
               <label htmlFor="expiry-date" className="block text-xs font-medium text-slate-500 mb-1">Data ważności</label>
-              <input 
+              <input
                 id="expiry-date"
                 type="date"
                 value={expiryDate}
@@ -153,156 +200,156 @@ const TherapistDashboard: React.FC = () => {
                 min={new Date().toISOString().split('T')[0]}
                 className="w-full p-3 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]"
               />
+            </div>
+            <button onClick={handleGenerateCode} className="flex self-end items-center justify-center gap-2 px-4 py-3 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold rounded-lg shadow-md hover:opacity-90">
+              <PlusIcon /> Generuj kod
+            </button>
           </div>
-          <button onClick={handleGenerateCode} className="flex self-end items-center justify-center gap-2 px-4 py-3 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold rounded-lg shadow-md hover:opacity-90">
-             <PlusIcon /> Generuj kod
-          </button>
-        </div>
-        {activeCodes.length > 0 && (
+          {activeCodes.length > 0 && (
             <div>
-                <h3 className="text-md font-semibold opacity-80">Aktywne kody (ważne i nieużyte):</h3>
-                <ul className="mt-2 space-y-1 text-sm opacity-70">
-                    {activeCodes.map(code => {
-                        const associatedTest = tests.find(t => t.id === code.testId);
-                        return (
-                            <li key={code.code} className="font-mono bg-[var(--background-color)] px-2 py-1 rounded flex justify-between items-center">
-                                <div className="flex items-center gap-2">
-                                  <span>{code.code} <span className="opacity-50">- ({associatedTest?.title} v{associatedTest?.version})</span></span>
-                                   <button onClick={() => handleCopyCode(code.code)} className="p-1 hover:bg-slate-200 rounded">
-                                        {copySuccess === code.code ? <span className="text-xs text-green-600">Skopiowano!</span> : <ClipboardCopyIcon />}
-                                   </button>
-                                </div>
-                                <span className="text-xs font-semibold">Ważny do: {new Date(code.expiresAt).toLocaleDateString()}</span>
-                            </li>
-                        )
-                    })}
-                </ul>
+              <h3 className="text-md font-semibold opacity-80">Aktywne kody (ważne i nieużyte):</h3>
+              <ul className="mt-2 space-y-1 text-sm opacity-70">
+                {activeCodes.filter(c => c && c.code).map(code => {
+                  const associatedTest = tests.find(t => t.id === code.testId);
+                  return (
+                    <li key={code.code} className="font-mono bg-[var(--background-color)] px-2 py-1 rounded flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <span>{code.code} <span className="opacity-50">- ({associatedTest?.title} v{associatedTest?.version})</span></span>
+                        <button onClick={() => handleCopyCode(code.code)} className="p-1 hover:bg-slate-200 rounded">
+                          {copySuccess === code.code ? <span className="text-xs text-green-600">Skopiowano!</span> : <ClipboardCopyIcon />}
+                        </button>
+                      </div>
+                      <span className="text-xs font-semibold">Ważny do: {new Date(code.expiresAt).toLocaleDateString()}</span>
+                    </li>
+                  )
+                })}
+              </ul>
             </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      <div className="bg-[var(--secondary-color)] rounded-xl shadow-lg overflow-hidden">
-        <div className="p-4 bg-[var(--background-color)] border-b border-[var(--border-color)] flex flex-col gap-4">
-          <div className="flex justify-between items-center">
-             <h2 className="text-xl font-semibold self-center">Ukończone testy</h2>
-             <button onClick={clearFilters} className="text-sm text-[var(--primary-color)] font-semibold hover:underline">Wyczyść filtry</button>
-          </div>
-          <div className="flex flex-wrap gap-4 items-end">
-            <div className="flex-grow">
-                <label className="text-xs font-medium text-slate-500">Szukaj po ID klienta</label>
-                <input 
-                    type="text"
-                    placeholder="Wpisz ID..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="w-full p-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]"
-                />
+        <div className="bg-[var(--secondary-color)] rounded-xl shadow-lg overflow-hidden">
+          <div className="p-4 bg-[var(--background-color)] border-b border-[var(--border-color)] flex flex-col gap-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold self-center">Ukończone testy</h2>
+              <button onClick={clearFilters} className="text-sm text-[var(--primary-color)] font-semibold hover:underline">Wyczyść filtry</button>
             </div>
-            <div className="flex-grow">
+            <div className="flex flex-wrap gap-4 items-end">
+              <div className="flex-grow">
+                <label className="text-xs font-medium text-slate-500">Szukaj po ID klienta</label>
+                <input
+                  type="text"
+                  placeholder="Wpisz ID..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full p-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]"
+                />
+              </div>
+              <div className="flex-grow">
                 <label className="text-xs font-medium text-slate-500">Filtruj po teście</label>
                 <select
-                    value={filterTest}
-                    onChange={e => setFilterTest(e.target.value)}
-                    className="w-full p-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]"
+                  value={filterTest}
+                  onChange={e => setFilterTest(e.target.value)}
+                  className="w-full p-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]"
                 >
-                    <option value="all">Wszystkie testy</option>
-                    {[...new Map(results.map(item => [item.testId, item])).values()].map((result: TestResult) => {
-                        const test = tests.find(t => t.id === result.testId);
-                        return <option key={result.testId} value={result.testId}>{test?.title} (v{test?.version})</option>
-                    })}
+                  <option value="all">Wszystkie testy</option>
+                  {Array.from(new Map(results.map(item => [item.testId, item])).values()).map((result: TestResult) => {
+                    const test = tests.find(t => t.id === result.testId);
+                    return <option key={result.testId} value={result.testId}>{test?.title} (v{test?.version})</option>
+                  })}
                 </select>
-            </div>
-             <div className="flex-grow">
+              </div>
+              <div className="flex-grow">
                 <label className="text-xs font-medium text-slate-500">Data ukończenia (od)</label>
                 <input
-                    type="date"
-                    value={filterStartDate}
-                    onChange={e => setFilterStartDate(e.target.value)}
-                    className="w-full p-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]"
+                  type="date"
+                  value={filterStartDate}
+                  onChange={e => setFilterStartDate(e.target.value)}
+                  className="w-full p-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]"
                 />
-            </div>
-             <div className="flex-grow">
+              </div>
+              <div className="flex-grow">
                 <label className="text-xs font-medium text-slate-500">Data ukończenia (do)</label>
                 <input
-                    type="date"
-                    value={filterEndDate}
-                    onChange={e => setFilterEndDate(e.target.value)}
-                    className="w-full p-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]"
+                  type="date"
+                  value={filterEndDate}
+                  onChange={e => setFilterEndDate(e.target.value)}
+                  className="w-full p-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]"
                 />
+              </div>
             </div>
           </div>
-        </div>
-        {isLoading ? (
-          <div className="p-8 text-center">Ładowanie wyników...</div>
-        ) : error ? (
-          <div className="p-8 text-center text-[var(--error-color)]">{error}</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-[var(--background-color)] text-sm font-semibold opacity-70">
-                <tr className="text-[var(--text-color)]">
-                  <th className="p-4">Identyfikator Klienta</th>
-                  <th className="p-4">Tytuł Testu</th>
-                  <th className="p-4">Data ukończenia</th>
-                  <th className="p-4">Usuwanie za</th>
-                  <th className="p-4">Akcje</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredResults.length === 0 ? (
+          {isLoading ? (
+            <div className="p-8 text-center">Ładowanie wyników...</div>
+          ) : error ? (
+            <div className="p-8 text-center text-[var(--error-color)]">{error}</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-[var(--background-color)] text-sm font-semibold opacity-70">
+                  <tr className="text-[var(--text-color)]">
+                    <th className="p-4">Identyfikator Klienta</th>
+                    <th className="p-4">Tytuł Testu</th>
+                    <th className="p-4">Data ukończenia</th>
+                    <th className="p-4">Usuwanie za</th>
+                    <th className="p-4">Akcje</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredResults.length === 0 ? (
                     <tr>
-                        <td colSpan={5} className="p-8 text-center opacity-60">
-                            Brak wyników pasujących do kryteriów.
-                        </td>
+                      <td colSpan={5} className="p-8 text-center opacity-60">
+                        Brak wyników pasujących do kryteriów.
+                      </td>
                     </tr>
-                ) : (
-                  filteredResults.map(result => {
-                    const daysLeft = getDaysUntilDeletion(result.completedAt);
-                    const urgencyClass = daysLeft <= 0 ? 'text-[var(--error-color)] font-bold' : daysLeft <= 7 ? 'text-[var(--warning-color)]' : '';
+                  ) : (
+                    filteredResults.map(result => {
+                      const daysLeft = getDaysUntilDeletion(result.completedAt);
+                      const urgencyClass = daysLeft <= 0 ? 'text-[var(--error-color)] font-bold' : daysLeft <= 7 ? 'text-[var(--warning-color)]' : '';
 
-                    return (
+                      return (
                         <tr key={result.id} className="border-b border-[var(--border-color)] hover:bg-[var(--background-color)]">
-                        <td className="p-4 font-mono">{result.clientIdentifier}</td>
-                        <td className="p-4">{result.testTitle} <span className="text-xs opacity-50">(v{result.testVersion})</span></td>
-                        <td className="p-4">{new Date(result.completedAt).toLocaleDateString()}</td>
-                        <td className={`p-4 ${urgencyClass}`}>{daysLeft > 0 ? `${daysLeft} dni` : 'Dziś'}</td>
-                        <td className="p-4 flex items-center gap-2">
+                          <td className="p-4 font-mono">{result.clientIdentifier}</td>
+                          <td className="p-4">{result.testTitle} <span className="text-xs opacity-50">(v{result.testVersion})</span></td>
+                          <td className="p-4">{new Date(result.completedAt).toLocaleDateString()}</td>
+                          <td className={`p-4 ${urgencyClass}`}>{daysLeft > 0 ? `${daysLeft} dni` : 'Dziś'}</td>
+                          <td className="p-4 flex items-center gap-2">
                             <button
-                                onClick={() => navigate(`/report/${result.id}`)} // Updated navigation
-                                className="flex items-center gap-2 px-3 py-1.5 bg-[var(--accent-color)]/20 text-[var(--accent-color)] font-semibold rounded-md hover:bg-[var(--accent-color)]/30 transition-colors text-sm"
+                              onClick={() => router.push(`/report/${result.id}`)} // Updated navigation
+                              className="flex items-center gap-2 px-3 py-1.5 bg-[var(--accent-color)]/20 text-[var(--accent-color)] font-semibold rounded-md hover:bg-[var(--accent-color)]/30 transition-colors text-sm"
                             >
-                                <ChartBarIcon />
-                                Zobacz raport
+                              <ChartBarIcon />
+                              Zobacz raport
                             </button>
-                             <button
-                                onClick={() => setResultToDelete(result.id)}
-                                className="p-2 opacity-60 hover:bg-red-100 hover:text-[var(--error-color)] rounded-full transition-colors"
-                                title="Usuń wynik"
+                            <button
+                              onClick={() => setResultToDelete(result.id)}
+                              className="p-2 opacity-60 hover:bg-red-100 hover:text-[var(--error-color)] rounded-full transition-colors"
+                              title="Usuń wynik"
                             >
-                                <TrashIcon />
+                              <TrashIcon />
                             </button>
-                        </td>
+                          </td>
                         </tr>
-                    );
-                })
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
-    <ActionConfirmModal 
-      isOpen={!!resultToDelete}
-      onCancel={() => setResultToDelete(null)}
-      onConfirm={() => {
-        if(resultToDelete) confirmDeleteResult(resultToDelete);
-        setResultToDelete(null);
-      }}
-      title="Potwierdź usunięcie wyniku"
-      message="Czy na pewno chcesz trwale usunąć ten wynik? Tej operacji nie można cofnąć."
-      confirmText="Usuń"
-    />
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div >
+      <ActionConfirmModal
+        isOpen={!!resultToDelete}
+        onCancel={() => setResultToDelete(null)}
+        onConfirm={() => {
+          if (resultToDelete) confirmDeleteResult(resultToDelete);
+          setResultToDelete(null);
+        }}
+        title="Potwierdź usunięcie wyniku"
+        message="Czy na pewno chcesz trwale usunąć ten wynik? Tej operacji nie można cofnąć."
+        confirmText="Usuń"
+      />
     </>
   );
 };
