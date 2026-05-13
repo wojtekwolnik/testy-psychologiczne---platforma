@@ -28,6 +28,14 @@ export interface Section {
   questions: Question[];
 }
 
+export interface ScaleLevel {
+  id: string;
+  name: string;
+  minScore: number;
+  maxScore: number;
+  color: string;
+}
+
 export interface Scale {
   type: 'standard' | 'calculated';
   id: string;
@@ -35,6 +43,7 @@ export interface Scale {
   description: string;
   maxScore?: number;
   formula?: string;
+  levels?: ScaleLevel[];
 }
 
 export interface Test {

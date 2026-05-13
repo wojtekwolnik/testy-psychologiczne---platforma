@@ -55,9 +55,23 @@ async function drawScoresTable(ctx: PdfContext, component: ReportComponent, resu
 
     const scaleIds = component.options.scaleIds || Object.keys(result.scores);
 
+    const getScoreLevel = (val: number, scale: any) => {
+        if (!scale) return 'Brak danych';
+        if (scale.levels && scale.levels.length > 0) {
+            const matched = scale.levels.find((l: any) => val >= l.minScore && val <= l.maxScore) || scale.levels[scale.levels.length - 1];
+            return matched.name;
+        }
+        if (!scale.maxScore) return 'Brak danych';
+        const ratio = val / scale.maxScore;
+        if (ratio > 0.73) return 'Wysoki';
+        if (ratio >= 0.45) return 'Przeciętny';
+        return 'Niski';
+    };
+
     // Header
     ctx.page.drawText('Skala', { x: 55, y: ctx.y, font: headerFont, size: 10 });
-    ctx.page.drawText('Wynik', { x: 350, y: ctx.y, font: headerFont, size: 10 });
+    ctx.page.drawText('Wynik', { x: 320, y: ctx.y, font: headerFont, size: 10 });
+    ctx.page.drawText('Poziom', { x: 420, y: ctx.y, font: headerFont, size: 10 });
     ctx.moveDown(20);
 
     // Body
@@ -66,9 +80,12 @@ async function drawScoresTable(ctx: PdfContext, component: ReportComponent, resu
         const scaleInfo = test.scales.find(s => s.id === scaleId);
         if (score === undefined || !scaleInfo) continue;
 
+        const levelText = getScoreLevel(score, scaleInfo);
+
         ctx.checkNewPage(20);
         ctx.page.drawText(scaleInfo.name, { x: 55, y: ctx.y, font: bodyFont, size: 10 });
-        ctx.page.drawText(String(score), { x: 350, y: ctx.y, font: bodyFont, size: 10 });
+        ctx.page.drawText(`${score}${scaleInfo.maxScore ? ` / ${scaleInfo.maxScore}` : ''}`, { x: 320, y: ctx.y, font: bodyFont, size: 10 });
+        ctx.page.drawText(levelText, { x: 420, y: ctx.y, font: bodyFont, size: 10 });
         ctx.moveDown(20);
     }
     ctx.moveDown(10); // Margin after table

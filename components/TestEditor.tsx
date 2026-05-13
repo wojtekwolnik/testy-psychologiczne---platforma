@@ -593,6 +593,89 @@ const TestEditor: React.FC = () => {
                                     </div>
                                 </div>
                             )}
+
+                            {/* Custom Levels Configuration */}
+                            <div className="mt-4 pt-4 border-t border-gray-200">
+                                <div className="flex justify-between items-center mb-2">
+                                    <label className="text-sm font-semibold text-gray-700">Poziomy wyników / przedziały (opcjonalne):</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const currentLevels = scale.levels || [];
+                                            const newLevel = { id: generateUniqueId('lvl'), name: 'Nowy Poziom', minScore: 0, maxScore: scale.maxScore || 100, color: 'blue' };
+                                            updateScale(i, { levels: [...currentLevels, newLevel] });
+                                        }}
+                                        className="text-xs px-3 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-md font-semibold flex items-center gap-1 transition-colors"
+                                    >
+                                        + Dodaj poziom
+                                    </button>
+                                </div>
+                                <div className="space-y-2">
+                                    {(scale.levels || []).map((level, lIndex) => (
+                                        <div key={level.id} className="flex flex-wrap items-center gap-2 bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm text-xs">
+                                            <input
+                                                type="text"
+                                                value={level.name}
+                                                onChange={e => {
+                                                    const updatedLevels = (scale.levels || []).map((l, idx) => idx === lIndex ? { ...l, name: e.target.value } : l);
+                                                    updateScale(i, { levels: updatedLevels });
+                                                }}
+                                                placeholder="Nazwa (np. Bardzo wysoki)"
+                                                className="flex-grow p-1.5 border border-gray-300 rounded font-semibold min-w-[120px]"
+                                            />
+                                            <span className="text-gray-500">od</span>
+                                            <input
+                                                type="number"
+                                                value={level.minScore}
+                                                onChange={e => {
+                                                    const updatedLevels = (scale.levels || []).map((l, idx) => idx === lIndex ? { ...l, minScore: parseInt(e.target.value) || 0 } : l);
+                                                    updateScale(i, { levels: updatedLevels });
+                                                }}
+                                                className="w-16 p-1.5 border border-gray-300 rounded text-center"
+                                                placeholder="Min"
+                                            />
+                                            <span className="text-gray-500">do</span>
+                                            <input
+                                                type="number"
+                                                value={level.maxScore}
+                                                onChange={e => {
+                                                    const updatedLevels = (scale.levels || []).map((l, idx) => idx === lIndex ? { ...l, maxScore: parseInt(e.target.value) || 0 } : l);
+                                                    updateScale(i, { levels: updatedLevels });
+                                                }}
+                                                className="w-16 p-1.5 border border-gray-300 rounded text-center"
+                                                placeholder="Max"
+                                            />
+                                            <select
+                                                value={level.color}
+                                                onChange={e => {
+                                                    const updatedLevels = (scale.levels || []).map((l, idx) => idx === lIndex ? { ...l, color: e.target.value } : l);
+                                                    updateScale(i, { levels: updatedLevels });
+                                                }}
+                                                className="p-1.5 border border-gray-300 rounded bg-white"
+                                            >
+                                                <option value="blue">Niebieski</option>
+                                                <option value="green">Zielony</option>
+                                                <option value="yellow">Żółty</option>
+                                                <option value="red">Czerwony</option>
+                                                <option value="purple">Fioletowy</option>
+                                            </select>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const updatedLevels = (scale.levels || []).filter((_, idx) => idx !== lIndex);
+                                                    updateScale(i, { levels: updatedLevels });
+                                                }}
+                                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded ml-auto"
+                                            >
+                                                <TrashIcon className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {(scale.levels || []).length === 0 && (
+                                        <p className="text-xs text-gray-400 italic">Brak zdefiniowanych poziomów. Zostaną użyte domyślne 3 progi wyliczane z maksymalnej liczby punktów.</p>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     ))}
                 </div>

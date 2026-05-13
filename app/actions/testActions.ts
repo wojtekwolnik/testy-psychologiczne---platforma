@@ -12,7 +12,12 @@ const serializeTest = (prismaTest: any): Test => {
         ...prismaTest,
         status: prismaTest.status || 'DRAFT', // Default to DRAFT if null (legacy data)
         createdAt: prismaTest.createdAt.toISOString(),
-        scales: prismaTest.scales.map((s: any) => ({ ...s, maxScore: s.maxScore ?? undefined, formula: s.formula ?? undefined })),
+        scales: prismaTest.scales.map((s: any) => ({
+            ...s,
+            maxScore: s.maxScore ?? undefined,
+            formula: s.formula ?? undefined,
+            levels: s.levels ? JSON.parse(s.levels) : undefined
+        })),
         sections: prismaTest.sections.map((sec: any) => ({
             ...sec,
             questions: sec.questions.map((q: any) => ({
@@ -114,7 +119,8 @@ export async function saveTest(testData: Test, asNewVersion: boolean): Promise<T
                     name: s.name,
                     description: s.description,
                     maxScore: s.maxScore || null,
-                    formula: s.formula || null
+                    formula: s.formula || null,
+                    levels: s.levels ? JSON.stringify(s.levels) : null
                 }))
             });
         }
@@ -187,7 +193,8 @@ export async function createNewTest(testData: Test): Promise<Test> {
                     name: s.name,
                     description: s.description,
                     maxScore: s.maxScore || null,
-                    formula: s.formula || null
+                    formula: s.formula || null,
+                    levels: s.levels ? JSON.stringify(s.levels) : null
                 }))
             },
             sections: {

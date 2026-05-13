@@ -133,6 +133,24 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
         return scale ? { name: scale.name, description: scale.description } : { name: scaleId, description: 'Brak opisu.' };
     };
 
+    const getScoreLevel = (val: number, scale: any) => {
+        if (!scale) return { label: 'Brak danych', color: 'bg-gray-100 text-gray-800 border-gray-200' };
+        if (scale.levels && scale.levels.length > 0) {
+            const matched = scale.levels.find((l: any) => val >= l.minScore && val <= l.maxScore) || scale.levels[scale.levels.length - 1];
+            const colorClass = matched.color === 'red' ? 'bg-red-100 text-red-800 border-red-200' :
+                               matched.color === 'yellow' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                               matched.color === 'green' ? 'bg-green-100 text-green-800 border-green-200' :
+                               matched.color === 'purple' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                               'bg-blue-100 text-blue-800 border-blue-200';
+            return { label: matched.name, color: colorClass };
+        }
+        if (!scale.maxScore) return { label: 'Brak danych', color: 'bg-gray-100 text-gray-800 border-gray-200' };
+        const ratio = val / scale.maxScore;
+        if (ratio > 0.73) return { label: 'Wysoki', color: 'bg-red-100 text-red-800 border-red-200' };
+        if (ratio >= 0.45) return { label: 'Przeciętny', color: 'bg-blue-100 text-blue-800 border-blue-200' };
+        return { label: 'Niski', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' };
+    };
+
     return (
         <div className="bg-gray-100 min-h-screen">
             <header className="bg-white shadow-sm sticky top-0 z-10 p-4">
@@ -163,12 +181,19 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                             <div className="space-y-4">
                                 {Object.entries(result.scores).map(([scaleId, value]) => {
                                     const { name, description } = getScaleDetails(scaleId);
-                                    const maxScore = test.scales.find(s => s.id === scaleId)?.maxScore;
+                                    const scale = test.scales.find(s => s.id === scaleId);
+                                    const maxScore = scale?.maxScore;
                                     const percentage = maxScore ? (value / maxScore) * 100 : 0;
+                                    const levelInfo = getScoreLevel(value, scale);
                                     return (
                                         <div key={scaleId} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                             <div className="flex justify-between items-center mb-1">
-                                                <p className="font-bold text-lg text-indigo-700">{name}</p>
+                                                <div className="flex items-center gap-3">
+                                                    <p className="font-bold text-lg text-indigo-700">{name}</p>
+                                                    <span className={`px-3 py-0.5 rounded-full text-xs font-bold border shadow-sm ${levelInfo.color}`}>
+                                                        {levelInfo.label}
+                                                    </span>
+                                                </div>
                                                 <p className="text-2xl font-extrabold text-gray-800">{value}{maxScore ? ` / ${maxScore}` : ''}</p>
                                             </div>
                                             {maxScore && (

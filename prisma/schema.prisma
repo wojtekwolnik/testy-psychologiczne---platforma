@@ -51,6 +51,7 @@ model Scale {
   description String?
   maxScore    Int?
   formula     String?
+  levels      String? // JSON: ScaleLevel[]
 }
 
 model Section {
