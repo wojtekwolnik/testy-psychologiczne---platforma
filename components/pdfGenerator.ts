@@ -164,7 +164,7 @@ export async function generatePdf(
                 break;
             case 'RadarChart': // Placeholder
                 ctx.checkNewPage(20);
-                ctx.page.drawText(`[Komponent Wykresu Radarowego '${component.title}' pojawi się tutaj]`, { x: 50, y: ctx.y, size: 10, font });
+                ctx.page.drawText(`[Komponent Wykresu Radarowego '${component.title}' pojawi sie tutaj]`, { x: 50, y: ctx.y, size: 10, font });
                 ctx.moveDown(30);
                 break;
             case 'RichText':

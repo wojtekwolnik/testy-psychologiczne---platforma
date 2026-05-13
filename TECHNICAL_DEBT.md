@@ -1,24 +1,10 @@
-
 # Dług Techniczny i Elementy do Dokończenia
 
 Ten plik dokumentuje elementy systemu, które zostały zaimplementowane w uproszczony sposób ("na skróty") w celu szybszego dostarczenia działającego prototypu. Należy do nich wrócić, aby zapewnić pełną funkcjonalność, bezpieczeństwo i profesjonalną jakość produktu końcowego.
 
 ---
 
-### 1. Mock Backend / Brak Trwałości Danych (`services/apiClient.ts`)
-
-*   **Stan Faktyczny:** Aplikacja **nie posiada żadnej trwałej bazy danych**. Cały stan aplikacji (użytkownicy, wyniki testów, szablony) jest przechowywany w **zmiennych w pamięci RAM** (JavaScript variables).
-*   **Konsekwencje:** **Odświeżenie strony (F5) powoduje całkowity reset danych** do stanu początkowego (utrata zarejestrowanych klientów, wyników i stworzonych testów).
-    *   *Wyjątek:* Jedynie ustawienia wizualne (branding) są zapisywane w `localStorage`.
-*   **Ryzyko:** Krytyczne. Aplikacja w obecnym stanie jest **bezużyteczna produkcyjnie**. Służy jedynie do prezentacji interfejsu (demo high-fidelity).
-*   **Wymagana Akcja:**
-    1.  **Budowa Backend:** Należy stworzyć prawdziwy backend (Node.js/Python/Go).
-    2.  **Baza Danych:** Podłączenie PostgreSQL lub MongoDB.
-    3.  **Migracja API:** Przepisanie `apiClient.ts` na `fetch/axios` do komunikacji z nowym backendem.
-
----
-
-### 2. Generator PDF (`components/pdfGenerator.ts`)
+### 1. Generator PDF (`components/pdfGenerator.ts`)
 
 #### a) Wizualizacja Wykresów (`drawBarChart`, `drawRadarChart`)
 
@@ -34,8 +20,7 @@ Ten plik dokumentuje elementy systemu, które zostały zaimplementowane w uprosz
 
 ---
 
-### 3. Ewaluacja Formuł w Mock Backendu (`services/apiClient.ts`)
+### 2. Ewaluacja Formuł w Backendu (`services/apiClient.ts` / Next.js Actions)
 
 *   **Problem:** Użycie `new Function('return ...')` do obliczania formuł jest potencjalnie niebezpieczne (Code Injection).
 *   **Kierunek Rozwoju (Idea):** Zastąpić obecną implementację bezpieczną biblioteką do parsowania wyrażeń matematycznych, np. **`math.js`**, która wykonuje obliczenia w trybie "sandbox".
-
