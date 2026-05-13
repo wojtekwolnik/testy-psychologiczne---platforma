@@ -1,9 +1,12 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { loadEnv } from 'vite';
 
-export default defineConfig({
-  plugins: [react()],
+export default defineConfig(({ mode }) => {
+  process.env = { ...process.env, ...loadEnv(mode, process.cwd(), '') };
+  return {
+    plugins: [react()],
   test: {
     environment: 'jsdom',
     setupFiles: ['./setupTests.ts'],
@@ -14,4 +17,5 @@ export default defineConfig({
       '@': path.resolve(__dirname, './'),
     },
   },
+  };
 });
