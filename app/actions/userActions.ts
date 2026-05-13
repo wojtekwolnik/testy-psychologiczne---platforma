@@ -1,18 +1,11 @@
 'use server';
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
+import type { User } from '@/components/types';
+import { UserRole } from '@/components/types';
+import { revalidatePath } from 'next/cache';
 
-const prisma = new PrismaClient();
-
-export type UserData = {
-    id: string;
-    email: string;
-    username: string | null;
-    role: string;
-    createdAt: Date;
-};
-
-export async function getUsers(): Promise<UserData[]> {
+export async function getAllUsers(): Promise<User[]> {
     try {
         const users = await prisma.user.findMany({
             select: {
@@ -21,12 +14,21 @@ export async function getUsers(): Promise<UserData[]> {
                 username: true,
                 role: true,
                 createdAt: true,
+                twoFactorSecret: true,
             },
             orderBy: {
                 createdAt: 'desc',
             },
         });
-        return users;
+        return users.map(user => ({
+            id: user.id,
+            email: user.email,
+            username: user.username || undefined,
+            fullName: user.username || undefined,
+            role: user.role as UserRole,
+            createdAt: user.createdAt.toISOString(),
+            twoFactorSecret: user.twoFactorSecret || undefined,
+        }));
     } catch (error) {
         console.error('Failed to fetch users:', error);
         throw new Error('Failed to fetch users');
@@ -40,32 +42,55 @@ export async function deleteUser(userId: string): Promise<void> {
                 id: userId,
             },
         });
+        revalidatePath('/admin/users');
     } catch (error) {
         console.error('Failed to delete user:', error);
         throw new Error('Failed to delete user');
     }
 }
 
-export async function createUser(data: { email: string; username: string; password: string; role: 'admin' | 'therapist' }): Promise<UserData> {
+export async function saveUser(user: Partial<User>): Promise<User> {
     try {
-        const newUser = await prisma.user.create({
-            data: {
-                email: data.email,
-                username: data.username,
-                password: data.password, // Plain text for prototype as per instructions
-                role: data.role,
-            },
-            select: {
-                id: true,
-                email: true,
-                username: true,
-                role: true,
-                createdAt: true,
-            },
-        });
-        return newUser;
+        const dataToSave = {
+            email: user.email!,
+            username: user.fullName || user.username || '',
+            role: user.role || 'therapist',
+            // if new user, password can be set to something default or sent via email. 
+            // For now, we'll leave password alone on update, or set a dummy on create
+        };
+
+        let savedUser;
+        if (user.id) {
+            // Update
+            savedUser = await prisma.user.update({
+                where: { id: user.id },
+                data: dataToSave,
+                select: { id: true, email: true, username: true, role: true, createdAt: true, twoFactorSecret: true },
+            });
+        } else {
+            // Create
+            savedUser = await prisma.user.create({
+                data: {
+                    ...dataToSave,
+                    password: 'password123', // Dummy password for newly created users via admin panel
+                },
+                select: { id: true, email: true, username: true, role: true, createdAt: true, twoFactorSecret: true },
+            });
+        }
+        
+        revalidatePath('/admin/users');
+
+        return {
+            id: savedUser.id,
+            email: savedUser.email,
+            username: savedUser.username || undefined,
+            fullName: savedUser.username || undefined,
+            role: savedUser.role as UserRole,
+            createdAt: savedUser.createdAt.toISOString(),
+            twoFactorSecret: savedUser.twoFactorSecret || undefined,
+        };
     } catch (error) {
-        console.error('Failed to create user:', error);
-        throw new Error('Failed to create user');
+        console.error('Failed to save user:', error);
+        throw new Error('Failed to save user');
     }
 }

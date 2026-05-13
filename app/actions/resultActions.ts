@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import type { TestResult, Test, Scale, Question, ClientAnswer, ScoringRule } from '@/components/types';
 import { revalidatePath } from 'next/cache';
 import { generateUniqueId } from '@/utils/idUtils'; // We might need to handle this or let Prisma UUID handle it. 
+import { evaluate } from 'mathjs';
 // Prisma schema uses String @id @default(cuid()) or similar usually. 
 // Let's check schema.
 
@@ -14,9 +15,8 @@ const evaluateFormula = (formula: string, availableScores: Record<string, number
     });
 
     try {
-        // Safe evaluation using Function
-        const calculate = new Function(`return ${populatedFormula}`);
-        const result = calculate();
+        // Safe evaluation using mathjs
+        const result = evaluate(populatedFormula);
 
         if (typeof result !== 'number' || !isFinite(result) || isNaN(result)) {
             return 0;

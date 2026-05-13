@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { UserRole, User, Notification } from '../types';
 import { ClipboardListIcon, UserGroupIcon, CogIcon, UserManagementIcon, BrandingIcon, ChartPieIcon, LogoutIcon, DocumentationIcon, SparklesIcon, HeartIcon, BellIcon, EnvelopeIcon, ChartBarIcon } from './Icons';
 import { BrandingContext } from '../../contexts/BrandingContext';
-import { markNotificationsAsRead } from '../../services/apiClient';
+import { markNotificationsAsRead } from '@/app/actions/notificationActions';
 
 interface SideNavProps {
     user: User;
