@@ -1,7 +1,7 @@
 'use server';
 
 import { PrismaClient } from '@prisma/client';
-import { BrandingSettings } from '../components/types';
+import { BrandingSettings } from '@/components/types';
 
 const prisma = new PrismaClient();
 

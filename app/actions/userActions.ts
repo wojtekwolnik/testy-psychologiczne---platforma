@@ -23,8 +23,8 @@ export async function getAllUsers(): Promise<User[]> {
         return users.map(user => ({
             id: user.id,
             email: user.email,
-            username: user.username || undefined,
-            fullName: user.username || undefined,
+            username: user.username || '',
+            fullName: user.username || '',
             role: user.role as UserRole,
             createdAt: user.createdAt.toISOString(),
             twoFactorSecret: user.twoFactorSecret || undefined,
@@ -83,8 +83,8 @@ export async function saveUser(user: Partial<User>): Promise<User> {
         return {
             id: savedUser.id,
             email: savedUser.email,
-            username: savedUser.username || undefined,
-            fullName: savedUser.username || undefined,
+            username: savedUser.username || '',
+            fullName: savedUser.username || '',
             role: savedUser.role as UserRole,
             createdAt: savedUser.createdAt.toISOString(),
             twoFactorSecret: savedUser.twoFactorSecret || undefined,
