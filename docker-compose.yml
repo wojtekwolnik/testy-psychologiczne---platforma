@@ -1,0 +1,64 @@
+version: '3.9'
+
+services:
+  # -------------------------------------------------------
+  # PostgreSQL Database
+  # -------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: testy_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: testy_psychologiczne
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # -------------------------------------------------------
+  # PostgreSQL Test Database
+  # -------------------------------------------------------
+  db_test:
+    image: postgres:16-alpine
+    container_name: testy_db_test
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: testy_psychologiczne_test
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_test_data:/var/lib/postgresql/data
+
+  # -------------------------------------------------------
+  # Next.js Application (Production-like, optional locally)
+  # Run with: docker compose --profile app up
+  # -------------------------------------------------------
+  app:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: testy_app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/testy_psychologiczne
+      JWT_SECRET: ${JWT_SECRET}
+      NODE_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  postgres_test_data:

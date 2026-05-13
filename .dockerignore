@@ -1,5 +1,11 @@
-node_modules
-dist
 .git
-.gitignore
-Dockerfile
+node_modules
+.next
+*.db
+*.db-journal
+.env
+.env.local
+.env.test
+.DS_Store
+npm-debug.log*
+coverage
