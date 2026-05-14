@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { getBrandingSettings } from '../actions/brandingActions';
+import { getInternalBrandingSettings } from './settingsService';
 
 export async function sendEmail({
     to,
@@ -11,23 +11,24 @@ export async function sendEmail({
     html: string;
 }) {
     try {
-        const settings = await getBrandingSettings();
+        const settings = await getInternalBrandingSettings();
         if (!settings || !settings.emailSettings?.enabled) {
             console.log('Email sending skipped: Disabled or no settings.');
-            return false;
+            return { success: false, error: 'Email sending is disabled in settings' };
         }
 
         const { smtp, fromEmail, fromName } = settings.emailSettings;
 
         if (!smtp.host || !smtp.username) {
             console.error('Email sending failed: Incomplete SMTP settings.');
-            return false;
+            return { success: false, error: 'Incomplete SMTP settings' };
         }
 
         const transporter = nodemailer.createTransport({
             host: smtp.host,
             port: smtp.port,
-            secure: smtp.secure,
+            // If port is 465, secure must be true. Otherwise let's use the explicit setting or default to false.
+            secure: smtp.port === 465 ? true : !!smtp.secure,
             auth: {
                 user: smtp.username,
                 pass: smtp.password,
@@ -42,10 +43,10 @@ export async function sendEmail({
         });
 
         console.log('Email sent:', info.messageId);
-        return true;
-    } catch (error) {
+        return { success: true };
+    } catch (error: any) {
         console.error('Error sending email:', error);
-        return false;
+        return { success: false, error: error.message };
     }
 }
 
@@ -56,15 +57,15 @@ export async function sendTherapistNotification(
     testTitle: string,
     reportLink: string
 ) {
-    const settings = await getBrandingSettings();
+    const settings = await getInternalBrandingSettings();
     if (!settings) return;
 
     const { therapistNotificationSubject, therapistNotificationBody, fromName } = settings.emailSettings;
 
     // Simple template replacement
     const subject = therapistNotificationSubject
-        .replace('{testTitle}', testTitle)
-        .replace('{clientIdentifier}', clientIdentifier);
+        .replace(/{testTitle}/g, testTitle)
+        .replace(/{clientIdentifier}/g, clientIdentifier);
 
     // Convert newlines to BR if needed, but the template is likely HTML.
     // We assume the user configures HTML or we wrap plain text.

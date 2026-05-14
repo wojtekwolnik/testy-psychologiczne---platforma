@@ -130,16 +130,13 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
 
     // Mapping from abstract view to concrete URL path
     const adminLinks = [
-        { to: '/admin/dashboard', label: 'Panel Główny', icon: <CogIcon className="h-5 w-5" /> },
-        { to: '/admin/users', label: 'Użytkownicy', icon: <UserManagementIcon /> },
+        { to: '/admin/dashboard', label: 'Testy', icon: <ClipboardListIcon className="h-5 w-5" /> },
+        { to: '/admin/codes', label: 'Kody dostępu', icon: <UserManagementIcon /> }, // Using existing icon for now, or maybe a Key icon if available. I'll use UserManagementIcon since it relates to giving access.
+        { to: '/admin/users', label: 'Użytkownicy', icon: <UserGroupIcon className="h-5 w-5" /> },
         { to: '/admin/results', label: 'Wyniki Testów', icon: <ChartBarIcon /> },
-        { to: '/admin/branding', label: 'Branding', icon: <BrandingIcon /> },
-        // { to: '/admin/settings/email', label: 'Ustawienia E-mail', icon: <EnvelopeIcon /> },
+        { to: '/admin/branding', label: 'Ustawienia', icon: <CogIcon className="h-5 w-5" /> },
         { to: '/admin/templates', label: 'Konfiguracja Raportów', icon: <ClipboardListIcon className="h-5 w-5" /> },
-        // { to: '/admin/data', label: 'Dane Zbiorcze', icon: <ChartPieIcon /> },
         { to: '/admin/docs', label: 'Dokumentacja', icon: <DocumentationIcon /> },
-        // { to: '/admin/settings/ai', label: 'Ustawienia AI', icon: <SparklesIcon className="h-6 w-6" /> },
-        // { to: '/admin/health', label: 'Stan Systemu', icon: <HeartIcon /> },
     ];
 
     const therapistLinks = [

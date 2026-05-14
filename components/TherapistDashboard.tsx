@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchResults, deleteResult } from '@/app/actions/resultActions';
-import { generateAccessCode, fetchActiveCodes } from '@/app/actions/accessCodeActions';
+import { generateAccessCode, fetchActiveCodes, deleteAccessCode } from '@/app/actions/accessCodeActions';
 import { fetchTests } from '@/app/actions/testActions';
 import { getUsers, UserData } from '@/app/actions/userActions';
 import { TestResult, Test, AccessCode } from './types';
@@ -49,6 +49,7 @@ const TherapistDashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState<string>('');
   const [resultToDelete, setResultToDelete] = useState<string | null>(null);
+  const [codeToDelete, setCodeToDelete] = useState<string | null>(null);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
 
   // Filters
@@ -67,10 +68,12 @@ const TherapistDashboard = () => {
     setExpiryDate(defaultExpiry.toISOString().split('T')[0]);
 
     if (user?.role === 'admin') {
-      getUsers().then((users: UserData[]) => {
-        setTherapists(users);
-        if (user) setSelectedTherapistId(user.id);
-      });
+      getUsers()
+        .then((users: UserData[]) => {
+          setTherapists(users);
+          if (user) setSelectedTherapistId(user.id);
+        })
+        .catch(err => console.error("Failed to fetch users:", err));
     } else if (user) {
       setSelectedTherapistId(user.id);
     }
@@ -87,11 +90,9 @@ const TherapistDashboard = () => {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const [fetchedResults, fetchedTests, fetchedCodes] = await Promise.all([
-        fetchResults(),
-        fetchTests(),
-        fetchActiveCodes()
-      ]);
+      const fetchedResults = await fetchResults();
+      const fetchedTests = await fetchTests();
+      const fetchedCodes = await fetchActiveCodes();
 
       fetchedResults.sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
       setResults(fetchedResults);
@@ -158,6 +159,15 @@ const TherapistDashboard = () => {
       await loadData();
     } catch {
       setError("Nie udało się usunąć wyniku.");
+    }
+  };
+
+  const confirmDeleteCode = async (code: string) => {
+    try {
+      await deleteAccessCode(code);
+      await loadData();
+    } catch {
+      setError("Nie udało się unieważnić kodu.");
     }
   };
 
@@ -253,24 +263,44 @@ const TherapistDashboard = () => {
             </button>
           </div>
           {activeCodes.length > 0 && (
-            <div>
-              <h3 className="text-md font-semibold opacity-80">Aktywne kody (ważne i nieużyte):</h3>
-              <ul className="mt-2 space-y-1 text-sm opacity-70">
-                {activeCodes.filter(c => c && c.code).map(code => {
-                  const associatedTest = tests.find(t => t.id === code.testId);
-                  return (
-                    <li key={code.code} className="font-mono bg-[var(--background-color)] px-2 py-1 rounded flex justify-between items-center">
-                      <div className="flex items-center gap-2">
-                        <span>{code.code} <span className="opacity-50">- ({associatedTest?.title} v{associatedTest?.version})</span></span>
-                        <button onClick={() => handleCopyCode(code.code)} className="p-1 hover:bg-slate-200 rounded">
-                          {copySuccess === code.code ? <span className="text-xs text-green-600">Skopiowano!</span> : <ClipboardCopyIcon />}
-                        </button>
-                      </div>
-                      <span className="text-xs font-semibold">Ważny do: {new Date(code.expiresAt).toLocaleDateString()}</span>
-                    </li>
-                  )
-                })}
-              </ul>
+            <div className="mt-8 pt-6 border-t border-[var(--border-color)]">
+              <h3 className="text-md font-semibold opacity-80 mb-4">Aktywne kody (ważne i nieużyte)</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-[var(--background-color)] font-semibold opacity-70 border-b border-[var(--border-color)]">
+                    <tr>
+                      <th className="p-3">Kod dostępu</th>
+                      <th className="p-3">Przypisany Test</th>
+                      <th className="p-3">Ważny do</th>
+                      <th className="p-3 text-right">Akcje</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeCodes.filter(c => c && c.code).map(code => {
+                      const associatedTest = tests.find(t => t.id === code.testId);
+                      return (
+                        <tr key={code.code} className="border-b border-[var(--border-color)]/50 hover:bg-[var(--background-color)]">
+                          <td className="p-3 font-mono font-semibold text-[var(--primary-color)]">{code.code}</td>
+                          <td className="p-3">{associatedTest?.title} <span className="text-xs opacity-50">(v{associatedTest?.version})</span></td>
+                          <td className="p-3">{new Date(code.expiresAt).toLocaleDateString()}</td>
+                          <td className="p-3 flex items-center justify-end gap-2">
+                            <button onClick={() => handleCopyCode(code.code)} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-md transition-colors text-xs" title="Kopiuj do schowka">
+                              {copySuccess === code.code ? <span className="text-green-600">Skopiowano!</span> : <><ClipboardCopyIcon /> Kopiuj</>}
+                            </button>
+                            <button
+                              onClick={() => setCodeToDelete(code.code)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 font-semibold rounded-md transition-colors text-xs"
+                              title="Unieważnij ten kod"
+                            >
+                              <TrashIcon /> Unieważnij
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
@@ -416,6 +446,17 @@ const TherapistDashboard = () => {
         title="Potwierdź usunięcie wyniku"
         message="Czy na pewno chcesz trwale usunąć ten wynik? Tej operacji nie można cofnąć."
         confirmText="Usuń"
+      />
+      <ActionConfirmModal
+        isOpen={!!codeToDelete}
+        onCancel={() => setCodeToDelete(null)}
+        onConfirm={() => {
+          if (codeToDelete) confirmDeleteCode(codeToDelete);
+          setCodeToDelete(null);
+        }}
+        title="Unieważnienie kodu"
+        message="Czy na pewno chcesz unieważnić ten kod dostępu? Po usunięciu klient nie będzie mógł rozwiązać testu."
+        confirmText="Unieważnij"
       />
     </>
   );

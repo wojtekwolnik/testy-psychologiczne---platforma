@@ -1,11 +1,11 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
-import { getBrandingSettings } from '../actions/brandingActions';
+import { getInternalBrandingSettings } from './settingsService';
 import { prisma } from '@/lib/prisma';
 
 export async function generateAnalysis(resultId: string): Promise<string | null> {
-    const settings = await getBrandingSettings();
+    const settings = await getInternalBrandingSettings();
 
     if (!settings?.aiSettings?.enabled || !settings.aiSettings.apiKey) {
         console.log("AI Analysis skipped: Disabled or missing API Key.");

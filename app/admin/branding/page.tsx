@@ -2,7 +2,7 @@
 
 import React, { useContext, useState, useEffect } from 'react';
 import { BrandingContext } from '@/contexts/BrandingContext';
-import { saveBrandingSettings } from '@/app/actions/brandingActions';
+import { saveBrandingSettings, sendTestEmailAction } from '@/app/actions/brandingActions';
 import { Tab } from '@headlessui/react';
 import { FaPalette, FaGlobe, FaEnvelope, FaRobot, FaCog, FaSun, FaMoon, FaUpload, FaTrash } from 'react-icons/fa';
 import { ThemePalette } from '@/components/types';
@@ -18,6 +18,8 @@ export default function BrandingPage() {
     const [error, setError] = useState('');
     const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
     const [logoError, setLogoError] = useState('');
+    const [testEmail, setTestEmail] = useState('wojciech.wolnik@gmail.com');
+    const [testEmailStatus, setTestEmailStatus] = useState<{ loading: boolean, message: string, success: boolean }>({ loading: false, message: '', success: false });
 
     const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -57,6 +59,16 @@ export default function BrandingPage() {
         } catch (err) {
             setError('Błąd zapisu ustawień.');
         }
+    };
+
+    const handleTestEmail = async () => {
+        setTestEmailStatus({ loading: true, message: '', success: false });
+        // It's important to save the settings first or at least they should be saved to DB for the action to use them.
+        // Actually the backend action uses the settings FROM THE DB. 
+        // So we inform the user they must save before testing.
+        const res = await sendTestEmailAction(testEmail);
+        setTestEmailStatus({ loading: false, message: res.message, success: res.success });
+        setTimeout(() => setTestEmailStatus(prev => ({ ...prev, message: '' })), 5000);
     };
 
     const updateSetting = (key: string, value: any) => {
@@ -497,6 +509,32 @@ export default function BrandingPage() {
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Hasło</label>
                                 <input type="password" className="w-full p-2 border rounded" value={localSettings.emailSettings.smtp.password || ''} onChange={e => updateSmtpSetting('password', e.target.value)} placeholder="Zostaw puste aby nie zmieniać" />
                             </div>
+                        </div>
+
+                        <div className={`mt-8 pt-6 border-t border-slate-200 ${!localSettings.emailSettings.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
+                            <h3 className="font-bold text-lg mb-2">Test Konfiguracji SMTP</h3>
+                            <p className="text-sm text-slate-500 mb-4">Pamiętaj o zapisaniu ustawień przed wykonaniem testu (test używa danych zapisanych w bazie).</p>
+                            <div className="flex gap-4 items-center">
+                                <input 
+                                    type="email" 
+                                    className="p-2 border rounded w-64" 
+                                    value={testEmail} 
+                                    onChange={e => setTestEmail(e.target.value)} 
+                                    placeholder="Adres e-mail do testu"
+                                />
+                                <button 
+                                    onClick={handleTestEmail}
+                                    disabled={testEmailStatus.loading}
+                                    className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
+                                >
+                                    {testEmailStatus.loading ? 'Wysyłanie...' : 'Wyślij Test'}
+                                </button>
+                            </div>
+                            {testEmailStatus.message && (
+                                <div className={`mt-4 p-3 rounded text-sm ${testEmailStatus.success ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                                    {testEmailStatus.message}
+                                </div>
+                            )}
                         </div>
                     </Tab.Panel>
 

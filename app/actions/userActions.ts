@@ -41,15 +41,34 @@ export async function getAllUsers(): Promise<User[]> {
 
 export async function deleteUser(userId: string): Promise<void> {
     try {
+        const { checkAuth } = await import('./authActions');
+        const currentUser = await checkAuth();
+
+        if (currentUser && currentUser.id === userId) {
+            throw new Error('Nie możesz usunąć własnego konta.');
+        }
+
+        const userToDelete = await prisma.user.findUnique({ where: { id: userId } });
+        if (!userToDelete) {
+            throw new Error('Nie znaleziono użytkownika.');
+        }
+
+        if (userToDelete.role === 'admin') {
+            const adminCount = await prisma.user.count({ where: { role: 'admin' } });
+            if (adminCount <= 1) {
+                throw new Error('Nie możesz usunąć jedynego konta administratora na platformie.');
+            }
+        }
+
         await prisma.user.delete({
             where: {
                 id: userId,
             },
         });
         revalidatePath('/admin/users');
-    } catch (error) {
+    } catch (error: any) {
         console.error('Failed to delete user:', error);
-        throw new Error('Failed to delete user');
+        throw new Error(error.message || 'Failed to delete user');
     }
 }
 

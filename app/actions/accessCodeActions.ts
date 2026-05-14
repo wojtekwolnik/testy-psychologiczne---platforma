@@ -27,7 +27,7 @@ export async function generateAccessCode(testId: string, expiresAt: Date, therap
     };
 }
 
-export async function fetchActiveCodes(): Promise<AccessCode[]> {
+export async function fetchActiveCodes(): Promise<(AccessCode & { therapistName?: string, therapistEmail?: string })[]> {
     const user = await checkAuth();
     if (!user) return [];
 
@@ -38,12 +38,19 @@ export async function fetchActiveCodes(): Promise<AccessCode[]> {
 
     const codes = await prisma.accessCode.findMany({
         where,
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
+        include: {
+            therapist: {
+                select: { username: true, email: true }
+            }
+        }
     });
 
     return codes.map(c => ({
         ...c,
-        expiresAt: c.expiresAt.toISOString()
+        expiresAt: c.expiresAt.toISOString(),
+        therapistName: c.therapist?.username || undefined,
+        therapistEmail: c.therapist?.email || undefined,
     }));
 }
 
@@ -72,4 +79,23 @@ export async function markAccessCodeAsUsed(code: string): Promise<void> {
         where: { code },
         data: { isUsed: true }
     });
+}
+
+export async function deleteAccessCode(code: string): Promise<void> {
+    const user = await checkAuth();
+    if (!user) throw new Error("Unauthorized");
+
+    const accessCode = await prisma.accessCode.findUnique({ where: { code } });
+    if (!accessCode) throw new Error("Code not found");
+
+    if (user.role !== 'admin' && accessCode.therapistId !== user.id) {
+        throw new Error("Forbidden");
+    }
+
+    await prisma.accessCode.delete({
+        where: { code }
+    });
+    
+    revalidatePath('/therapist/dashboard');
+    revalidatePath('/admin/codes');
 }

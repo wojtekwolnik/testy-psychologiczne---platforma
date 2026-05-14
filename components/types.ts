@@ -80,6 +80,8 @@ export interface AccessCode {
   therapistId: string;
   isUsed: boolean;
   expiresAt: string;
+  therapistName?: string;
+  therapistEmail?: string;
 }
 
 

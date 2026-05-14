@@ -3,11 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import { getUsers, deleteUser, createUser, UserData } from '../../actions/userActions';
 import { FaTrash, FaUser, FaUserShield, FaPlus, FaTimes } from 'react-icons/fa';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function UsersPage() {
     const [users, setUsers] = useState<UserData[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const { user: currentUser } = useAuth();
 
     // Create User State
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -40,8 +42,8 @@ export default function UsersPage() {
         try {
             await deleteUser(id);
             setUsers(users.filter(user => user.id !== id));
-        } catch (err) {
-            alert('Błąd podczas usuwania użytkownika.');
+        } catch (err: any) {
+            alert(err.message || 'Błąd podczas usuwania użytkownika.');
         }
     };
 
@@ -108,13 +110,15 @@ export default function UsersPage() {
                                     {new Date(user.createdAt).toLocaleDateString('pl-PL')}
                                 </td>
                                 <td className="p-4 text-right">
-                                    <button
-                                        onClick={() => handleDelete(user.id)}
-                                        className="text-red-500 hover:text-red-700 p-2 rounded hover:bg-red-50 transition-colors"
-                                        title="Usuń użytkownika"
-                                    >
-                                        <FaTrash />
-                                    </button>
+                                    {currentUser?.id !== user.id && (
+                                        <button
+                                            onClick={() => handleDelete(user.id)}
+                                            className="text-red-500 hover:text-red-700 p-2 rounded hover:bg-red-50 transition-colors"
+                                            title="Usuń użytkownika"
+                                        >
+                                            <FaTrash />
+                                        </button>
+                                    )}
                                 </td>
                             </tr>
                         ))}
