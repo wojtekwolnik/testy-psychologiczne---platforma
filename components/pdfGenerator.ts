@@ -17,6 +17,15 @@ function safeText(str: string | undefined | null): string {
         .replace(/[^\x00-\x7F]/g, '');
 }
 
+function hexToRgb(hex: string) {
+    hex = hex.replace(/^#/, '');
+    if (hex.length === 3) {
+        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
+    const num = parseInt(hex, 16);
+    return rgb((num >> 16) / 255, ((num >> 8) & 255) / 255, (num & 255) / 255);
+}
+
 // Helper to manage page and y-position
 class PdfContext {
     page: any;
@@ -45,15 +54,67 @@ class PdfContext {
 }
 
 
-async function drawHeader(ctx: PdfContext, component: ReportComponent) {
+async function drawHeader(ctx: PdfContext, component: ReportComponent, branding: BrandingSettings, result: TestResult) {
     ctx.checkNewPage(40);
     const font = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const normalFont = await ctx.pdfDoc.embedFont(StandardFonts.Helvetica);
+
+    // Draw logo if available
+    const logoUrl = branding.reportLogoUrl || branding.logoUrl;
+    if (logoUrl) {
+        try {
+            let image;
+            const imageBytes = await fetch(logoUrl).then(res => res.arrayBuffer());
+            if (logoUrl.toLowerCase().endsWith('.png')) {
+                image = await ctx.pdfDoc.embedPng(imageBytes);
+            } else {
+                image = await ctx.pdfDoc.embedJpg(imageBytes);
+            }
+            const imgDims = image.scaleToFit(100, 40);
+            ctx.page.drawImage(image, {
+                x: 50,
+                y: ctx.y - 10,
+                width: imgDims.width,
+                height: imgDims.height,
+            });
+        } catch (e) {
+            console.error('Failed to embed logo', e);
+        }
+    }
+
+    // Client Info
+    ctx.page.drawText(safeText(`Kod klienta: ${result.clientIdentifier}`), {
+        x: ctx.page.getWidth() - 200,
+        y: ctx.y + 15,
+        size: 10,
+        font: font
+    });
+    ctx.page.drawText(safeText(`Data badania: ${new Date(result.completedAt).toLocaleDateString()}`), {
+        x: ctx.page.getWidth() - 200,
+        y: ctx.y,
+        size: 10,
+        font: normalFont
+    });
+
+    ctx.moveDown(20);
+
+    // Title
     ctx.page.drawText(safeText(component.options.text || 'Nagłówek'), {
         x: 50,
         y: ctx.y,
         size: component.options.fontSize || 18,
         font
     });
+    
+    // Primary Color line
+    const pColor = branding.reportPrimaryColor ? hexToRgb(branding.reportPrimaryColor) : rgb(0, 0, 0);
+    ctx.page.drawLine({
+        start: { x: 50, y: ctx.y - 5 },
+        end: { x: ctx.page.getWidth() - 50, y: ctx.y - 5 },
+        thickness: 2,
+        color: pColor
+    });
+
     ctx.moveDown((component.options.fontSize || 18) + (component.options.marginBottom || 15));
 }
 
@@ -106,7 +167,7 @@ async function drawScoresTable(ctx: PdfContext, component: ReportComponent, resu
     ctx.moveDown(10); // Margin after table
 }
 
-async function drawBarChart(ctx: PdfContext, component: ReportComponent, result: TestResult, test: Test) {
+async function drawBarChart(ctx: PdfContext, component: ReportComponent, result: TestResult, test: Test, branding: BrandingSettings) {
     ctx.checkNewPage(150); // Reserve space for chart
     const headerFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
@@ -129,12 +190,13 @@ async function drawBarChart(ctx: PdfContext, component: ReportComponent, result:
         const barHeight = (score / maxScore) * 100; // Height capped at 100px relative
 
         // Draw Bar
+        const pColor = branding.reportPrimaryColor ? hexToRgb(branding.reportPrimaryColor) : rgb(0.2, 0.4, 0.8);
         ctx.page.drawRectangle({
             x: currentX,
             y: ctx.y - barHeight,
             width: barWidth,
             height: barHeight,
-            color: rgb(0.2, 0.4, 0.8)
+            color: pColor
         });
         // Draw Label
         const label = safeText(scaleInfo.abbreviation || scaleInfo.name.substring(0, 1).toUpperCase());
@@ -148,7 +210,7 @@ async function drawBarChart(ctx: PdfContext, component: ReportComponent, result:
     ctx.moveDown(120 + 20); // Chart height + margin
 }
 
-async function drawRadarChart(ctx: PdfContext, component: ReportComponent, result: TestResult, test: Test) {
+async function drawRadarChart(ctx: PdfContext, component: ReportComponent, result: TestResult, test: Test, branding: BrandingSettings) {
     const size = 200; // Total width and height of the chart
     ctx.checkNewPage(size + 60);
     const headerFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
@@ -237,10 +299,11 @@ async function drawRadarChart(ctx: PdfContext, component: ReportComponent, resul
     }
     svgPath += 'Z';
 
+    const pColor = branding.reportPrimaryColor ? hexToRgb(branding.reportPrimaryColor) : rgb(0.2, 0.4, 0.8);
     ctx.page.drawSvgPath(svgPath, {
-        color: rgb(0.2, 0.4, 0.8),
+        color: pColor,
         opacity: 0.3,
-        borderColor: rgb(0.2, 0.4, 0.8),
+        borderColor: pColor,
         borderWidth: 2,
     });
 
@@ -510,16 +573,16 @@ export async function generatePdf(
     for (const component of componentsToRender) {
         switch (component.type) {
             case 'Header':
-                await drawHeader(ctx, component);
+                await drawHeader(ctx, component, branding, result);
                 break;
             case 'ScoresTable':
                 await drawScoresTable(ctx, component, result, test);
                 break;
             case 'BarChart':
-                await drawBarChart(ctx, component, result, test);
+                await drawBarChart(ctx, component, result, test, branding);
                 break;
             case 'RadarChart':
-                await drawRadarChart(ctx, component, result, test);
+                await drawRadarChart(ctx, component, result, test, branding);
                 break;
             case 'RichText':
                 await drawRichText(ctx, component, result, test);
@@ -545,7 +608,32 @@ export async function generatePdf(
         const headerFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
         ctx.page.drawText(safeText('Interpretacja Terapeuty'), { x: 50, y: ctx.y, size: 14, font: headerFont });
         ctx.moveDown(25);
-        await drawRichText(ctx, { id: 'cust-int', type: 'RichText', options: { content: customInterpretation } });
+        await drawRichText(ctx, { id: 'cust-int', type: 'RichText', options: { content: customInterpretation } }, result, test);
+    }
+
+    // Draw Footer and Pagination on every page
+    const pages = pdfDoc.getPages();
+    const pageCount = pages.length;
+    const footerText = branding.reportFooterText || '';
+    
+    for (let i = 0; i < pageCount; i++) {
+        const p = pages[i];
+        p.drawText(safeText(`Strona ${i + 1} z ${pageCount}`), {
+            x: p.getWidth() - 100,
+            y: 20,
+            size: 9,
+            font: font,
+            color: rgb(0.5, 0.5, 0.5)
+        });
+        if (footerText) {
+            p.drawText(safeText(footerText), {
+                x: 50,
+                y: 20,
+                size: 9,
+                font: font,
+                color: rgb(0.5, 0.5, 0.5)
+            });
+        }
     }
 
     return pdfDoc.save();

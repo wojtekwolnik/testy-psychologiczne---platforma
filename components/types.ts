@@ -222,6 +222,11 @@ export interface BrandingSettings {
   sidebarActiveText?: string;
   sidebarHoverBackground?: string;
   sidebarHoverText?: string;
+  
+  // PDF Report Branding
+  reportLogoUrl?: string;
+  reportPrimaryColor?: string;
+  reportFooterText?: string;
 
   aiSettings: {
     enabled: boolean;
