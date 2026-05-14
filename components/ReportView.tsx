@@ -134,21 +134,33 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
     };
 
     const getScoreLevel = (val: number, scale: any) => {
-        if (!scale) return { label: 'Brak danych', color: 'bg-gray-100 text-gray-800 border-gray-200' };
+        if (!scale) return { label: 'Brak danych', color: '#f3f4f6', textColor: '#374151', description: null };
         if (scale.levels && scale.levels.length > 0) {
             const matched = scale.levels.find((l: any) => val >= l.minScore && val <= l.maxScore) || scale.levels[scale.levels.length - 1];
-            const colorClass = matched.color === 'red' ? 'bg-red-100 text-red-800 border-red-200' :
-                               matched.color === 'yellow' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                               matched.color === 'green' ? 'bg-green-100 text-green-800 border-green-200' :
-                               matched.color === 'purple' ? 'bg-purple-100 text-purple-800 border-purple-200' :
-                               'bg-blue-100 text-blue-800 border-blue-200';
-            return { label: matched.name, color: colorClass };
+            
+            let hexColor = matched.color;
+            let textColor = '#ffffff';
+            
+            if (hexColor === 'red') hexColor = '#ef4444';
+            else if (hexColor === 'yellow') { hexColor = '#fef08a'; textColor = '#854d0e'; }
+            else if (hexColor === 'green') hexColor = '#22c55e';
+            else if (hexColor === 'purple') hexColor = '#a855f7';
+            else if (hexColor === 'blue') hexColor = '#3b82f6';
+            else if (hexColor && hexColor.startsWith('#')) {
+                const r = parseInt(hexColor.slice(1, 3), 16) || 0;
+                const g = parseInt(hexColor.slice(3, 5), 16) || 0;
+                const b = parseInt(hexColor.slice(5, 7), 16) || 0;
+                const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                if (luminance > 0.5) textColor = '#1f2937';
+            }
+            
+            return { label: matched.name, color: hexColor || '#3b82f6', textColor, description: matched.description };
         }
-        if (!scale.maxScore) return { label: 'Brak danych', color: 'bg-gray-100 text-gray-800 border-gray-200' };
+        if (!scale.maxScore) return { label: 'Brak danych', color: '#f3f4f6', textColor: '#374151', description: null };
         const ratio = val / scale.maxScore;
-        if (ratio > 0.73) return { label: 'Wysoki', color: 'bg-red-100 text-red-800 border-red-200' };
-        if (ratio >= 0.45) return { label: 'Przeciętny', color: 'bg-blue-100 text-blue-800 border-blue-200' };
-        return { label: 'Niski', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' };
+        if (ratio > 0.73) return { label: 'Wysoki', color: '#fee2e2', textColor: '#991b1b', description: null };
+        if (ratio >= 0.45) return { label: 'Przeciętny', color: '#dbeafe', textColor: '#1e40af', description: null };
+        return { label: 'Niski', color: '#fef08a', textColor: '#854d0e', description: null };
     };
 
     return (
@@ -190,7 +202,10 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                                             <div className="flex justify-between items-center mb-1">
                                                 <div className="flex items-center gap-3">
                                                     <p className="font-bold text-lg text-indigo-700">{name}</p>
-                                                    <span className={`px-3 py-0.5 rounded-full text-xs font-bold border shadow-sm ${levelInfo.color}`}>
+                                                    <span 
+                                                        className="px-3 py-0.5 rounded-full text-xs font-bold border shadow-sm"
+                                                        style={{ backgroundColor: levelInfo.color, borderColor: levelInfo.color, color: levelInfo.textColor }}
+                                                    >
                                                         {levelInfo.label}
                                                     </span>
                                                 </div>
@@ -202,6 +217,12 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                                                 </div>
                                             )}
                                             <div className="text-gray-600 text-sm mt-2 prose max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(description || '') }} />
+                                            {levelInfo.description && (
+                                                <div className="mt-4 p-4 bg-indigo-50 border-l-4 border-indigo-500 rounded-r-lg">
+                                                    <h5 className="font-bold text-indigo-800 mb-1">Interpretacja wyniku ({levelInfo.label}):</h5>
+                                                    <div className="text-indigo-900 text-sm prose max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(levelInfo.description) }} />
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })}

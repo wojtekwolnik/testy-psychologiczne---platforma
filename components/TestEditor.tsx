@@ -560,7 +560,10 @@ const TestEditor: React.FC = () => {
                         <div key={scale.id} className={`p-4 rounded-lg bg-[var(--background-color)] border-l-4 ${scale.type === 'calculated' ? 'border-orange-500' : 'border-blue-500'}`}>
                             <div className="flex items-start gap-4">
                                 <div className="flex-grow space-y-2">
-                                    <input type="text" placeholder="Nazwa skali" value={scale.name} onChange={e => updateScale(i, { name: e.target.value })} className="w-full p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
+                                    <div className="flex gap-2">
+                                        <input type="text" placeholder="Nazwa skali" value={scale.name} onChange={e => updateScale(i, { name: e.target.value })} className="w-full p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
+                                        <input type="text" placeholder="Skrót (max 3 znaki)" value={scale.abbreviation || ''} maxLength={3} onChange={e => updateScale(i, { abbreviation: e.target.value })} className="w-32 p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)] text-center font-bold" title="Krótka nazwa wyświetlana na wykresach" />
+                                    </div>
                                     <input type="text" placeholder="Opis skali" value={scale.description} onChange={e => updateScale(i, { description: e.target.value })} className="w-full p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
                                 </div>
                                 <button onClick={() => removeScale(scale.id)} className="p-2 text-[var(--error-color)] hover:bg-red-100 rounded-full"><TrashIcon /></button>
@@ -587,7 +590,7 @@ const TestEditor: React.FC = () => {
                                         <span className="font-semibold">Wstaw ID skali:</span>
                                         <div className="flex flex-wrap gap-1 mt-1">
                                             {test.scales.filter(s => s.id !== scale.id).map(s => (
-                                                <button key={s.id} onClick={() => insertScaleIdIntoFormula(i, s.id)} className="text-xs bg-slate-200 hover:bg-slate-300 px-2 py-1 rounded-md">{s.name} ({s.id})</button>
+                                                <button key={s.id} onClick={() => insertScaleIdIntoFormula(i, s.id)} className="text-xs bg-slate-200 hover:bg-slate-300 px-2 py-1 rounded-md">{s.name} {s.abbreviation ? `(${s.abbreviation})` : ''} [{s.id}]</button>
                                             ))}
                                         </div>
                                     </div>
@@ -602,7 +605,7 @@ const TestEditor: React.FC = () => {
                                         type="button"
                                         onClick={() => {
                                             const currentLevels = scale.levels || [];
-                                            const newLevel = { id: generateUniqueId('lvl'), name: 'Nowy Poziom', minScore: 0, maxScore: scale.maxScore || 100, color: 'blue' };
+                                            const newLevel = { id: generateUniqueId('lvl'), name: 'Nowy Poziom', minScore: 0, maxScore: scale.maxScore || 100, color: '#3b82f6', description: '' };
                                             updateScale(i, { levels: [...currentLevels, newLevel] });
                                         }}
                                         className="text-xs px-3 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-md font-semibold flex items-center gap-1 transition-colors"
@@ -612,63 +615,72 @@ const TestEditor: React.FC = () => {
                                 </div>
                                 <div className="space-y-2">
                                     {(scale.levels || []).map((level, lIndex) => (
-                                        <div key={level.id} className="flex flex-wrap items-center gap-2 bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm text-xs">
-                                            <input
-                                                type="text"
-                                                value={level.name}
+                                        <div key={level.id} className="bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm text-xs mb-2">
+                                            <div className="flex flex-wrap items-center gap-2 mb-2">
+                                                <input
+                                                    type="text"
+                                                    value={level.name}
+                                                    onChange={e => {
+                                                        const updatedLevels = (scale.levels || []).map((l, idx) => idx === lIndex ? { ...l, name: e.target.value } : l);
+                                                        updateScale(i, { levels: updatedLevels });
+                                                    }}
+                                                    placeholder="Nazwa (np. Bardzo wysoki)"
+                                                    className="flex-grow p-1.5 border border-gray-300 rounded font-semibold min-w-[120px]"
+                                                />
+                                                <span className="text-gray-500">od</span>
+                                                <input
+                                                    type="number"
+                                                    value={level.minScore}
+                                                    onChange={e => {
+                                                        const updatedLevels = (scale.levels || []).map((l, idx) => idx === lIndex ? { ...l, minScore: parseInt(e.target.value) || 0 } : l);
+                                                        updateScale(i, { levels: updatedLevels });
+                                                    }}
+                                                    className="w-16 p-1.5 border border-gray-300 rounded text-center"
+                                                    placeholder="Min"
+                                                />
+                                                <span className="text-gray-500">do</span>
+                                                <input
+                                                    type="number"
+                                                    value={level.maxScore}
+                                                    onChange={e => {
+                                                        const updatedLevels = (scale.levels || []).map((l, idx) => idx === lIndex ? { ...l, maxScore: parseInt(e.target.value) || 0 } : l);
+                                                        updateScale(i, { levels: updatedLevels });
+                                                    }}
+                                                    className="w-16 p-1.5 border border-gray-300 rounded text-center"
+                                                    placeholder="Max"
+                                                />
+                                                <div className="flex items-center gap-1 border border-gray-300 rounded p-1 bg-white">
+                                                    <input
+                                                        type="color"
+                                                        value={level.color && level.color.startsWith('#') ? level.color : '#3b82f6'}
+                                                        onChange={e => {
+                                                            const updatedLevels = (scale.levels || []).map((l, idx) => idx === lIndex ? { ...l, color: e.target.value } : l);
+                                                            updateScale(i, { levels: updatedLevels });
+                                                        }}
+                                                        className="w-6 h-6 border-0 cursor-pointer p-0 bg-transparent"
+                                                        title="Wybierz kolor poziomu"
+                                                    />
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const updatedLevels = (scale.levels || []).filter((_, idx) => idx !== lIndex);
+                                                        updateScale(i, { levels: updatedLevels });
+                                                    }}
+                                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded ml-auto"
+                                                >
+                                                    <TrashIcon className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                            <textarea
+                                                value={level.description || ''}
                                                 onChange={e => {
-                                                    const updatedLevels = (scale.levels || []).map((l, idx) => idx === lIndex ? { ...l, name: e.target.value } : l);
+                                                    const updatedLevels = (scale.levels || []).map((l, idx) => idx === lIndex ? { ...l, description: e.target.value } : l);
                                                     updateScale(i, { levels: updatedLevels });
                                                 }}
-                                                placeholder="Nazwa (np. Bardzo wysoki)"
-                                                className="flex-grow p-1.5 border border-gray-300 rounded font-semibold min-w-[120px]"
+                                                placeholder="Specyficzny opis dla tego poziomu wyników (opcjonalny, pojawi się w raporcie)..."
+                                                className="w-full p-1.5 border border-gray-300 rounded font-normal min-h-[50px] resize-y"
                                             />
-                                            <span className="text-gray-500">od</span>
-                                            <input
-                                                type="number"
-                                                value={level.minScore}
-                                                onChange={e => {
-                                                    const updatedLevels = (scale.levels || []).map((l, idx) => idx === lIndex ? { ...l, minScore: parseInt(e.target.value) || 0 } : l);
-                                                    updateScale(i, { levels: updatedLevels });
-                                                }}
-                                                className="w-16 p-1.5 border border-gray-300 rounded text-center"
-                                                placeholder="Min"
-                                            />
-                                            <span className="text-gray-500">do</span>
-                                            <input
-                                                type="number"
-                                                value={level.maxScore}
-                                                onChange={e => {
-                                                    const updatedLevels = (scale.levels || []).map((l, idx) => idx === lIndex ? { ...l, maxScore: parseInt(e.target.value) || 0 } : l);
-                                                    updateScale(i, { levels: updatedLevels });
-                                                }}
-                                                className="w-16 p-1.5 border border-gray-300 rounded text-center"
-                                                placeholder="Max"
-                                            />
-                                            <select
-                                                value={level.color}
-                                                onChange={e => {
-                                                    const updatedLevels = (scale.levels || []).map((l, idx) => idx === lIndex ? { ...l, color: e.target.value } : l);
-                                                    updateScale(i, { levels: updatedLevels });
-                                                }}
-                                                className="p-1.5 border border-gray-300 rounded bg-white"
-                                            >
-                                                <option value="blue">Niebieski</option>
-                                                <option value="green">Zielony</option>
-                                                <option value="yellow">Żółty</option>
-                                                <option value="red">Czerwony</option>
-                                                <option value="purple">Fioletowy</option>
-                                            </select>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    const updatedLevels = (scale.levels || []).filter((_, idx) => idx !== lIndex);
-                                                    updateScale(i, { levels: updatedLevels });
-                                                }}
-                                                className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded ml-auto"
-                                            >
-                                                <TrashIcon className="h-4 w-4" />
-                                            </button>
                                         </div>
                                     ))}
                                     {(scale.levels || []).length === 0 && (

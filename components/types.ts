@@ -34,12 +34,14 @@ export interface ScaleLevel {
   minScore: number;
   maxScore: number;
   color: string;
+  description?: string;
 }
 
 export interface Scale {
   type: 'standard' | 'calculated';
   id: string;
   name: string;
+  abbreviation?: string;
   description: string;
   maxScore?: number;
   formula?: string;
@@ -91,7 +93,7 @@ export interface AccessCode {
 
 export type ReportComponent = {
   id: string;
-  type: 'Header' | 'ScoresTable' | 'BarChart' | 'RadarChart' | 'RichText';
+  type: 'Header' | 'ScoresTable' | 'BarChart' | 'RadarChart' | 'RichText' | 'Interpretations';
   title?: string;
   options: { [key: string]: any };
 };

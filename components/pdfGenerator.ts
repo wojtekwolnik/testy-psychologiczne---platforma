@@ -137,7 +137,8 @@ async function drawBarChart(ctx: PdfContext, component: ReportComponent, result:
             color: rgb(0.2, 0.4, 0.8)
         });
         // Draw Label
-        ctx.page.drawText(safeText(scaleInfo.name.substring(0, 5)), {
+        const label = safeText(scaleInfo.abbreviation || scaleInfo.name.substring(0, 1).toUpperCase());
+        ctx.page.drawText(label, {
             x: currentX + 5,
             y: ctx.y - barHeight - 15,
             size: 8
@@ -206,7 +207,7 @@ async function drawRadarChart(ctx: PdfContext, component: ReportComponent, resul
             color: rgb(0.6, 0.6, 0.6)
         });
 
-        const label = safeText(scalesToDraw[i].name.substring(0, 15));
+        const label = safeText(scalesToDraw[i].abbreviation || scalesToDraw[i].name.substring(0, 15));
         const labelWidth = labelFont.widthOfTextAtSize(label, 8);
         const labelX = centerX + (radius + 15) * Math.cos(angle) - (labelWidth / 2);
         const labelY = centerY - (radius + 15) * Math.sin(angle) - 3;
@@ -342,6 +343,46 @@ async function drawRichText(ctx: PdfContext, component: ReportComponent) {
     ctx.moveDown(lineHeight);
 }
 
+async function drawInterpretations(ctx: PdfContext, component: ReportComponent, result: TestResult, test: Test) {
+    ctx.checkNewPage(50);
+    const headerFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    
+    if (component.title) {
+        ctx.page.drawText(safeText(component.title), { x: 50, y: ctx.y, size: 14, font: headerFont });
+        ctx.moveDown(25);
+    }
+
+    const scaleIds = component.options.scaleIds || Object.keys(result.scores);
+
+    const getScoreLevel = (val: number, scale: any) => {
+        if (!scale) return null;
+        if (scale.levels && scale.levels.length > 0) {
+            return scale.levels.find((l: any) => val >= l.minScore && val <= l.maxScore) || scale.levels[scale.levels.length - 1];
+        }
+        return null;
+    };
+
+    for (const scaleId of scaleIds) {
+        const score = result.scores[scaleId];
+        const scaleInfo = test.scales.find(s => s.id === scaleId);
+        if (score === undefined || !scaleInfo) continue;
+
+        let content = `<b>${scaleInfo.name}</b><br>`;
+        if (scaleInfo.description) {
+            content += `${scaleInfo.description}<br>`;
+        }
+
+        const levelInfo = getScoreLevel(score, scaleInfo);
+        if (levelInfo && levelInfo.description) {
+            content += `<b>Interpretacja wyniku (${levelInfo.name}):</b><br>${levelInfo.description}<br>`;
+        }
+        
+        content += `<br>`;
+
+        await drawRichText(ctx, { id: 'temp-rt', type: 'RichText', options: { content } });
+    }
+}
+
 export async function generatePdf(
     result: TestResult,
     test: Test,
@@ -358,6 +399,7 @@ export async function generatePdf(
         { id: 'def-h1', type: 'Header', options: { text: `Raport: ${test.title}` } },
         { id: 'def-st', type: 'ScoresTable', title: 'Wyniki surowe', options: {} },
         { id: 'def-barchart', type: 'BarChart', title: 'Profil podstawowy', options: { scaleIds: test.scales.filter(s => s.type === 'standard').map(s => s.id) } },
+        { id: 'def-interp', type: 'Interpretations', title: 'Szczegółowa interpretacja', options: {} },
     ];
 
     // Page Header
@@ -378,9 +420,11 @@ export async function generatePdf(
                 await drawRadarChart(ctx, component, result, test);
                 break;
             case 'RichText':
-                // Use customInterpretation if the component is marked for it (future feature), for now just content
                 const content = component.options.content;
                 await drawRichText(ctx, { ...component, options: { ...component.options, content } });
+                break;
+            case 'Interpretations':
+                await drawInterpretations(ctx, component, result, test);
                 break;
         }
     }
