@@ -163,9 +163,13 @@ const generateDefaultTemplate = (test: Test, testId: string): PdfTemplate => {
         testCanonicalId: test.canonicalId,
         components: [
             { id: crypto.randomUUID(), type: 'Header', options: { title: 'Raport Wyniku Testu', subtitle: test.title, showLogo: true } },
-            { id: crypto.randomUUID(), type: 'RichText', options: { content: '## Dane Klienta\n\nPoniżej znajdują się szczegółowe wyniki przeprowadzonego badania.' } },
+            { id: crypto.randomUUID(), type: 'TestDescription', options: {} },
+            { id: crypto.randomUUID(), type: 'RichText', options: { content: '## Dane Klienta\n\nIdentyfikator: {{imie}}\nData badania: {{data}}' } },
             { id: crypto.randomUUID(), type: 'ScoresTable', options: { showDescriptions: true } },
             { id: crypto.randomUUID(), type: 'BarChart', options: { title: 'Profil Wyników' } },
+            { id: crypto.randomUUID(), type: 'Interpretations', options: { title: 'Szczegółowa interpretacja' } },
+            { id: crypto.randomUUID(), type: 'AiInterpretation', options: { title: 'Opis zindywidualizowany' } },
+            { id: crypto.randomUUID(), type: 'AnswersList', options: { title: 'Udzielone odpowiedzi' } },
             { id: crypto.randomUUID(), type: 'RichText', options: { content: '---\n*Raport wygenerowany automatycznie przez Platformę Testów Psychologicznych.*' } }
         ]
     };

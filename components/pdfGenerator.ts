@@ -247,14 +247,38 @@ async function drawRadarChart(ctx: PdfContext, component: ReportComponent, resul
     ctx.moveDown(size + 20);
 }
 
-async function drawRichText(ctx: PdfContext, component: ReportComponent) {
+async function drawRichText(ctx: PdfContext, component: ReportComponent, result?: TestResult, test?: Test) {
     ctx.checkNewPage(30);
     const normalFont = await ctx.pdfDoc.embedFont(StandardFonts.Helvetica);
     const boldFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const italicFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaOblique);
     const boldItalicFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBoldOblique);
 
-    const content = component.options.content || '';
+    let content = component.options.content || '';
+
+    // Replace variables if result and test are provided
+    if (result && test) {
+        content = content.replace(/\{\{imie\}\}/g, result.clientIdentifier || 'Brak danych');
+        content = content.replace(/\{\{data\}\}/g, new Date(result.completedAt).toLocaleDateString() || 'Brak danych');
+        content = content.replace(/\{\{nazwa_testu\}\}/g, test.title || 'Brak danych');
+        
+        // Match {{wynik:ID}} and {{poziom:ID}}
+        content = content.replace(/\{\{wynik:([^}]+)\}\}/g, (match: string, scaleId: string) => {
+            return result.scores[scaleId] !== undefined ? String(result.scores[scaleId]) : '?';
+        });
+        
+        content = content.replace(/\{\{poziom:([^}]+)\}\}/g, (match: string, scaleId: string) => {
+            const score = result.scores[scaleId];
+            const scale = test.scales.find(s => s.id === scaleId);
+            if (score === undefined || !scale) return '?';
+            if (scale.levels && scale.levels.length > 0) {
+                const matched = scale.levels.find(l => score >= l.minScore && score <= l.maxScore) || scale.levels[scale.levels.length - 1];
+                return matched.name;
+            }
+            return String(score);
+        });
+    }
+
     const fontSize = component.options.fontSize || 10;
     const maxWidth = 500;
     const marginX = 50;
@@ -379,8 +403,86 @@ async function drawInterpretations(ctx: PdfContext, component: ReportComponent, 
         
         content += `<br>`;
 
-        await drawRichText(ctx, { id: 'temp-rt', type: 'RichText', options: { content } });
+        await drawRichText(ctx, { id: 'temp-rt', type: 'RichText', options: { content } }, result, test);
     }
+}
+
+async function drawTestDescription(ctx: PdfContext, component: ReportComponent, test: Test) {
+    ctx.checkNewPage(50);
+    const headerFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    
+    const title = component.title || 'Opis testu';
+    ctx.page.drawText(safeText(title), { x: 50, y: ctx.y, size: 14, font: headerFont });
+    ctx.moveDown(25);
+
+    let content = '';
+    if (test.description) {
+        content += `<b>Cel badania:</b><br>${test.description}<br><br>`;
+    }
+    if (test.instructions) {
+        content += `<b>Instrukcja:</b><br>${test.instructions}<br>`;
+    }
+    
+    if (content) {
+        await drawRichText(ctx, { id: 'temp-desc', type: 'RichText', options: { content } });
+    }
+}
+
+async function drawAnswersList(ctx: PdfContext, component: ReportComponent, result: TestResult, test: Test) {
+    ctx.checkNewPage(50);
+    const headerFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const bodyFont = await ctx.pdfDoc.embedFont(StandardFonts.Helvetica);
+    const italicFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaOblique);
+    
+    const title = component.title || 'Udzielone odpowiedzi';
+    ctx.page.drawText(safeText(title), { x: 50, y: ctx.y, size: 14, font: headerFont });
+    ctx.moveDown(25);
+
+    for (const section of test.sections) {
+        ctx.checkNewPage(40);
+        ctx.page.drawText(safeText(section.title), { x: 50, y: ctx.y, size: 12, font: headerFont });
+        ctx.moveDown(20);
+
+        for (const question of section.questions) {
+            ctx.checkNewPage(30);
+            
+            // Print question
+            const qText = safeText(`${question.text}`);
+            ctx.page.drawText(qText, { x: 50, y: ctx.y, size: 10, font: bodyFont });
+            ctx.moveDown(15);
+            
+            // Find answer
+            const answerId = result.answers[question.id];
+            let answerText = 'Brak odpowiedzi';
+            if (answerId) {
+                const option = question.options.find(o => o.id === answerId);
+                if (option) answerText = option.text;
+            }
+            
+            ctx.page.drawText(safeText(`➜ ${answerText}`), { x: 70, y: ctx.y, size: 10, font: italicFont });
+            ctx.moveDown(20);
+        }
+    }
+}
+
+async function drawAiInterpretation(ctx: PdfContext, component: ReportComponent, result: TestResult) {
+    if (!result.analysis) return; // Skip if no AI analysis exists
+
+    ctx.checkNewPage(50);
+    const headerFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    
+    const title = component.title || 'Opis zindywidualizowany';
+    ctx.page.drawText(safeText(title), { x: 50, y: ctx.y, size: 14, font: headerFont });
+    ctx.moveDown(25);
+
+    // Format analysis to basic HTML if it uses markdown (simple replacement)
+    let content = result.analysis
+        .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+        .replace(/\*(.*?)\*/g, '<i>$1</i>')
+        .replace(/\n\n/g, '<p></p>')
+        .replace(/\n/g, '<br>');
+
+    await drawRichText(ctx, { id: 'temp-ai', type: 'RichText', options: { content } });
 }
 
 export async function generatePdf(
@@ -420,11 +522,19 @@ export async function generatePdf(
                 await drawRadarChart(ctx, component, result, test);
                 break;
             case 'RichText':
-                const content = component.options.content;
-                await drawRichText(ctx, { ...component, options: { ...component.options, content } });
+                await drawRichText(ctx, component, result, test);
                 break;
             case 'Interpretations':
                 await drawInterpretations(ctx, component, result, test);
+                break;
+            case 'TestDescription':
+                await drawTestDescription(ctx, component, test);
+                break;
+            case 'AnswersList':
+                await drawAnswersList(ctx, component, result, test);
+                break;
+            case 'AiInterpretation':
+                await drawAiInterpretation(ctx, component, result);
                 break;
         }
     }

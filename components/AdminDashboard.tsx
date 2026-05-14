@@ -222,26 +222,31 @@ const AdminDashboard: React.FC = () => {
                       <h3 className="font-bold text-lg flex items-center gap-2">
                         {test.title}
                         <span className="text-xs font-mono bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">v{test.version}</span>
-                        {test.status === 'DRAFT' && <span className="text-xs font-bold uppercase tracking-wider px-2 py-1 rounded" style={{ backgroundColor: 'var(--warning-color)', color: 'white' }}>Szkic</span>}
-                        {test.status === 'PUBLISHED' && <span className="text-xs font-bold uppercase tracking-wider px-2 py-1 rounded" style={{ backgroundColor: 'var(--success-color)', color: 'white' }}>Opublikowany</span>}
                       </h3>
                       <p className="opacity-70 text-sm">
                         {test.sections.reduce((acc, s) => acc + s.questions.length, 0)} Pytań, {test.scales.length} Skal
                       </p>
                     </div>
                     <div className="flex items-center gap-2 self-end sm:self-center">
-                      <select
-                        value={test.status}
-                        onChange={(e) => handleStatusChange(test.id, e.target.value as 'DRAFT' | 'PUBLISHED')}
-                        className="text-sm font-bold uppercase tracking-wider px-2 py-1.5 rounded border-none outline-none cursor-pointer"
-                        style={{
-                          backgroundColor: test.status === 'PUBLISHED' ? 'var(--success-color)' : 'var(--warning-color)',
-                          color: 'white'
-                        }}
-                      >
-                        <option value="DRAFT">Szkic</option>
-                        <option value="PUBLISHED">Opublikowany</option>
-                      </select>
+                      <div className="relative inline-block">
+                        <select
+                          value={test.status}
+                          onChange={(e) => handleStatusChange(test.id, e.target.value as 'DRAFT' | 'PUBLISHED')}
+                          className="text-xs font-bold uppercase tracking-wider pl-3 pr-8 py-1.5 rounded border-none outline-none cursor-pointer shadow-sm hover:brightness-110 transition-all appearance-none text-left"
+                          style={{
+                            backgroundColor: test.status === 'PUBLISHED' ? 'var(--success-color)' : 'var(--warning-color)',
+                            color: 'white',
+                            minWidth: '130px'
+                          }}
+                          title="Zmień status testu"
+                        >
+                          <option value="DRAFT">Szkic</option>
+                          <option value="PUBLISHED">Opublikowany</option>
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">
+                          <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>
+                        </div>
+                      </div>
                       <button
                         onClick={() => handleShowHistory(test.canonicalId)}
                         className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-700 font-semibold rounded-md hover:bg-slate-200 text-sm" title="Historia wersji"

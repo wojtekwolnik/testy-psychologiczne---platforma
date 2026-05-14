@@ -16,9 +16,13 @@ const componentTypeNames: { [key: string]: string } = {
     BarChart: 'Wykres słupkowy',
     RadarChart: 'Wykres radarowy',
     RichText: 'Blok tekstowy',
+    Interpretations: 'Szczegółowa interpretacja',
+    AnswersList: 'Udzielone odpowiedzi',
+    TestDescription: 'Opis i instrukcja testu',
+    AiInterpretation: 'Opis zindywidualizowany (AI)',
 };
 
-const availableComponentTypes: ReportComponent['type'][] = ['Header', 'ScoresTable', 'BarChart', 'RadarChart', 'RichText'];
+const availableComponentTypes: ReportComponent['type'][] = ['Header', 'TestDescription', 'ScoresTable', 'BarChart', 'RadarChart', 'Interpretations', 'AnswersList', 'AiInterpretation', 'RichText'];
 
 // Tooltip helper
 const InfoTooltip = ({ text }: { text: string }) => {
@@ -110,8 +114,8 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ templateId }) => {
             title: '',
             options: {},
         };
-        // Set default options for chart types
-        if (type === 'BarChart' || type === 'RadarChart') {
+        // Set default options for components that select scales
+        if (type === 'BarChart' || type === 'RadarChart' || type === 'ScoresTable' || type === 'Interpretations') {
             newComponent.options = { scaleIds: [] };
         }
         if (type === 'RichText') {
@@ -163,11 +167,13 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ templateId }) => {
         switch (comp.type) {
             case 'BarChart':
             case 'RadarChart':
+            case 'ScoresTable':
+            case 'Interpretations':
                 return (
                     <div className='mt-2 p-3 bg-slate-100 rounded-md'>
                         <div className="flex items-center mb-2">
-                            <label className='block text-sm font-medium text-slate-700'>Skale do wyświetlenia</label>
-                            <InfoTooltip text="Wybierz, które skale mają być widoczne na wykresie. Jeśli nie zaznaczysz żadnej, wykres może być pusty." />
+                            <label className='block text-sm font-medium text-slate-700'>Skale do uwzględnienia</label>
+                            <InfoTooltip text="Wybierz, które skale mają być widoczne. Jeśli nie zaznaczysz żadnej, komponent może być pusty." />
                         </div>
                         <div className='grid grid-cols-2 gap-2 mt-1'>
                             {selectedTestScales.map(scale => (
@@ -194,9 +200,15 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ templateId }) => {
             case 'RichText':
                 return (
                     <div className='mt-2'>
-                        <div className="flex items-center mb-1">
-                            <label className='block text-sm font-medium text-slate-700'>Treść tekstowa</label>
-                            <InfoTooltip text="Możesz używać sformatowanego tekstu. Ten blok jest idealny do opisów, interpretacji statycznych lub uwag końcowych." />
+                        <div className="flex flex-col mb-2">
+                            <div className="flex items-center">
+                                <label className='block text-sm font-medium text-slate-700'>Treść tekstowa</label>
+                                <InfoTooltip text="Możesz używać sformatowanego tekstu oraz dynamicznych zmiennych wstawiających dane z testu." />
+                            </div>
+                            <div className="mt-1 p-2 bg-blue-50 border border-blue-100 rounded text-xs text-blue-800">
+                                <strong>Dostępne zmienne:</strong> <code>{`{{imie}}`}</code> (Identyfikator klienta), <code>{`{{data}}`}</code> (Data wypełnienia), <code>{`{{nazwa_testu}}`}</code><br />
+                                <strong>Zmienne skal (użyj ID skali widocznego w edytorze):</strong> <code>{`{{wynik:ID}}`}</code> (Zdobyte punkty), <code>{`{{poziom:ID}}`}</code> (Słowny poziom, np. Wysoki)
+                            </div>
                         </div>
                         <RichTextInput value={comp.options.content || ''} onChange={val => updateComponentOptions(comp.id, { content: val })} />
                     </div>

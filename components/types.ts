@@ -93,7 +93,7 @@ export interface AccessCode {
 
 export type ReportComponent = {
   id: string;
-  type: 'Header' | 'ScoresTable' | 'BarChart' | 'RadarChart' | 'RichText' | 'Interpretations';
+  type: 'Header' | 'ScoresTable' | 'BarChart' | 'RadarChart' | 'RichText' | 'Interpretations' | 'AnswersList' | 'TestDescription' | 'AiInterpretation';
   title?: string;
   options: { [key: string]: any };
 };
