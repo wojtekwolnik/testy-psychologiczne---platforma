@@ -135,7 +135,6 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
         { to: '/admin/users', label: 'Użytkownicy', icon: <UserGroupIcon className="h-5 w-5" /> },
         { to: '/admin/results', label: 'Wyniki Testów', icon: <ChartBarIcon /> },
         { to: '/admin/branding', label: 'Ustawienia Platformy', icon: <CogIcon className="h-5 w-5" /> },
-        { to: '/admin/report-settings', label: 'Ustawienia Raportów', icon: <CogIcon className="h-5 w-5" /> },
         { to: '/admin/templates', label: 'Konfiguracja Raportów', icon: <ClipboardListIcon className="h-5 w-5" /> },
         { to: '/admin/docs', label: 'Dokumentacja', icon: <DocumentationIcon /> },
     ];

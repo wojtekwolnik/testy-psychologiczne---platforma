@@ -4,7 +4,7 @@ import React, { useContext, useState, useEffect } from 'react';
 import { BrandingContext } from '@/contexts/BrandingContext';
 import { saveBrandingSettings, sendTestEmailAction } from '@/app/actions/brandingActions';
 import { Tab } from '@headlessui/react';
-import { FaPalette, FaGlobe, FaEnvelope, FaRobot, FaCog, FaSun, FaMoon, FaUpload, FaTrash } from 'react-icons/fa';
+import { FaPalette, FaGlobe, FaEnvelope, FaRobot, FaCog, FaSun, FaMoon, FaUpload, FaTrash, FaImage, FaAlignLeft } from 'react-icons/fa';
 import { ThemePalette } from '@/components/types';
 
 function classNames(...classes: string[]) {
@@ -39,6 +39,20 @@ export default function BrandingPage() {
         };
         reader.onerror = () => {
             setLogoError('Błąd podczas odczytu pliku.');
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleReportLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > 2 * 1024 * 1024) {
+            setError('Plik logo dla raportów musi być mniejszy niż 2MB.');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            updateSetting('reportLogoUrl', reader.result as string);
         };
         reader.readAsDataURL(file);
     };
@@ -173,6 +187,9 @@ export default function BrandingPage() {
                     </Tab>
                     <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm font-medium leading-5', selected ? 'bg-white shadow text-[var(--primary-color)]' : 'text-slate-600 hover:bg-white/[0.12] hover:text-slate-800')}>
                         <div className="flex items-center justify-center gap-2"><FaRobot /> AI</div>
+                    </Tab>
+                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm font-medium leading-5', selected ? 'bg-white shadow text-[var(--primary-color)]' : 'text-slate-600 hover:bg-white/[0.12] hover:text-slate-800')}>
+                        <div className="flex items-center justify-center gap-2"><FaCog /> Raporty PDF</div>
                     </Tab>
                 </Tab.List>
 
@@ -568,6 +585,74 @@ export default function BrandingPage() {
                             <label className="block text-sm font-medium text-slate-700 mb-1">System Prompt</label>
                             <textarea className="w-full p-2 border rounded" rows={4} value={localSettings.aiSettings.systemPrompt} onChange={e => updateNestedSetting('aiSettings', 'systemPrompt', e.target.value)} />
                             <p className="text-xs text-slate-500 mt-1">Instrukcja dla modelu AI opisująca jego rolę i zachowanie.</p>
+                        </div>
+                    </Tab.Panel>
+
+                    {/* Report Settings */}
+                    <Tab.Panel className="bg-white p-6 rounded-lg shadow-sm space-y-6">
+                        {/* Logo */}
+                        <div>
+                            <h3 className="text-lg font-semibold flex items-center gap-2 mb-3"><FaImage className="text-blue-500" /> Logo na raportach</h3>
+                            <p className="text-sm text-slate-500 mb-4">Jeśli nie wgrasz osobnego logo dla raportów, system użyje domyślnego logo platformy.</p>
+                            
+                            <div className="flex items-center gap-6">
+                                <div className="w-48 h-32 border-2 border-dashed rounded-lg flex items-center justify-center bg-slate-50 relative overflow-hidden">
+                                    {localSettings.reportLogoUrl ? (
+                                        <img src={localSettings.reportLogoUrl} alt="Logo raportu" className="max-w-full max-h-full object-contain p-2" />
+                                    ) : (
+                                        <span className="text-slate-400 text-sm">Brak wybranego logo</span>
+                                    )}
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="cursor-pointer flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 font-medium transition-colors text-sm w-fit">
+                                        <FaUpload /> Wgraj logo
+                                        <input type="file" accept="image/*" className="hidden" onChange={handleReportLogoUpload} />
+                                    </label>
+                                    {localSettings.reportLogoUrl && (
+                                        <button onClick={() => updateSetting('reportLogoUrl', '')} className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-md hover:bg-red-100 font-medium transition-colors text-sm">
+                                            <FaTrash /> Usuń logo
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        {/* Primary Color */}
+                        <div>
+                            <h3 className="text-lg font-semibold flex items-center gap-2 mb-3"><FaPalette className="text-purple-500" /> Kolor wiodący</h3>
+                            <p className="text-sm text-slate-500 mb-4">Ten kolor będzie używany jako akcent w nagłówkach i przy generowaniu wykresów w pliku PDF.</p>
+                            
+                            <div className="flex items-center gap-4">
+                                <input 
+                                    type="color" 
+                                    value={localSettings.reportPrimaryColor || '#2563eb'} 
+                                    onChange={(e) => updateSetting('reportPrimaryColor', e.target.value)}
+                                    className="w-12 h-12 rounded cursor-pointer border-0 p-0"
+                                />
+                                <input 
+                                    type="text" 
+                                    value={localSettings.reportPrimaryColor || '#2563eb'} 
+                                    onChange={(e) => updateSetting('reportPrimaryColor', e.target.value)}
+                                    className="p-2 border rounded-md font-mono text-sm uppercase w-28"
+                                />
+                            </div>
+                        </div>
+
+                        <hr />
+
+                        {/* Footer */}
+                        <div>
+                            <h3 className="text-lg font-semibold flex items-center gap-2 mb-3"><FaAlignLeft className="text-green-500" /> Stopka strony</h3>
+                            <p className="text-sm text-slate-500 mb-4">Tekst, który będzie drukowany na samym dole każdej strony raportu. Paginacja (numer strony) dodawana jest automatycznie.</p>
+                            
+                            <textarea 
+                                value={localSettings.reportFooterText || ''}
+                                onChange={(e) => updateSetting('reportFooterText', e.target.value)}
+                                className="w-full p-3 border rounded-lg min-h-[100px] focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                placeholder="Platforma Testów Psychologicznych | www.twojastrona.pl"
+                            />
                         </div>
                     </Tab.Panel>
                 </Tab.Panels>

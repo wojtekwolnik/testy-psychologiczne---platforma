@@ -71,13 +71,36 @@ const TestEditor: React.FC = () => {
                 if (initialTest) {
                     setTest(initialTest);
                 } else {
-                    const newTest: Test = {
-                        id: generateUniqueId('new'),
-                        canonicalId: generateUniqueId('tid'), version: 1, title: 'Nowy Test',
-                        description: '', instructions: '', status: 'DRAFT', questionsPerPage: 10, scales: [],
-                        sections: [{ id: generateUniqueId('sec'), title: 'Sekcja 1', questions: [] }],
-                        defaultTemplateId: null, createdAt: new Date().toISOString(),
-                    };
+                    let newTest: Test | null = null;
+                    const searchParams = new URLSearchParams(window.location.search);
+                    const importDraftStr = localStorage.getItem('import_draft');
+                    
+                    if (importDraftStr && searchParams.get('import') === 'local') {
+                        try {
+                            const parsed = JSON.parse(importDraftStr);
+                            newTest = {
+                                ...parsed,
+                                id: generateUniqueId('new'),
+                                canonicalId: generateUniqueId('tid'),
+                                version: 1,
+                                status: 'DRAFT',
+                                createdAt: new Date().toISOString()
+                            };
+                            localStorage.removeItem('import_draft');
+                        } catch (e) {
+                            console.error('Failed to parse import_draft', e);
+                        }
+                    }
+
+                    if (!newTest) {
+                        newTest = {
+                            id: generateUniqueId('new'),
+                            canonicalId: generateUniqueId('tid'), version: 1, title: 'Nowy Test',
+                            description: '', instructions: '', status: 'DRAFT', questionsPerPage: 10, scales: [],
+                            sections: [{ id: generateUniqueId('sec'), title: 'Sekcja 1', questions: [] }],
+                            defaultTemplateId: null, createdAt: new Date().toISOString(),
+                        };
+                    }
                     setTest(newTest);
                 }
             } catch (e) { console.error("Failed to load initial data", e); }
