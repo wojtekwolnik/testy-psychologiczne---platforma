@@ -496,6 +496,7 @@ async function drawAnswersList(ctx: PdfContext, component: ReportComponent, resu
     ctx.page.drawText(safeText(title), { x: 50, y: ctx.y, size: 14, font: headerFont });
     ctx.moveDown(25);
 
+    let questionIndex = 1;
     for (const section of test.sections) {
         ctx.checkNewPage(40);
         ctx.page.drawText(safeText(section.title), { x: 50, y: ctx.y, size: 12, font: headerFont });
@@ -505,7 +506,7 @@ async function drawAnswersList(ctx: PdfContext, component: ReportComponent, resu
             ctx.checkNewPage(30);
             
             // Print question
-            const qText = safeText(`${question.text}`);
+            const qText = safeText(`${questionIndex}. ${question.text}`);
             ctx.page.drawText(qText, { x: 50, y: ctx.y, size: 10, font: bodyFont });
             ctx.moveDown(15);
             
@@ -519,6 +520,7 @@ async function drawAnswersList(ctx: PdfContext, component: ReportComponent, resu
             
             ctx.page.drawText(safeText(`➜ ${answerText}`), { x: 70, y: ctx.y, size: 10, font: italicFont });
             ctx.moveDown(20);
+            questionIndex++;
         }
     }
 }

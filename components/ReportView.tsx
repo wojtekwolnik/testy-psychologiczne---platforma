@@ -83,7 +83,8 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
             const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = `Raport-${result.clientIdentifier.replace(/ /g, '_')}.pdf`;
+            const safeFilename = `Raport-${(result.clientIdentifier || 'wynik').replace(/[^a-zA-Z0-9\-_]/g, '_')}.pdf`;
+            link.download = safeFilename;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -277,9 +278,9 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                         </div>
                         <h3 className="text-xl font-semibold text-gray-800 border-b pb-3 my-4">Udzielone Odpowiedzi</h3>
                         <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                            {Object.entries(result.answers).map(([questionId, answerValue]) => {
-                                const question = questionsMap.get(questionId);
-                                if (!question) return null;
+                            {test.sections.flatMap(sec => sec.questions).map((question, index) => {
+                                const answerValue = result.answers[question.id];
+                                if (answerValue === undefined) return null;
 
                                 let answerText = '';
                                 if (Array.isArray(answerValue)) { // Multiple select
@@ -289,8 +290,10 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                                 }
 
                                 return (
-                                    <div key={questionId} className="text-sm">
-                                        <p className="font-semibold text-gray-700" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(question.text) }} />
+                                    <div key={question.id} className="text-sm">
+                                        <p className="font-semibold text-gray-700">
+                                            {index + 1}. <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(question.text) }} />
+                                        </p>
                                         <p className="text-gray-600 pl-4">Odpowiedź: {answerText}</p>
                                     </div>
                                 );
