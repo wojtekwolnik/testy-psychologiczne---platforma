@@ -1,8 +1,6 @@
 
 import { PDFDocument, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
-import fs from 'fs';
-import path from 'path';
 import type { TestResult, Test, PdfTemplate, ReportComponent, BrandingSettings } from './types';
 
 function safeText(str: string | undefined | null): string {
@@ -556,11 +554,19 @@ export async function generatePdf(
     const pdfDoc = await PDFDocument.create();
     pdfDoc.registerFontkit(fontkit);
 
-    const fontsDir = path.join(process.cwd(), 'public', 'fonts');
-    const regularFontBytes = fs.readFileSync(path.join(fontsDir, 'Roboto-Regular.ttf'));
-    const boldFontBytes = fs.readFileSync(path.join(fontsDir, 'Roboto-Bold.ttf'));
-    const italicFontBytes = fs.readFileSync(path.join(fontsDir, 'Roboto-Italic.ttf'));
-    const boldItalicFontBytes = fs.readFileSync(path.join(fontsDir, 'Roboto-BoldItalic.ttf'));
+    const fetchFont = async (filename: string) => {
+        const response = await fetch(`/fonts/${filename}`);
+        if (!response.ok) {
+            console.error(`Failed to load font: ${filename}`);
+            throw new Error(`Nie udało się załadować czcionki: ${filename}`);
+        }
+        return await response.arrayBuffer();
+    };
+
+    const regularFontBytes = await fetchFont('Roboto-Regular.ttf');
+    const boldFontBytes = await fetchFont('Roboto-Bold.ttf');
+    const italicFontBytes = await fetchFont('Roboto-Italic.ttf');
+    const boldItalicFontBytes = await fetchFont('Roboto-BoldItalic.ttf');
 
     const regularFont = await pdfDoc.embedFont(regularFontBytes);
     const boldFont = await pdfDoc.embedFont(boldFontBytes);
