@@ -80,6 +80,28 @@ const AdminDashboard: React.FC = () => {
     setIsCreateMenuOpen(false);
   };
 
+  const validateImportSchema = (data: any): string | null => {
+    if (!data || typeof data !== 'object') return "Plik nie zawiera poprawnego obiektu JSON.";
+    if (typeof data.title !== 'string') return "Brak tytułu testu (pole 'title').";
+    if (!Array.isArray(data.sections)) return "Brak sekcji pytań (pole 'sections' musi być listą).";
+    if (!Array.isArray(data.scales)) return "Brak definicji skal (pole 'scales' musi być listą).";
+
+    for (let i = 0; i < data.sections.length; i++) {
+      const sec = data.sections[i];
+      if (!sec || typeof sec !== 'object') return `Sekcja ${i + 1} jest nieprawidłowa.`;
+      if (!Array.isArray(sec.questions)) return `Sekcja ${i + 1} nie zawiera prawidłowej listy pytań ('questions').`;
+      
+      for (let j = 0; j < sec.questions.length; j++) {
+        const q = sec.questions[j];
+        if (!q || typeof q !== 'object') return `Pytanie ${j + 1} w sekcji ${i + 1} jest nieprawidłowe.`;
+        if (!Array.isArray(q.options)) return `Pytanie ${j + 1} w sekcji ${i + 1} nie zawiera listy opcji ('options').`;
+        if (!q.scoring || typeof q.scoring !== 'object') return `Pytanie ${j + 1} w sekcji ${i + 1} nie zawiera obiektu punktacji ('scoring').`;
+      }
+    }
+
+    return null; // Brak błędów
+  };
+
   const handleJsonFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -88,10 +110,17 @@ const AdminDashboard: React.FC = () => {
     reader.onload = (event) => {
       try {
         const importedTest = JSON.parse(event.target?.result as string);
+        
+        const schemaError = validateImportSchema(importedTest);
+        if (schemaError) {
+          toast.error(`Błąd walidacji pliku: ${schemaError}`);
+          return;
+        }
+
         localStorage.setItem('import_draft', JSON.stringify(importedTest));
         router.push('/admin/test/new?import=local');
       } catch (err) {
-        alert("Błąd podczas przetwarzania pliku JSON. Upewnij się, że ma poprawny format.");
+        toast.error("Błąd podczas przetwarzania pliku JSON. Upewnij się, że ma poprawny format składniowy.");
       }
     };
     reader.readAsText(file);

@@ -1,20 +1,13 @@
 
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
+import fs from 'fs';
+import path from 'path';
 import type { TestResult, Test, PdfTemplate, ReportComponent, BrandingSettings } from './types';
 
 function safeText(str: string | undefined | null): string {
     if (!str) return '';
-    return str
-        .replace(/ą/g, 'a').replace(/Ą/g, 'A')
-        .replace(/ć/g, 'c').replace(/Ć/g, 'C')
-        .replace(/ę/g, 'e').replace(/Ę/g, 'E')
-        .replace(/ł/g, 'l').replace(/Ł/g, 'L')
-        .replace(/ń/g, 'n').replace(/Ń/g, 'N')
-        .replace(/ó/g, 'o').replace(/Ó/g, 'O')
-        .replace(/ś/g, 's').replace(/Ś/g, 'S')
-        .replace(/ź/g, 'z').replace(/Ź/g, 'Z')
-        .replace(/ż/g, 'z').replace(/Ż/g, 'Z')
-        .replace(/[^\x00-\x7F]/g, '');
+    return str;
 }
 
 function hexToRgb(hex: string) {
@@ -32,6 +25,10 @@ class PdfContext {
     y: number;
     height: number;
     pdfDoc: PDFDocument;
+    regularFont: any;
+    boldFont: any;
+    italicFont: any;
+    boldItalicFont: any;
 
     constructor(pdfDoc: PDFDocument) {
         this.pdfDoc = pdfDoc;
@@ -56,8 +53,8 @@ class PdfContext {
 
 async function drawHeader(ctx: PdfContext, component: ReportComponent, branding: BrandingSettings, result: TestResult) {
     ctx.checkNewPage(40);
-    const font = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const normalFont = await ctx.pdfDoc.embedFont(StandardFonts.Helvetica);
+    const font = ctx.boldFont;
+    const normalFont = ctx.regularFont;
 
     // Draw logo if available
     const logoUrl = branding.reportLogoUrl || branding.logoUrl;
@@ -120,8 +117,8 @@ async function drawHeader(ctx: PdfContext, component: ReportComponent, branding:
 
 async function drawScoresTable(ctx: PdfContext, component: ReportComponent, result: TestResult, test: Test) {
     ctx.checkNewPage(50);
-    const headerFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const bodyFont = await ctx.pdfDoc.embedFont(StandardFonts.Helvetica);
+    const headerFont = ctx.boldFont;
+    const bodyFont = ctx.regularFont;
 
     // Title for the table
     if (component.title) {
@@ -169,7 +166,7 @@ async function drawScoresTable(ctx: PdfContext, component: ReportComponent, resu
 
 async function drawBarChart(ctx: PdfContext, component: ReportComponent, result: TestResult, test: Test, branding: BrandingSettings) {
     ctx.checkNewPage(150); // Reserve space for chart
-    const headerFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const headerFont = ctx.boldFont;
 
     if (component.title) {
         ctx.page.drawText(safeText(component.title), { x: 50, y: ctx.y, size: 14, font: headerFont });
@@ -213,8 +210,8 @@ async function drawBarChart(ctx: PdfContext, component: ReportComponent, result:
 async function drawRadarChart(ctx: PdfContext, component: ReportComponent, result: TestResult, test: Test, branding: BrandingSettings) {
     const size = 200; // Total width and height of the chart
     ctx.checkNewPage(size + 60);
-    const headerFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const labelFont = await ctx.pdfDoc.embedFont(StandardFonts.Helvetica);
+    const headerFont = ctx.boldFont;
+    const labelFont = ctx.regularFont;
 
     if (component.title) {
         ctx.page.drawText(safeText(component.title), { x: 50, y: ctx.y, size: 14, font: headerFont });
@@ -312,10 +309,10 @@ async function drawRadarChart(ctx: PdfContext, component: ReportComponent, resul
 
 async function drawRichText(ctx: PdfContext, component: ReportComponent, result?: TestResult, test?: Test) {
     ctx.checkNewPage(30);
-    const normalFont = await ctx.pdfDoc.embedFont(StandardFonts.Helvetica);
-    const boldFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const italicFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaOblique);
-    const boldItalicFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBoldOblique);
+    const normalFont = ctx.regularFont;
+    const boldFont = ctx.boldFont;
+    const italicFont = ctx.italicFont;
+    const boldItalicFont = ctx.boldItalicFont;
 
     let content = component.options.content || '';
 
@@ -432,7 +429,7 @@ async function drawRichText(ctx: PdfContext, component: ReportComponent, result?
 
 async function drawInterpretations(ctx: PdfContext, component: ReportComponent, result: TestResult, test: Test) {
     ctx.checkNewPage(50);
-    const headerFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const headerFont = ctx.boldFont;
     
     if (component.title) {
         ctx.page.drawText(safeText(component.title), { x: 50, y: ctx.y, size: 14, font: headerFont });
@@ -472,7 +469,7 @@ async function drawInterpretations(ctx: PdfContext, component: ReportComponent, 
 
 async function drawTestDescription(ctx: PdfContext, component: ReportComponent, test: Test) {
     ctx.checkNewPage(50);
-    const headerFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const headerFont = ctx.boldFont;
     
     const title = component.title || 'Opis testu';
     ctx.page.drawText(safeText(title), { x: 50, y: ctx.y, size: 14, font: headerFont });
@@ -493,9 +490,9 @@ async function drawTestDescription(ctx: PdfContext, component: ReportComponent, 
 
 async function drawAnswersList(ctx: PdfContext, component: ReportComponent, result: TestResult, test: Test) {
     ctx.checkNewPage(50);
-    const headerFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const bodyFont = await ctx.pdfDoc.embedFont(StandardFonts.Helvetica);
-    const italicFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaOblique);
+    const headerFont = ctx.boldFont;
+    const bodyFont = ctx.regularFont;
+    const italicFont = ctx.italicFont;
     
     const title = component.title || 'Udzielone odpowiedzi';
     ctx.page.drawText(safeText(title), { x: 50, y: ctx.y, size: 14, font: headerFont });
@@ -532,7 +529,7 @@ async function drawAiInterpretation(ctx: PdfContext, component: ReportComponent,
     if (!result.analysis) return; // Skip if no AI analysis exists
 
     ctx.checkNewPage(50);
-    const headerFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const headerFont = ctx.boldFont;
     
     const title = component.title || 'Opis zindywidualizowany';
     ctx.page.drawText(safeText(title), { x: 50, y: ctx.y, size: 14, font: headerFont });
@@ -557,8 +554,26 @@ export async function generatePdf(
 ): Promise<Uint8Array> {
 
     const pdfDoc = await PDFDocument.create();
+    pdfDoc.registerFontkit(fontkit);
+
+    const fontsDir = path.join(process.cwd(), 'public', 'fonts');
+    const regularFontBytes = fs.readFileSync(path.join(fontsDir, 'Roboto-Regular.ttf'));
+    const boldFontBytes = fs.readFileSync(path.join(fontsDir, 'Roboto-Bold.ttf'));
+    const italicFontBytes = fs.readFileSync(path.join(fontsDir, 'Roboto-Italic.ttf'));
+    const boldItalicFontBytes = fs.readFileSync(path.join(fontsDir, 'Roboto-BoldItalic.ttf'));
+
+    const regularFont = await pdfDoc.embedFont(regularFontBytes);
+    const boldFont = await pdfDoc.embedFont(boldFontBytes);
+    const italicFont = await pdfDoc.embedFont(italicFontBytes);
+    const boldItalicFont = await pdfDoc.embedFont(boldItalicFontBytes);
+
     const ctx = new PdfContext(pdfDoc);
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    ctx.regularFont = regularFont;
+    ctx.boldFont = boldFont;
+    ctx.italicFont = italicFont;
+    ctx.boldItalicFont = boldItalicFont;
+
+    const font = regularFont;
 
     const componentsToRender: ReportComponent[] = template && template.components && template.components.length > 0 ? template.components : [
         { id: 'def-h1', type: 'Header', options: { text: `Raport: ${test.title}` } },
@@ -605,7 +620,7 @@ export async function generatePdf(
     // Add Custom Interpretation if provided and not handled by RichText
     if (customInterpretation) {
         ctx.checkNewPage(40);
-        const headerFont = await ctx.pdfDoc.embedFont(StandardFonts.HelveticaBold);
+        const headerFont = ctx.boldFont;
         ctx.page.drawText(safeText('Interpretacja Terapeuty'), { x: 50, y: ctx.y, size: 14, font: headerFont });
         ctx.moveDown(25);
         await drawRichText(ctx, { id: 'cust-int', type: 'RichText', options: { content: customInterpretation } }, result, test);
