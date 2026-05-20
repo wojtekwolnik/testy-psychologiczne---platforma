@@ -4,29 +4,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient()
 
 async function main() {
-    // Create Admin
-    const admin = await prisma.user.upsert({
-        where: { email: 'admin@example.com' },
-        update: {},
-        create: {
-            email: 'admin@example.com',
-            username: 'Admin User',
-            password: await bcrypt.hash('admin-password', 10),
-            role: 'admin',
-        },
-    })
-
-    // Create Therapist
-    const therapist = await prisma.user.upsert({
-        where: { email: 'user@example.com' },
-        update: {},
-        create: {
-            email: 'user@example.com',
-            username: 'Therapist User',
-            password: await bcrypt.hash('password123', 10),
-            role: 'therapist',
-        },
-    })
+    // Users are now created via Setup Wizard or admin panel.
 
     // Create Sample Test
     const sampleTest = await prisma.test.findUnique({ where: { canonicalId: 'demo-personality-test' } }) || await prisma.test.create({
@@ -219,7 +197,7 @@ async function main() {
         });
     }
 
-    console.log({ admin, therapist, sampleTest, bigFiveTest })
+    console.log({ sampleTest, bigFiveTest })
 }
 
 main()
