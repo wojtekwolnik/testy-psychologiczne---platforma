@@ -43,7 +43,6 @@ services:
   # Run with: docker compose --profile app up
   # -------------------------------------------------------
   app:
-    profiles: ["app"]
     build:
       context: .
       dockerfile: Dockerfile
