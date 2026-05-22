@@ -3,7 +3,7 @@
 # ==============================================================
 
 # Stage 1: Install dependencies
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
@@ -11,7 +11,7 @@ COPY package.json package-lock.json* ./
 RUN npm ci
 
 # Stage 2: Build the application
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 RUN apk add --no-cache openssl
 WORKDIR /app
 
@@ -26,7 +26,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 # Stage 3: Production runner (minimal image)
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 RUN apk add --no-cache openssl
 WORKDIR /app
 
