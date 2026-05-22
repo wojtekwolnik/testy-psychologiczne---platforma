@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { BrandingSettings } from '@/components/types';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
 const DEFAULT_ID = 'default';
 
 /**
