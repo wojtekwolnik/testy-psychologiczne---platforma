@@ -43,7 +43,7 @@ COPY --from=builder /app/public ./public
 
 # Copy Prisma schema, config, and migrations for runtime migration
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/prisma.config.js ./prisma.config.js
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
@@ -56,4 +56,4 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 # Run migrations then start the app
-CMD ["sh", "-c", "npx prisma migrate deploy --config prisma.config.js && node server.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy --config prisma.config.ts && node server.js"]
