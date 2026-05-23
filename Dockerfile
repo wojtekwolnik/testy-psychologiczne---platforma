@@ -56,4 +56,4 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 # Run migrations then start the app
-CMD ["sh", "-c", "npx prisma migrate deploy --config prisma.config.ts && node server.js"]
+CMD ["sh", "-c", "node ./node_modules/prisma/build/index.js migrate deploy --config prisma.config.ts && node server.js"]
