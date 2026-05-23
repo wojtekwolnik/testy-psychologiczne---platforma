@@ -18,8 +18,8 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Generate Prisma client for the correct platform
-RUN npx prisma generate
+# Generate Prisma client for the correct platform (requires dummy DATABASE_URL to parse config)
+RUN DATABASE_URL="postgresql://dummy" npx prisma generate
 
 # Build Next.js standalone output
 ENV NEXT_TELEMETRY_DISABLED=1
