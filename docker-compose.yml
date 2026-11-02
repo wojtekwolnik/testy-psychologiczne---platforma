@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   # -------------------------------------------------------
   # PostgreSQL Database
@@ -9,25 +7,26 @@ services:
     container_name: testy_db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: testy_psychologiczne
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-testy_psychologiczne}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-testy_psychologiczne}"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   # -------------------------------------------------------
-  # PostgreSQL Test Database
+  # PostgreSQL Test Database (local dev/tests)
   # -------------------------------------------------------
   db_test:
     image: postgres:16-alpine
     container_name: testy_db_test
+    profiles: ["test"]
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
@@ -39,10 +38,10 @@ services:
       - postgres_test_data:/var/lib/postgresql/data
 
   # -------------------------------------------------------
-  # Next.js Application (Production-like, optional locally)
-  # Run with: docker compose --profile app up
+  # Next.js Application
   # -------------------------------------------------------
   app:
+    image: ghcr.io/wojtekwolnik/testy-psychologiczne---platforma:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -51,7 +50,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: "postgresql://postgres:password@db:5432/testy_psychologiczne"
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:password@db:5432/testy_psychologiczne}
       JWT_SECRET: ${JWT_SECRET}
       NODE_ENV: production
     depends_on:
