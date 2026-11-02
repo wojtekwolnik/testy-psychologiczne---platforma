@@ -54,7 +54,7 @@ export default function SetupWizard() {
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-blue-500"></div>
 
                     {/* Step 1: Welcome */}
-                    <div className={`transition-all duration-500 ease-in-out absolute w-[calc(100%-4rem)] ${step === 1 ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 -translate-x-full pointer-events-none'}`}>
+                    <div className={`transition-all duration-500 ease-in-out ${step === 1 ? 'opacity-100 translate-x-0 pointer-events-auto' : 'opacity-0 -translate-x-full absolute w-[calc(100%-4rem)] top-8 pointer-events-none'}`}>
                         <h2 className="text-2xl font-bold mb-4 flex items-center gap-3">
                             <ShieldCheck className="text-blue-400 w-8 h-8" />
                             Witaj w systemie!

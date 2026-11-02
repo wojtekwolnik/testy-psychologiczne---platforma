@@ -66,7 +66,7 @@ export async function login(email: string, password: string): Promise<{ success:
 
     // 4. Set Cookie (JWT Session) if no 2FA
     const token = await signToken({ userId: user.id, role: user.role });
-    cookies().set(COOKIE_NAME, token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/' });
+    cookies().set(COOKIE_NAME, token, { httpOnly: true, secure: process.env.COOKIE_SECURE === 'true', sameSite: 'lax', path: '/' });
 
     return {
         success: true,
@@ -102,7 +102,7 @@ export async function verify2FA(userId: string, code: string): Promise<{ success
 
     // Set Cookie on success
     const token = await signToken({ userId: user.id, role: user.role });
-    cookies().set(COOKIE_NAME, token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/' });
+    cookies().set(COOKIE_NAME, token, { httpOnly: true, secure: process.env.COOKIE_SECURE === 'true', sameSite: 'lax', path: '/' });
 
     return {
         success: true,
