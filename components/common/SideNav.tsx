@@ -1,4 +1,3 @@
-
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
@@ -6,6 +5,7 @@ import { UserRole, User, Notification } from '../types';
 import { ClipboardListIcon, UserGroupIcon, CogIcon, UserManagementIcon, BrandingIcon, ChartPieIcon, LogoutIcon, DocumentationIcon, SparklesIcon, HeartIcon, BellIcon, EnvelopeIcon, ChartBarIcon } from './Icons';
 import { BrandingContext } from '../../contexts/BrandingContext';
 import { markNotificationsAsRead } from '@/app/actions/notificationActions';
+import { updateUserPassword } from '@/app/actions/userActions';
 
 interface SideNavProps {
     user: User;
@@ -127,11 +127,43 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
     const { branding } = useContext(BrandingContext);
     const router = useRouter();
     const pathname = usePathname();
+    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [pwSaving, setPwSaving] = useState(false);
+    const [pwMessage, setPwMessage] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+
+    const handlePasswordChange = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setPwMessage(null);
+        if (newPassword !== confirmPassword) {
+            setPwMessage({ type: 'error', text: 'Podane hasła nie są identyczne.' });
+            return;
+        }
+        if (newPassword.length < 6) {
+            setPwMessage({ type: 'error', text: 'Hasło musi mieć co najmniej 6 znaków.' });
+            return;
+        }
+        setPwSaving(true);
+        const res = await updateUserPassword(user.id, newPassword);
+        setPwSaving(false);
+        if (!res.success) {
+            setPwMessage({ type: 'error', text: res.error || 'Błąd podczas zmiany hasła.' });
+        } else {
+            setPwMessage({ type: 'success', text: 'Hasło zostało zmienione!' });
+            setNewPassword('');
+            setConfirmPassword('');
+            setTimeout(() => {
+                setIsPasswordModalOpen(false);
+                setPwMessage(null);
+            }, 1000);
+        }
+    };
 
     // Mapping from abstract view to concrete URL path
     const adminLinks = [
         { to: '/admin/dashboard', label: 'Testy', icon: <ClipboardListIcon className="h-5 w-5" /> },
-        { to: '/admin/codes', label: 'Kody dostępu', icon: <UserManagementIcon /> }, // Using existing icon for now, or maybe a Key icon if available. I'll use UserManagementIcon since it relates to giving access.
+        { to: '/admin/codes', label: 'Kody dostępu', icon: <UserManagementIcon /> },
         { to: '/admin/users', label: 'Użytkownicy', icon: <UserGroupIcon className="h-5 w-5" /> },
         { to: '/admin/results', label: 'Wyniki Testów', icon: <ChartBarIcon /> },
         { to: '/admin/branding', label: 'Ustawienia Platformy', icon: <CogIcon className="h-5 w-5" /> },
@@ -158,8 +190,6 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
     return (
         <nav className="w-64 flex flex-col p-4 shadow-[4px_0_24px_-4px_rgba(0,0,0,0.1)] h-full transition-colors duration-300 relative z-40"
             style={{ backgroundColor: sidebarColors.bg, color: sidebarColors.text }}>
-
-
 
             <div className="relative flex items-start justify-between p-2 mb-8 border-b border-white/10 pb-6">
                 <div className="flex flex-col items-start gap-2.5 flex-shrink min-w-0">
@@ -210,7 +240,7 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
 
             <div className="mt-auto relative">
                 <div className="border-t border-gray-700/50 pt-4">
-                    <div className="flex items-center gap-3 px-4 py-2 mb-2">
+                    <div className="flex items-center gap-3 px-4 py-2 mb-1">
                         <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold border border-white/10">
                             {user.username ? user.username.substring(0, 2).toUpperCase() : 'U'}
                         </div>
@@ -220,6 +250,13 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
                         </div>
                     </div>
                     <button
+                        onClick={() => { setIsPasswordModalOpen(true); setPwMessage(null); }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-slate-300 hover:bg-black/20 hover:text-white rounded-lg transition-all text-left text-sm"
+                    >
+                        <CogIcon className="h-5 w-5" />
+                        <span className="font-medium">Zmień hasło</span>
+                    </button>
+                    <button
                         onClick={onLogout}
                         className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-black/20 hover:text-red-300 rounded-lg transition-all text-left text-sm font-semibold"
                     >
@@ -228,6 +265,61 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
                     </button>
                 </div>
             </div>
+
+            {isPasswordModalOpen && (
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+                    <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-w-sm w-full p-6 text-slate-100">
+                        <h3 className="text-lg font-bold mb-4">Zmień swoje hasło</h3>
+                        <form onSubmit={handlePasswordChange} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-medium text-slate-300 mb-1">Nowe hasło</label>
+                                <input
+                                    type="password"
+                                    required
+                                    minLength={6}
+                                    value={newPassword}
+                                    onChange={e => setNewPassword(e.target.value)}
+                                    placeholder="Min. 6 znaków"
+                                    className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-slate-300 mb-1">Powtórz nowe hasło</label>
+                                <input
+                                    type="password"
+                                    required
+                                    minLength={6}
+                                    value={confirmPassword}
+                                    onChange={e => setConfirmPassword(e.target.value)}
+                                    placeholder="Powtórz hasło"
+                                    className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm"
+                                />
+                            </div>
+                            {pwMessage && (
+                                <div className={`p-2.5 rounded-lg text-xs ${pwMessage.type === 'error' ? 'bg-red-500/20 text-red-300 border border-red-500/40' : 'bg-green-500/20 text-green-300 border border-green-500/40'}`}>
+                                    {pwMessage.text}
+                                </div>
+                            )}
+                            <div className="flex justify-end gap-2 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsPasswordModalOpen(false)}
+                                    className="px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 rounded-lg"
+                                >
+                                    Anuluj
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={pwSaving}
+                                    className="px-4 py-2 text-xs font-semibold bg-teal-600 hover:bg-teal-500 text-white rounded-lg disabled:opacity-50"
+                                >
+                                    {pwSaving ? 'Zapisywanie...' : 'Zapisz hasło'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </nav>
     );
 };

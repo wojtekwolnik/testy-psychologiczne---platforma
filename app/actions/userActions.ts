@@ -126,3 +126,88 @@ export async function createUser(data: { email: string; username: string; passwo
         role: data.role as UserRole,
     }, hashedPassword);
 }
+
+export async function updateUserPassword(userId: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { checkAuth } = await import('./authActions');
+        const currentUser = await checkAuth();
+
+        if (!currentUser) {
+            return { success: false, error: 'Brak autoryzacji.' };
+        }
+
+        if (currentUser.role !== 'admin' && currentUser.id !== userId) {
+            return { success: false, error: 'Brak uprawnień do zmiany hasła tego użytkownika.' };
+        }
+
+        if (!newPassword || newPassword.length < 6) {
+            return { success: false, error: 'Hasło musi mieć co najmniej 6 znaków.' };
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await prisma.user.update({
+            where: { id: userId },
+            data: { password: hashedPassword },
+        });
+
+        revalidatePath('/admin/users');
+        return { success: true };
+    } catch (error: any) {
+        console.error('Failed to update password:', error);
+        return { success: false, error: 'Nie udało się zmienić hasła.' };
+    }
+}
+
+export async function updateUserDetails(
+    userId: string,
+    data: { username: string; email: string; role?: 'admin' | 'therapist'; password?: string }
+): Promise<{ success: boolean; user?: User; error?: string }> {
+    try {
+        const { checkAuth } = await import('./authActions');
+        const currentUser = await checkAuth();
+
+        if (!currentUser || (currentUser.role !== 'admin' && currentUser.id !== userId)) {
+            return { success: false, error: 'Brak uprawnień.' };
+        }
+
+        const updateData: any = {
+            username: data.username,
+            email: data.email,
+        };
+
+        if (data.role && currentUser.role === 'admin') {
+            updateData.role = data.role;
+        }
+
+        if (data.password && data.password.trim().length > 0) {
+            if (data.password.length < 6) {
+                return { success: false, error: 'Hasło musi mieć co najmniej 6 znaków.' };
+            }
+            updateData.password = await bcrypt.hash(data.password, 10);
+        }
+
+        const updated = await prisma.user.update({
+            where: { id: userId },
+            data: updateData,
+            select: { id: true, email: true, username: true, role: true, createdAt: true, twoFactorSecret: true },
+        });
+
+        revalidatePath('/admin/users');
+
+        return {
+            success: true,
+            user: {
+                id: updated.id,
+                email: updated.email,
+                username: updated.username || '',
+                fullName: updated.username || '',
+                role: updated.role as UserRole,
+                createdAt: updated.createdAt.toISOString(),
+                twoFactorSecret: updated.twoFactorSecret || undefined,
+            },
+        };
+    } catch (error: any) {
+        console.error('Failed to update user:', error);
+        return { success: false, error: 'Nie udało się zapisać zmian (sprawdź, czy e-mail nie jest już zajęty).' };
+    }
+}
