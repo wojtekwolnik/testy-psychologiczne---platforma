@@ -7,15 +7,17 @@ export default defineConfig(({ mode }) => {
   process.env = { ...process.env, ...loadEnv(mode, process.cwd(), '') };
   return {
     plugins: [react()],
-  test: {
-    environment: 'jsdom',
-    setupFiles: ['./setupTests.ts'],
-    globals: true,
-  },
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './'),
+    test: {
+      environment: 'jsdom',
+      setupFiles: ['./setupTests.ts'],
+      globals: true,
+      fileParallelism: false,
+      exclude: ['node_modules/**', '_legacy_reference/**', '.next/**'],
     },
-  },
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './'),
+      },
+    },
   };
 });

@@ -10,6 +10,21 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: testy_psychologiczne_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -25,7 +40,7 @@ jobs:
 
     - name: Prepare environment variables
       run: |
-        echo "DATABASE_URL=postgresql://postgres:password@localhost:5432/testy_psychologiczne" > .env
+        echo "DATABASE_URL=postgresql://postgres:password@localhost:5433/testy_psychologiczne_test" > .env
         echo "JWT_SECRET=super_secret_ci_key_for_testing" >> .env
         echo "DATABASE_URL=postgresql://postgres:password@localhost:5433/testy_psychologiczne_test" > .env.test
         echo "JWT_SECRET=super_secret_ci_key_for_testing" >> .env.test
@@ -37,7 +52,7 @@ jobs:
       run: npm run lint
 
     - name: Run Tests
-      run: npm test
+      run: npm test -- --run
 
     - name: Build Next.js application
       run: npm run build
