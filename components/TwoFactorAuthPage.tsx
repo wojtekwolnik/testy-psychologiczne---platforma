@@ -57,7 +57,7 @@ const TwoFactorAuthPage = () => {
 
   return (
     <div className="min-h-screen bg-[var(--background-color)] flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md">
+      <div className="bg-[var(--background-color)] border border-[var(--border-color)] rounded-xl shadow-2xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <div className="mx-auto bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mb-4 text-indigo-600">
             <ShieldCheckIcon />

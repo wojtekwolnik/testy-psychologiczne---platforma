@@ -16,7 +16,6 @@ export default function BrandingPage() {
     const [localSettings, setLocalSettings] = useState(branding);
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState('');
-    const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
     const [logoError, setLogoError] = useState('');
     const [testEmail, setTestEmail] = useState('wojciech.wolnik@gmail.com');
     const [testEmailStatus, setTestEmailStatus] = useState<{ loading: boolean, message: string, success: boolean }>({ loading: false, message: '', success: false });
@@ -59,7 +58,7 @@ export default function BrandingPage() {
 
     // Sync localSettings when branding context updates (async load from server)
     useEffect(() => {
-        if (branding.lightTheme) {
+        if (branding) {
             setLocalSettings(branding);
         }
     }, [branding]);
@@ -99,42 +98,14 @@ export default function BrandingPage() {
         }));
     };
 
-    // Default palettes for fallback
-    const defaultLightPalette: ThemePalette = { primaryColor: '#0d9488', secondaryColor: '#f8fafc', accentColor: '#2563eb', backgroundColor: '#e2e8f0', textColor: '#1e293b', borderColor: '#cbd5e1', inputBackgroundColor: '#ffffff', inputTextColor: '#1e293b', errorColor: '#dc2626', warningColor: '#f59e0b', successColor: '#16a34a', adminColor: '#7e22ce', adminBackgroundColor: '#f3e8ff', therapistColor: '#0d9488', therapistBackgroundColor: '#ccfbf1', sidebarBackground: '#1e293b', sidebarTextColor: '#f1f5f9', sidebarActiveBackground: '#334155', sidebarActiveText: '#ffffff', sidebarHoverBackground: '#334155', sidebarHoverText: '#ffffff' };
-    const defaultDarkPalette: ThemePalette = { primaryColor: '#2dd4bf', secondaryColor: '#1e293b', accentColor: '#60a5fa', backgroundColor: '#0f172a', textColor: '#e2e8f0', borderColor: '#334155', inputBackgroundColor: '#1e293b', inputTextColor: '#e2e8f0', errorColor: '#f87171', warningColor: '#fbbf24', successColor: '#4ade80', adminColor: '#c084fc', adminBackgroundColor: '#3b0764', therapistColor: '#2dd4bf', therapistBackgroundColor: '#115e59', sidebarBackground: '#020617', sidebarTextColor: '#e2e8f0', sidebarActiveBackground: '#1e293b', sidebarActiveText: '#ffffff', sidebarHoverBackground: '#1e293b', sidebarHoverText: '#ffffff' };
-
     const updateThemeSetting = (key: keyof ThemePalette, value: string) => {
-        const themeKey = themeMode === 'light' ? 'lightTheme' : 'darkTheme';
-        const defaults = themeMode === 'light' ? defaultLightPalette : defaultDarkPalette;
         setLocalSettings(prev => ({
             ...prev,
-            [themeKey]: {
-                ...defaults,
-                ...(prev[themeKey] || {}),
-                [key]: value
-            }
+            [key]: value
         }));
     };
 
-    const getCurrentTheme = (): ThemePalette => {
-        const defaults = themeMode === 'light' ? defaultLightPalette : defaultDarkPalette;
-        const palette = themeMode === 'light' ? localSettings.lightTheme : localSettings.darkTheme;
-
-        // Filter out undefined/null values from palette before merging
-        const cleanPalette: Partial<ThemePalette> = {};
-        if (palette) {
-            Object.entries(palette).forEach(([key, value]) => {
-                if (value !== undefined && value !== null && value !== '') {
-                    cleanPalette[key as keyof ThemePalette] = value;
-                }
-            });
-        }
-
-        // Merge defaults with clean palette values
-        return { ...defaults, ...cleanPalette };
-    };
-
-    const currentPalette = getCurrentTheme();
+    const currentPalette = localSettings;
 
     const updateSmtpSetting = (key: string, value: any) => {
         setLocalSettings(prev => ({
@@ -238,14 +209,6 @@ export default function BrandingPage() {
                                     </div>
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Tryb Domyślny</label>
-                                <select className="w-full p-2 border rounded" value={localSettings.mode || 'system'} onChange={e => updateSetting('mode', e.target.value)}>
-                                    <option value="system">Domyślny Systemu (Auto)</option>
-                                    <option value="light">Jasny (Light)</option>
-                                    <option value="dark">Ciemny (Dark)</option>
-                                </select>
-                            </div>
                         </div>
                     </Tab.Panel>
 
@@ -275,27 +238,10 @@ export default function BrandingPage() {
 
                     {/* Colors Settings */}
                     <Tab.Panel className="bg-white p-6 rounded-lg shadow-sm space-y-8">
-
-                        {/* Theme Toggle for Editing */}
-                        <div className="flex justify-center mb-8 bg-slate-100 p-2 rounded-lg inline-flex self-center mx-auto w-full md:w-auto">
-                            <button
-                                onClick={() => setThemeMode('light')}
-                                className={`flex items-center gap-2 px-6 py-2 rounded-md transition-all ${themeMode === 'light' ? 'bg-white shadow text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                <FaSun /> Edytuj Jasny (Light)
-                            </button>
-                            <button
-                                onClick={() => setThemeMode('dark')}
-                                className={`flex items-center gap-2 px-6 py-2 rounded-md transition-all ${themeMode === 'dark' ? 'bg-slate-800 shadow text-white font-bold' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                <FaMoon /> Edytuj Ciemny (Dark)
-                            </button>
-                        </div>
-
                         {currentPalette ? (
                             <>
                                 <div>
-                                    <h3 className="font-bold text-lg mb-4 text-slate-700 border-b pb-2">Główne Elementy ({themeMode === 'light' ? 'Jasny' : 'Ciemny'})</h3>
+                                    <h3 className="font-bold text-lg mb-4 text-slate-700 border-b pb-2">Główne Elementy</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                         <div>
                                             <label className="block text-sm font-medium text-slate-700 mb-1">Kolor Podstawowy (Primary)</label>

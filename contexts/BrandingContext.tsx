@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect } from 'react';
 import type { BrandingSettings, ThemePalette } from '../components/types';
 import { getBrandingSettings } from '../app/actions/brandingActions';
@@ -23,7 +22,7 @@ const deepMerge = (target: any, source: any) => {
 const baseSettings = {
   appName: 'MindCare Platform',
   logoUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjY0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNFMkU4RjAiIHJ4PSI4IiByeT0iOCIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiM0NzU1NjkiPgogICAgTE9HTwogIDwvdGV4dD4KPC9zdmc+Cg==',
-  fontFamily: `'Inter', sans-serif`,
+  fontFamily: `system-ui, sans-serif`,
   borderRadius: 0.75,
   boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
   chartColors: ['#0d9488', '#2563eb', '#f59e0b', '#dc2626', '#9333ea'],
@@ -60,32 +59,8 @@ const baseSettings = {
   },
 };
 
-// --- Themes --- //
-export const lightPalette: ThemePalette = {
-  primaryColor: '#0d9488',
-  secondaryColor: '#f8fafc',
-  accentColor: '#2563eb',
-  backgroundColor: '#e2e8f0',
-  textColor: '#1e293b',
-  borderColor: '#cbd5e1',
-  inputBackgroundColor: '#ffffff',
-  inputTextColor: '#1e293b',
-  errorColor: '#dc2626',
-  warningColor: '#f59e0b',
-  successColor: '#16a34a',
-  adminColor: '#7e22ce',
-  adminBackgroundColor: '#f3e8ff',
-  therapistColor: '#0d9488',
-  therapistBackgroundColor: '#ccfbf1',
-  sidebarBackground: '#1e293b',
-  sidebarTextColor: '#f1f5f9',
-  sidebarActiveBackground: '#334155',
-  sidebarActiveText: '#ffffff',
-  sidebarHoverBackground: '#334155',
-  sidebarHoverText: '#ffffff',
-};
-
-export const darkPalette: ThemePalette = {
+// --- Unified Default Theme (Dark) --- //
+export const unifiedPalette: ThemePalette = {
   primaryColor: '#2dd4bf',
   secondaryColor: '#1e293b',
   accentColor: '#60a5fa',
@@ -111,23 +86,18 @@ export const darkPalette: ThemePalette = {
 
 const defaultBranding: BrandingSettings = {
   ...baseSettings,
-  mode: 'system',
-  lightTheme: lightPalette,
-  darkTheme: darkPalette,
-  ...lightPalette
+  ...unifiedPalette
 };
 
 // --- Context Definition --- //
 interface BrandingContextType {
   branding: BrandingSettings;
   setBranding: (settings: BrandingSettings) => void;
-  applyTheme: (theme: 'light' | 'dark') => void;
 }
 
 export const BrandingContext = createContext<BrandingContextType>({
   branding: defaultBranding,
   setBranding: () => { },
-  applyTheme: () => { },
 });
 
 
@@ -140,37 +110,29 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       try {
         const serverSettings = await getBrandingSettings();
         if (serverSettings) {
-          const merged = deepMerge(defaultBranding, serverSettings);
-
-          // MIGRATION: If serverSettings has legacy top-level colors but no lightTheme,
-          // copy them into lightTheme to preserve user customization.
-          if (!serverSettings.lightTheme && serverSettings.primaryColor) {
-            console.log("Migrating legacy branding settings to lightTheme...");
-            merged.lightTheme = {
-              primaryColor: serverSettings.primaryColor || lightPalette.primaryColor,
-              secondaryColor: serverSettings.secondaryColor || lightPalette.secondaryColor,
-              accentColor: serverSettings.accentColor || lightPalette.accentColor,
-              backgroundColor: serverSettings.backgroundColor || lightPalette.backgroundColor,
-              textColor: serverSettings.textColor || lightPalette.textColor,
-              borderColor: serverSettings.borderColor || lightPalette.borderColor,
-              inputBackgroundColor: serverSettings.inputBackgroundColor || lightPalette.inputBackgroundColor,
-              inputTextColor: serverSettings.inputTextColor || lightPalette.inputTextColor,
-              errorColor: serverSettings.errorColor || lightPalette.errorColor,
-              warningColor: serverSettings.warningColor || lightPalette.warningColor,
-              successColor: serverSettings.successColor || lightPalette.successColor,
-              adminColor: serverSettings.adminColor || lightPalette.adminColor,
-              adminBackgroundColor: serverSettings.adminBackgroundColor || lightPalette.adminBackgroundColor,
-              therapistColor: serverSettings.therapistColor || lightPalette.therapistColor,
-              therapistBackgroundColor: serverSettings.therapistBackgroundColor || lightPalette.therapistBackgroundColor,
-              sidebarBackground: serverSettings.sidebarBackground || lightPalette.sidebarBackground,
-              sidebarTextColor: serverSettings.sidebarTextColor || lightPalette.sidebarTextColor,
-              sidebarActiveBackground: serverSettings.sidebarActiveBackground || lightPalette.sidebarActiveBackground,
-              sidebarActiveText: serverSettings.sidebarActiveText || lightPalette.sidebarActiveText,
-              sidebarHoverBackground: serverSettings.sidebarHoverBackground || lightPalette.sidebarHoverBackground,
-              sidebarHoverText: serverSettings.sidebarHoverText || lightPalette.sidebarHoverText,
-            };
+          // MIGRATION LOGIC:
+          // If the user had set a custom darkTheme before, pull values from it
+          // to preserve their exact color overrides.
+          let migrationData: Partial<BrandingSettings> = {};
+          
+          if (serverSettings.darkTheme) {
+            console.log("Migrating legacy darkTheme settings...");
+            Object.keys(unifiedPalette).forEach((key) => {
+              const themeKey = key as keyof ThemePalette;
+              if (serverSettings.darkTheme[themeKey]) {
+                migrationData[themeKey] = serverSettings.darkTheme[themeKey];
+              }
+            });
+            // Cleanup legacy fields to prevent issues with deepMerge
+            delete serverSettings.darkTheme;
+            delete serverSettings.lightTheme;
+            delete serverSettings.mode;
           }
-          setBrandingState(merged);
+
+          const merged = deepMerge(defaultBranding, serverSettings);
+          const fullyMerged = { ...merged, ...migrationData };
+          
+          setBrandingState(fullyMerged);
         } else {
           const storedBranding = localStorage.getItem('brandingSettings');
           if (storedBranding) {
@@ -188,12 +150,8 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setBrandingState(newBranding);
   };
 
-  const applyTheme = (theme: 'light' | 'dark') => {
-    // Deprecated - handled by ThemeInjector
-  }
-
   return (
-    <BrandingContext.Provider value={{ branding, setBranding, applyTheme }}>
+    <BrandingContext.Provider value={{ branding, setBranding }}>
       {children}
     </BrandingContext.Provider>
   );

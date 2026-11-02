@@ -188,32 +188,32 @@ const AdminDashboard: React.FC = () => {
             <input type="file" accept=".json" ref={importJsonInputRef} onChange={handleJsonFileSelected} className="hidden" />
             <button
               onClick={() => setIsCreateMenuOpen(prev => !prev)}
-              className="flex items-center gap-2 px-5 py-2 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold rounded-lg shadow-md hover:opacity-90"
+              className="flex items-center gap-2 px-5 py-2 bg-primary text-primary-contrast font-bold rounded-lg shadow-md hover:-translate-y-0.5 hover:shadow-lg transition-all"
             >
               <PlusIcon /> Utwórz Test
             </button>
             {isCreateMenuOpen && (
               <div
-                className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-xl z-50 border border-[var(--border-color)]"
+                className="absolute right-0 mt-2 w-64 bg-surface rounded-xl shadow-2xl z-50 border border-border/50 backdrop-blur-md"
                 style={{ backgroundColor: 'var(--secondary-color, #ffffff)' }}
               >
                 <button
                   onClick={handleCreateNewClick}
-                  className="w-full text-left px-4 py-3 hover:bg-[var(--background-color)] transition-colors text-[var(--text-color)]"
+                  className="w-full text-left px-4 py-3 hover:bg-background transition-colors text-text rounded-t-xl"
                 >
                   <p className="font-semibold">Utwórz nowy</p>
                   <p className="text-xs opacity-70">Zaprojektuj test od zera w edytorze.</p>
                 </button>
                 <button
                   onClick={handleCsvImportClick}
-                  className="w-full text-left px-4 py-3 hover:bg-[var(--background-color)] border-t border-[var(--border-color)] transition-colors text-[var(--text-color)]"
+                  className="w-full text-left px-4 py-3 hover:bg-background border-t border-border/50 transition-colors text-text"
                 >
                   <p className="font-semibold">Importuj (CSV)</p>
                   <p className="text-xs opacity-70">Rekomendowane do tworzenia nowych testów z pliku.</p>
                 </button>
                 <button
                   onClick={handleJsonImportClick}
-                  className="w-full text-left px-4 py-3 hover:bg-[var(--background-color)] border-t border-[var(--border-color)] transition-colors text-[var(--text-color)]"
+                  className="w-full text-left px-4 py-3 hover:bg-background border-t border-border/50 transition-colors text-text rounded-b-xl"
                 >
                   <p className="font-semibold">Importuj (JSON)</p>
                   <p className="text-xs opacity-70">Do przywracania kopii zapasowych i archiwów.</p>
@@ -223,15 +223,15 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-[var(--secondary-color)] rounded-xl shadow-lg overflow-hidden">
-          <div className="p-4 bg-[var(--background-color)] border-b border-[var(--border-color)] flex justify-between items-center">
+        <div className="bg-surface/60 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden border border-border/50">
+          <div className="p-5 bg-background/50 border-b border-border flex justify-between items-center">
             <h2 className="text-xl font-semibold">Istniejące Testy (Najnowsze Wersje)</h2>
             <input
               type="text"
               placeholder="Szukaj testu..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full max-w-xs p-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]"
+              className="w-full max-w-xs p-2.5 pl-10 border border-border rounded-lg bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner"
             />
           </div>
           {isLoading ? (
@@ -250,7 +250,7 @@ const AdminDashboard: React.FC = () => {
                     <div>
                       <h3 className="font-bold text-lg flex items-center gap-2">
                         {test.title}
-                        <span className="text-xs font-mono bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">v{test.version}</span>
+                        <span className="text-xs font-mono bg-primary/10 text-primary px-2.5 py-1 rounded-full border border-primary/20">v{test.version}</span>
                       </h3>
                       <p className="opacity-70 text-sm">
                         {test.sections.reduce((acc, s) => acc + s.questions.length, 0)} Pytań, {test.scales.length} Skal
@@ -278,19 +278,19 @@ const AdminDashboard: React.FC = () => {
                       </div>
                       <button
                         onClick={() => handleShowHistory(test.canonicalId)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-700 font-semibold rounded-md hover:bg-slate-200 text-sm" title="Historia wersji"
+                        className="flex items-center gap-2 px-3 py-2 bg-background border border-border/50 text-text font-semibold rounded-lg hover:bg-border/30 hover:shadow-sm text-sm transition-all" title="Historia wersji"
                       >
                         <ClockIcon />
                       </button>
                       <button
                         onClick={() => handleExport(test.id)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-700 font-semibold rounded-md hover:bg-slate-200 text-sm"
+                        className="flex items-center gap-2 px-3 py-2 bg-background border border-border/50 text-text font-semibold rounded-lg hover:bg-border/30 hover:shadow-sm text-sm transition-all"
                       >
                         <DownloadIcon /> Eksportuj
                       </button>
                       <button
                         onClick={() => router.push(`/admin/test/edit/${test.id}`)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 text-slate-700 font-semibold rounded-md hover:bg-slate-200 text-sm"
+                        className="flex items-center gap-2 px-3 py-2 bg-background border border-border/50 text-text font-semibold rounded-lg hover:bg-border/30 hover:shadow-sm text-sm transition-all"
                       >
                         <EditIcon /> Edytuj
                       </button>
@@ -304,15 +304,15 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {isHistoryModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-          <div className="bg-[var(--secondary-color)] rounded-lg shadow-xl p-6 w-full max-w-2xl text-[var(--text-color)] max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-surface rounded-2xl shadow-2xl p-8 w-full max-w-2xl text-text max-h-[90vh] flex flex-col border border-border/50 animate-scale-in">
             <h2 className="text-2xl font-bold mb-4">Historia Wersji Testu</h2>
             <div className="flex-grow overflow-y-auto pr-2">
               {isHistoryLoading ? (
                 <p>Ładowanie historii...</p>) : historyVersions.length > 0 ? (
                   <div className="space-y-3">
                     {historyVersions.sort((a, b) => b.version - a.version).map(v => (
-                      <div key={v.id} className="bg-[var(--background-color)] p-3 rounded-lg flex justify-between items-center">
+                      <div key={v.id} className="bg-background/80 p-4 rounded-xl flex justify-between items-center border border-border/30 hover:shadow-sm transition-all">
                         <div>
                           <p className="font-semibold">{v.title}</p>
                           <p className="text-sm opacity-70">
@@ -320,8 +320,8 @@ const AdminDashboard: React.FC = () => {
                           </p>
                         </div>
                         <div className="flex gap-2">
-                          <button onClick={() => handleExport(v.id)} className="p-2 hover:bg-slate-200 rounded-full" title="Eksportuj tę wersję"><DownloadIcon /></button>
-                          <button onClick={() => { setIsHistoryModalOpen(false); router.push(`/admin/test/edit/${v.id}`); }} className="p-2 hover:bg-slate-200 rounded-full" title="Edytuj tę wersję"><EditIcon /></button>
+                          <button onClick={() => handleExport(v.id)} className="p-2 hover:bg-primary/10 hover:text-primary rounded-lg transition-colors" title="Eksportuj tę wersję"><DownloadIcon /></button>
+                          <button onClick={() => { setIsHistoryModalOpen(false); router.push(`/admin/test/edit/${v.id}`); }} className="p-2 hover:bg-primary/10 hover:text-primary rounded-lg transition-colors" title="Edytuj tę wersję"><EditIcon /></button>
                         </div>
                       </div>
                     ))}
@@ -331,7 +331,7 @@ const AdminDashboard: React.FC = () => {
               )}
             </div>
             <div className="flex justify-end gap-4 mt-6">
-              <button onClick={() => setIsHistoryModalOpen(false)} className="px-5 py-2 bg-slate-200 text-slate-800 rounded-lg font-semibold">Zamknij</button>
+              <button onClick={() => setIsHistoryModalOpen(false)} className="px-6 py-2.5 bg-background border border-border text-text rounded-xl font-semibold hover:bg-surface transition-colors shadow-sm">Zamknij</button>
             </div>
           </div>
         </div>

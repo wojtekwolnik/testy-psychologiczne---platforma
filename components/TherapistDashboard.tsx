@@ -18,13 +18,13 @@ const InfoTooltip: React.FC<{ id: string, label: string, text: string, activeId:
       <button 
         type="button" 
         onClick={(e) => { e.stopPropagation(); setActiveId(isOpen ? null : id); }}
-        className="w-4 h-4 rounded-full bg-[var(--primary-color)]/20 text-[var(--primary-color)] hover:bg-[var(--primary-color)]/30 text-[11px] font-bold flex items-center justify-center transition-colors shadow-sm"
+        className="w-4 h-4 rounded-full bg-primary/20 text-primary hover:bg-primary/30 text-[11px] font-bold flex items-center justify-center transition-colors shadow-sm"
         title="Więcej informacji"
       >
         ?
       </button>
       {isOpen && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-slate-800 text-white text-xs rounded-lg shadow-2xl border border-slate-700 z-50 animate-in fade-in zoom-in-95 duration-150 pointer-events-auto text-left font-normal">
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-text text-background text-xs rounded-xl shadow-2xl border border-border/50 z-50 animate-fade-in pointer-events-auto text-left font-normal">
           <div className="font-semibold mb-1 text-[var(--primary-contrast-text-color)] flex justify-between items-center border-b border-slate-700 pb-1">
             <span>{label}</span>
             <button onClick={() => setActiveId(null)} className="hover:text-white text-slate-400 font-bold ml-2">✕</button>
@@ -211,14 +211,14 @@ const TherapistDashboard = () => {
         <p className="opacity-80 mb-8">Przeglądaj wyniki, generuj kody dostępu i zarządzaj danymi klientów.</p>
 
         {/* Code Generator */}
-        <div className="bg-[var(--secondary-color)] rounded-xl shadow-lg p-6 mb-8">
+        <div className="bg-surface/60 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden border border-border/50 mb-8 p-6">
           <div className="flex flex-col sm:flex-row items-end gap-4 mb-4">
             <div className="flex-grow w-full sm:w-auto">
               <label htmlFor="test-select" className="block text-xs font-medium text-slate-500 mb-1">
                 Wybierz test
                 <InfoTooltip id="genTest" label="Wybierz test" text="Wybierz test psychologiczny z listy dostępnych narzędzi, do którego chcesz wygenerować jednorazowy kod dostępu dla klienta." activeId={activeTooltip} setActiveId={setActiveTooltip} />
               </label>
-              <select id="test-select" value={selectedTest} onChange={e => setSelectedTest(e.target.value)} className="w-full h-[48px] px-3 py-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]">
+              <select id="test-select" value={selectedTest} onChange={e => setSelectedTest(e.target.value)} className="w-full h-[48px] px-4 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner">
                 {tests.map(t => <option key={t.id} value={t.id}>{t.title} (v{t.version})</option>)}
               </select>
             </div>
@@ -233,7 +233,7 @@ const TherapistDashboard = () => {
                   id="therapist-select"
                   value={selectedTherapistId}
                   onChange={e => setSelectedTherapistId(e.target.value)}
-                  className="w-full h-[48px] px-3 py-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]"
+                  className="w-full h-[48px] px-4 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner"
                 >
                   {therapists.map(t => (
                     <option key={t.id} value={t.id}>
@@ -255,10 +255,10 @@ const TherapistDashboard = () => {
                 value={expiryDate}
                 onChange={e => setExpiryDate(e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
-                className="w-full h-[48px] px-3 py-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]"
+                className="w-full h-[48px] px-4 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner"
               />
             </div>
-            <button onClick={handleGenerateCode} className="flex items-center justify-center gap-2 px-6 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold rounded-lg shadow-md hover:opacity-90 h-[48px] w-full sm:w-auto flex-shrink-0">
+            <button onClick={handleGenerateCode} className="flex items-center justify-center gap-2 px-8 bg-primary text-primary-contrast font-bold rounded-xl shadow-lg hover:shadow-primary/30 hover:-translate-y-1 transition-all h-[48px] w-full sm:w-auto flex-shrink-0">
               <PlusIcon /> Generuj kod
             </button>
           </div>
@@ -267,7 +267,7 @@ const TherapistDashboard = () => {
               <h3 className="text-md font-semibold opacity-80 mb-4">Aktywne kody (ważne i nieużyte)</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="bg-[var(--background-color)] font-semibold opacity-70 border-b border-[var(--border-color)]">
+                  <thead className="bg-background/50 font-semibold border-b border-border">
                     <tr>
                       <th className="p-3">Kod dostępu</th>
                       <th className="p-3">Przypisany Test</th>
@@ -279,17 +279,17 @@ const TherapistDashboard = () => {
                     {activeCodes.filter(c => c && c.code).map(code => {
                       const associatedTest = tests.find(t => t.id === code.testId);
                       return (
-                        <tr key={code.code} className="border-b border-[var(--border-color)]/50 hover:bg-[var(--background-color)]">
+                        <tr key={code.code} className="border-b border-border/50 hover:bg-background/80 transition-colors">
                           <td className="p-3 font-mono font-semibold text-[var(--primary-color)]">{code.code}</td>
                           <td className="p-3">{associatedTest?.title} <span className="text-xs opacity-50">(v{associatedTest?.version})</span></td>
                           <td className="p-3">{new Date(code.expiresAt).toLocaleDateString()}</td>
                           <td className="p-3 flex items-center justify-end gap-2">
-                            <button onClick={() => handleCopyCode(code.code)} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-md transition-colors text-xs" title="Kopiuj do schowka">
+                            <button onClick={() => handleCopyCode(code.code)} className="flex items-center gap-1.5 px-3 py-1.5 bg-background hover:bg-border/30 text-text font-semibold rounded-lg transition-colors shadow-sm text-xs border border-border" title="Kopiuj do schowka">
                               {copySuccess === code.code ? <span className="text-green-600">Skopiowano!</span> : <><ClipboardCopyIcon /> Kopiuj</>}
                             </button>
                             <button
                               onClick={() => setCodeToDelete(code.code)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 font-semibold rounded-md transition-colors text-xs"
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-error/10 hover:bg-error/20 text-error font-semibold rounded-lg transition-colors shadow-sm text-xs border border-error/20"
                               title="Unieważnij ten kod"
                             >
                               <TrashIcon /> Unieważnij
@@ -305,8 +305,8 @@ const TherapistDashboard = () => {
           )}
         </div>
 
-        <div className="bg-[var(--secondary-color)] rounded-xl shadow-lg">
-          <div className="p-4 bg-[var(--background-color)] border-b border-[var(--border-color)] flex flex-col gap-4">
+        <div className="bg-surface/60 backdrop-blur-md rounded-2xl shadow-xl border border-border/50">
+          <div className="p-6 bg-background/50 border-b border-border flex flex-col gap-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold self-center">Ukończone testy</h2>
               <button onClick={clearFilters} className="text-sm text-[var(--primary-color)] font-semibold hover:underline">Wyczyść filtry</button>
@@ -380,7 +380,7 @@ const TherapistDashboard = () => {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left">
-                <thead className="bg-[var(--background-color)] text-sm font-semibold opacity-70">
+                <thead className="bg-background/50 text-sm font-semibold border-b border-border">
                   <tr className="text-[var(--text-color)]">
                     <th className="p-4">Identyfikator Klienta</th>
                     <th className="p-4">Tytuł Testu</th>
@@ -404,7 +404,7 @@ const TherapistDashboard = () => {
                       const urgencyClass = daysLeft <= 0 ? 'text-[var(--error-color)] font-bold' : daysLeft <= 7 ? 'text-[var(--warning-color)]' : '';
 
                       return (
-                        <tr key={result.id} className="border-b border-[var(--border-color)] hover:bg-[var(--background-color)]">
+                        <tr key={result.id} className="border-b border-border/50 hover:bg-background/80 transition-colors">
                           <td className="p-4 font-mono">{result.clientIdentifier}</td>
                           <td className="p-4">{result.testTitle} <span className="text-xs opacity-50">(v{result.testVersion})</span></td>
                           <td className="p-4">{new Date(result.completedAt).toLocaleDateString()}</td>
@@ -413,7 +413,7 @@ const TherapistDashboard = () => {
                           <td className="p-4 flex items-center gap-2">
                             <button
                               onClick={() => router.push(`/report/${result.id}`)} // Updated navigation
-                              className="flex items-center gap-2 px-3 py-1.5 bg-[var(--accent-color)]/20 text-[var(--accent-color)] font-semibold rounded-md hover:bg-[var(--accent-color)]/30 transition-colors text-sm"
+                              className="flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent font-semibold rounded-lg hover:bg-accent/20 transition-all text-sm border border-accent/20"
                             >
                               <ChartBarIcon />
                               Zobacz raport

@@ -47,7 +47,7 @@ const Enable2FAModal: React.FC<{ user: User; onClose: () => void; }> = ({ user, 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-lg text-center">
+      <div className="bg-[var(--background-color)] border border-[var(--border-color)] rounded-lg shadow-xl p-8 w-full max-w-lg text-center">
         <h2 className="text-2xl font-bold mb-4">Konfiguracja Weryfikacji Dwuetapowej (2FA)</h2>
         <p className="text-slate-600 mb-4">Zeskanuj poniższy kod QR za pomocą aplikacji uwierzytelniającej, takiej jak Google Authenticator.</p>
         {qrCode ? (
@@ -132,7 +132,7 @@ const UserManagement: React.FC = () => {
         <h1 className="text-4xl font-bold">Zarządzanie Użytkownikami</h1>
         <button onClick={openAddModal} className="px-5 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 flex items-center gap-2"><PlusIcon /> Dodaj Użytkownika</button>
       </div>
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+      <div className="bg-[var(--background-color)] border border-[var(--border-color)] rounded-xl shadow-lg overflow-hidden">
         <table className="w-full">
           <thead className="bg-gray-50"><tr>
             <th className="p-4 text-left font-semibold text-gray-600">Nazwa</th>
@@ -177,7 +177,7 @@ const UserFormModal: React.FC<{ user: User | null; onSave: (user: User) => void;
   const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); if (!formData.fullName || !formData.email) { alert("Proszę wypełnić wszystkie pola."); return; } onSave(formData as User); };
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-md">
+      <div className="bg-[var(--background-color)] border border-[var(--border-color)] rounded-lg shadow-xl p-8 w-full max-w-md">
         <h2 className="text-2xl font-bold mb-6">{user ? 'Edytuj Użytkownika' : 'Dodaj Użytkownika'}</h2>
         <form onSubmit={handleSubmit}><div className="mb-4"><label className="block text-gray-700 font-semibold mb-2">Imię i Nazwisko</label><input type="text" name="fullName" value={formData.fullName} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" /></div><div className="mb-4"><label className="block text-gray-700 font-semibold mb-2">Adres E-mail</label><input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" /></div><div className="mb-6"><label className="block text-gray-700 font-semibold mb-2">Rola</label><select name="role" value={formData.role} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg bg-white"><option value={UserRole.Admin}>Administrator</option><option value={UserRole.Therapist}>Terapeuta</option></select></div><div className="flex justify-end gap-4"><button type="button" onClick={onClose} className="px-5 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg">Anuluj</button><button type="submit" className="px-5 py-2 bg-blue-600 text-white font-bold rounded-lg">Zapisz</button></div></form>
       </div>

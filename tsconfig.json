@@ -42,6 +42,13 @@
   ],
   "exclude": [
     "node_modules",
-    "_legacy_reference"
+    "_legacy_reference",
+    "tmp_prisma",
+    "query_sqlite.ts",
+    "check_db.ts",
+    "check_users.ts",
+    "create_settings.ts",
+    "create_users.ts",
+    "scratch_db.ts"
   ]
 }

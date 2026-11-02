@@ -91,8 +91,8 @@ const NotificationBell: React.FC<Pick<SideNavProps, 'user' | 'notifications' | '
                 )}
             </button>
             {isOpen && (
-                <div className="fixed top-16 left-64 mt-1 w-80 bg-slate-800 border border-slate-700 rounded-r-lg shadow-2xl z-50 text-white overflow-hidden">
-                    <div className="p-3 font-semibold bg-slate-900 border-b border-slate-700 flex items-center justify-between">
+                <div className="fixed top-16 left-64 mt-1 w-80 bg-sidebar-bg border border-border/50 rounded-xl shadow-2xl z-50 text-sidebar-text overflow-hidden backdrop-blur-md animate-scale-in">
+                    <div className="p-4 font-semibold bg-black/20 border-b border-white/10 flex items-center justify-between">
                         <span>Powiadomienia</span>
                         <button 
                             onClick={() => setIsOpen(false)}
@@ -104,12 +104,12 @@ const NotificationBell: React.FC<Pick<SideNavProps, 'user' | 'notifications' | '
                             </svg>
                         </button>
                     </div>
-                    <div className="max-h-96 overflow-y-auto divide-y divide-slate-700/50 bg-slate-800/95 backdrop-blur">
+                    <div className="max-h-96 overflow-y-auto divide-y divide-white/10 bg-sidebar-bg/95 backdrop-blur">
                         {notifications.length === 0 ? (
                             <p className="p-4 text-sm text-slate-400 text-center py-8">Brak nowych powiadomień.</p>
                         ) : (
                             notifications.map(n => (
-                                <div key={n.id} onClick={() => handleNotificationClick(n)} className={`p-3 transition-colors ${n.context ? 'cursor-pointer hover:bg-slate-700' : ''}`}>
+                                <div key={n.id} onClick={() => handleNotificationClick(n)} className={`p-4 transition-colors ${n.context ? 'cursor-pointer hover:bg-black/20' : ''}`}>
                                     <p className="text-sm font-medium leading-snug">{n.message}</p>
                                     <p className="text-xs text-slate-400 mt-1.5 font-normal">{new Date(n.createdAt).toLocaleString()}</p>
                                 </div>
@@ -156,10 +156,10 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
     };
 
     return (
-        <nav className="w-64 flex flex-col p-4 shadow-lg h-full transition-colors duration-300 relative"
+        <nav className="w-64 flex flex-col p-4 shadow-[4px_0_24px_-4px_rgba(0,0,0,0.1)] h-full transition-colors duration-300 relative z-40"
             style={{ backgroundColor: sidebarColors.bg, color: sidebarColors.text }}>
 
-            <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundColor: branding.primaryColor }}></div>
+
 
             <div className="relative flex items-start justify-between p-2 mb-8 border-b border-white/10 pb-6">
                 <div className="flex flex-col items-start gap-2.5 flex-shrink min-w-0">
@@ -168,7 +168,7 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
                             <img src={branding.logoUrl} alt="Logo" className="h-8 w-auto max-w-[120px] object-contain flex-shrink-0" />
                         </div>
                     ) : (
-                        <div className="h-10 w-10 bg-gradient-to-br from-[var(--primary-color)] to-[var(--accent-color)] rounded-lg flex items-center justify-center text-white font-bold text-lg">
+                        <div className="h-10 w-10 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center text-primary-contrast font-bold text-lg shadow-md">
                             {branding.appName.substring(0, 1)}
                         </div>
                     )}
@@ -211,7 +211,7 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
             <div className="mt-auto relative">
                 <div className="border-t border-gray-700/50 pt-4">
                     <div className="flex items-center gap-3 px-4 py-2 mb-2">
-                        <div className="h-8 w-8 rounded-full bg-slate-600 flex items-center justify-center text-xs">
+                        <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold border border-white/10">
                             {user.username ? user.username.substring(0, 2).toUpperCase() : 'U'}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -221,7 +221,7 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
                     </div>
                     <button
                         onClick={onLogout}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-red-300 hover:bg-slate-700/50 hover:text-red-200 rounded-md transition-colors text-left text-sm"
+                        className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-black/20 hover:text-red-300 rounded-lg transition-all text-left text-sm font-semibold"
                     >
                         <LogoutIcon />
                         <span className="font-medium">Wyloguj</span>

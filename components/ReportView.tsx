@@ -165,8 +165,8 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
     };
 
     return (
-        <div className="bg-gray-100 min-h-screen">
-            <header className="bg-white shadow-sm sticky top-0 z-10 p-4">
+        <div className="min-h-screen text-[var(--text-color)]">
+            <header className="bg-[var(--background-color)] shadow-sm sticky top-0 z-10 p-4 border-b border-[var(--border-color)]">
                 <button onClick={() => router.back()} className="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900">
                     <ChevronLeftIcon />
                     Powrót
@@ -175,7 +175,7 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2 bg-white p-8 rounded-xl shadow-lg">
+                    <div className="lg:col-span-2 bg-[var(--background-color)] border border-[var(--border-color)] p-8 rounded-xl shadow-lg">
                         <div className="border-b pb-6 mb-6">
                             <div className="flex justify-between items-start">
                                 <div>
@@ -258,7 +258,7 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                         </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-xl shadow-lg self-start sticky top-24">
+                    <div className="bg-[var(--background-color)] border border-[var(--border-color)] p-6 rounded-xl shadow-lg self-start sticky top-24">
                         <div className="flex justify-between items-center border-b pb-3 mb-4">
                             <h3 className="text-xl font-semibold text-gray-800">Opcje Raportu</h3>
                             <button
@@ -271,7 +271,7 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                         </div>
                         <div className="mb-4">
                             <label htmlFor="template-select" className="block text-sm font-medium text-gray-700 mb-2">Szablon PDF</label>
-                            <select id="template-select" value={selectedTemplate} onChange={e => setSelectedTemplate(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md bg-white text-gray-900">
+                            <select id="template-select" value={selectedTemplate} onChange={e => setSelectedTemplate(e.target.value)} className="w-full p-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)]">
                                 <option value="default">Domyślny wygląd raportu</option>
                                 {pdfTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                             </select>

@@ -228,7 +228,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ templateId }) => {
             {/* Main Form */}
             <div className="space-y-6">
                 {/* Metadata Section */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div className="bg-[var(--background-color)] border border-[var(--border-color)] p-6 rounded-xl shadow-sm">
                     <h2 className="text-lg font-semibold mb-4 text-slate-700 border-b pb-2">Ustawienia podstawowe</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
@@ -272,7 +272,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ templateId }) => {
                 </div>
 
                 {/* Components Section */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                <div className="bg-[var(--background-color)] border border-[var(--border-color)] p-6 rounded-xl shadow-sm">
                     <div className="flex justify-between items-center mb-4 border-b pb-2">
                         <h2 className="text-lg font-semibold text-slate-700 flex items-center">
                             Komponenty raportu

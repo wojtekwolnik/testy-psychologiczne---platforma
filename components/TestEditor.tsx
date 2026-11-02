@@ -504,7 +504,7 @@ const TestEditor: React.FC = () => {
             <h1 className="text-4xl font-bold mb-6">Edytor Testu</h1>
 
             {/* Metadata Section */}
-            <div className="bg-white p-6 rounded-xl shadow-lg mb-8 border border-slate-200">
+            <div className="bg-[var(--background-color)] border border-[var(--border-color)] p-6 rounded-xl shadow-lg mb-8">
                 <h2 className="text-2xl font-semibold mb-4">Informacje Podstawowe</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="col-span-2">
@@ -718,7 +718,7 @@ const TestEditor: React.FC = () => {
 
             <div className="space-y-8">
                 {test.sections.map((section, sIndex) => (
-                    <div key={section.id} className="bg-white p-6 rounded-xl shadow-lg border border-slate-200">
+                    <div key={section.id} className="bg-[var(--background-color)] border border-[var(--border-color)] p-6 rounded-xl shadow-lg">
                         <div className="flex justify-between items-center mb-6">
                             <input
                                 type="text"
@@ -845,7 +845,7 @@ const TestEditor: React.FC = () => {
                                             <div className="space-y-3 pl-4 border-l-2 border-slate-200">
                                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Odpowiedzi</label>
                                                 {question.options.map((option) => (
-                                                    <div key={option.id} className="bg-white p-4 rounded-lg border border-slate-200">
+                                                    <div key={option.id} className="bg-[var(--background-color)] border border-[var(--border-color)] p-4 rounded-lg">
                                                         <div className="flex items-center gap-3 mb-3">
                                                             <div className="h-4 w-4 rounded-full border-2 border-slate-300"></div>
                                                             <input
@@ -947,7 +947,7 @@ const TestEditor: React.FC = () => {
     /* Generic Help Modal */}
             {helpTopic && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+                    <div className="bg-[var(--background-color)] border border-[var(--border-color)] rounded-xl shadow-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-xl font-bold text-gray-800">
                                 {helpTopic === 'formula' && "Jak tworzyć formuły obliczeniowe?"}

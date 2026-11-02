@@ -100,11 +100,11 @@ const TemplateManager: React.FC = () => {
 
     const renderTemplateTable = (testTemplates: PdfTemplate[], test: Test) => {
         if (testTemplates.length === 0) {
-            return <div className="p-4 text-center text-sm opacity-60 bg-white border-t">Brak zdefiniowanych szablonów dla tego testu.</div>;
+            return <div className="p-4 text-center text-sm opacity-60 bg-[var(--background-color)] border-t border-[var(--border-color)]">Brak zdefiniowanych szablonów dla tego testu.</div>;
         }
 
         return (
-            <div className="overflow-x-auto bg-white border-t border-gray-100">
+            <div className="overflow-x-auto bg-[var(--background-color)] border-t border-[var(--border-color)]">
                 <table className="w-full text-left">
                     <thead className="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider">
                         <tr>
@@ -206,7 +206,7 @@ const TemplateManager: React.FC = () => {
                             const isExpanded = !!expandedGroups[test.id];
 
                             return (
-                                <div key={test.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                                <div key={test.id} className="bg-[var(--background-color)] border border-[var(--border-color)] rounded-xl shadow-sm overflow-hidden">
                                     <button
                                         onClick={() => toggleGroup(test.id)}
                                         className="w-full flex items-center justify-between p-5 hover:bg-slate-50 transition-colors"

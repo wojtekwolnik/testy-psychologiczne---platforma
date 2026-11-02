@@ -56,44 +56,43 @@ const ClientTestConfirmationPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-screen bg-[var(--background-color)]">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[var(--primary-color)]"></div>
+      <div className="flex justify-center items-center h-screen bg-background">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   if (error || !test) {
-    return <div className="p-8 text-center text-[var(--error-color)]">{error || "Nie udało się wczytać testu."}</div>;
+    return <div className="p-8 text-center text-error">{error || "Nie udało się wczytać testu."}</div>;
   }
 
   const questionCount = test.sections.reduce((acc, section) => acc + section.questions.length, 0);
 
   // Dynamically replace placeholders in branding messages
-  const formattedMessage = branding.clientConfirmationMessage
+  const parsedMessage = branding.clientConfirmationMessage
     .replace(/{testTitle}/g, test.title)
     .replace(/{questionCount}/g, String(questionCount))
     .replace(/{testDescription}/g, test.description);
 
-  const formattedTitle = branding.clientConfirmationTitle.replace(/{testTitle}/g, test.title);
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-100 to-slate-200 flex items-center justify-center p-4 transition-all duration-500 text-[var(--text-color)]">
-      <div className="bg-white/70 backdrop-blur-md rounded-2xl shadow-2xl p-8 sm:p-12 text-center max-w-2xl w-full border border-slate-200">
-        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedTitle) }}></h1>
-        <div className="text-base md:text-lg mb-6 prose max-w-none mx-auto opacity-80" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formattedMessage) }}></div>
+    <div className="min-h-screen bg-gradient-to-br from-background via-surface to-background flex items-center justify-center p-4 transition-all duration-500 text-text">
+      <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl rounded-3xl shadow-2xl p-8 sm:p-12 text-center max-w-2xl w-full border border-white/20 dark:border-white/10 animate-fade-in-up">
+        <h1 className="text-3xl font-extrabold mb-4" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(branding.clientConfirmationTitle) }}></h1>
+        <div className="text-text-muted text-lg leading-relaxed mb-6" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(parsedMessage) }}></div>
 
-        <div className="bg-slate-100 border border-slate-300 rounded-lg p-4 my-6">
-          <p className="text-sm text-slate-600">Twój identyfikator testu to:</p>
-          <p className="text-2xl font-mono font-bold tracking-widest text-slate-800 mt-1">{clientCode}</p>
-          <p className="text-xs text-slate-500 mt-2">Ten identyfikator zostanie użyty do zapisania wyników. Terapeuta użyje go do odnalezienia Twojego testu.</p>
+        <div className="bg-surface/50 border border-border/50 rounded-xl p-6 my-8 backdrop-blur-sm shadow-inner">
+          <p className="text-lg font-medium">Test: <span className="text-primary font-bold">{test.title}</span></p>
+          <p className="text-text-muted mt-2">Ilość pytań: <span className="font-semibold text-text">{questionCount}</span></p>
         </div>
 
-        <button
-          onClick={handleStart}
-          className="w-full max-w-xs mx-auto px-8 py-4 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold text-lg rounded-lg shadow-lg hover:opacity-90 transition-all duration-300 hover:shadow-xl"
-        >
-          {branding.clientConfirmationButtonText}
-        </button>
+        <div className="flex justify-center mt-8">
+          <button
+            onClick={handleStart}
+            className="w-full max-w-sm mx-auto px-8 py-4 bg-primary text-primary-contrast font-bold text-lg rounded-xl shadow-lg hover:shadow-primary/30 hover:-translate-y-1 transition-all duration-300"
+          >
+            {branding.clientConfirmationButtonText}
+          </button>
+        </div>
       </div>
     </div>
   );

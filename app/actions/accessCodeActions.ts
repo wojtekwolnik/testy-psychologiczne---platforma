@@ -21,6 +21,7 @@ export async function generateAccessCode(testId: string, expiresAt: Date, therap
     });
 
     revalidatePath('/therapist/dashboard');
+    revalidatePath('/admin/codes');
     return {
         ...accessCode,
         expiresAt: accessCode.expiresAt.toISOString()

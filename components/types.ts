@@ -195,33 +195,33 @@ export interface BrandingSettings {
   clientConfirmationMessage: string;
   clientConfirmationButtonText: string;
 
-  // Modern Theming
-  mode: 'system' | 'light' | 'dark';
-  lightTheme: ThemePalette;
-  darkTheme: ThemePalette;
-
-  // Valid for backward compatibility (optional/deprecated)
-  primaryColor?: string;
-  secondaryColor?: string;
-  accentColor?: string;
-  backgroundColor?: string;
-  textColor?: string;
-  borderColor?: string;
-  inputBackgroundColor?: string;
-  inputTextColor?: string;
-  errorColor?: string;
-  warningColor?: string;
-  successColor?: string;
-  adminColor?: string;
-  adminBackgroundColor?: string;
-  therapistColor?: string;
-  therapistBackgroundColor?: string;
-  sidebarBackground?: string;
-  sidebarTextColor?: string;
-  sidebarActiveBackground?: string;
-  sidebarActiveText?: string;
-  sidebarHoverBackground?: string;
-  sidebarHoverText?: string;
+  // Modern Theming (Flat Palette)
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  backgroundColor: string;
+  textColor: string;
+  borderColor: string;
+  inputBackgroundColor: string;
+  inputTextColor: string;
+  errorColor: string;
+  warningColor: string;
+  successColor: string;
+  adminColor: string;
+  adminBackgroundColor: string;
+  therapistColor: string;
+  therapistBackgroundColor: string;
+  sidebarBackground: string;
+  sidebarTextColor: string;
+  sidebarActiveBackground: string;
+  sidebarActiveText: string;
+  sidebarHoverBackground: string;
+  sidebarHoverText: string;
+  
+  // Legacy fields (optional for typing during migration)
+  mode?: 'system' | 'light' | 'dark';
+  lightTheme?: any;
+  darkTheme?: any;
   
   // PDF Report Branding
   reportLogoUrl?: string;

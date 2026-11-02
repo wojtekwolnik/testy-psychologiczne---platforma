@@ -197,23 +197,22 @@ export default function ClientTestView(props: ClientTestViewProps) {
         }
     };
 
-    if (isLoading) return <div className="flex justify-center items-center h-screen bg-[var(--background-color)]"><div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[var(--primary-color)]"></div></div>;
+    if (isLoading) return <div className="flex justify-center items-center h-screen bg-background"><div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div></div>;
 
     if (isSubmitted && submissionResult && test) {
         return <ClientThankYou result={submissionResult} test={test} />;
     }
 
     if (error) return (
-        <div className="min-h-screen bg-[var(--background-color)] flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-2xl p-12 text-center max-w-lg prose">
-                <h1 className="text-3xl font-bold text-red-600">Wystąpił błąd</h1>
-                <p className="text-lg">{error}</p>
-                <button
-                    onClick={() => router.push('/')}
-                    className="mt-4 no-underline px-6 py-2 bg-slate-600 text-white font-semibold rounded-lg shadow-md hover:opacity-90 transition-colors"
-                >
-                    Powrót do strony głównej
-                </button>
+        <div className="min-h-screen bg-background flex items-center justify-center p-4">
+            <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl shadow-2xl p-12 text-center max-w-lg prose animate-fade-in-up">
+                <h2 className="text-3xl font-bold text-error mb-4">Wystąpił błąd</h2>
+                <p className="text-text-muted text-lg">{error}</p>
+                <div className="mt-8">
+                    <a href="/" className="no-underline px-8 py-3 bg-surface/80 text-text font-bold rounded-xl shadow hover:bg-surface transition-all duration-300 inline-block hover:-translate-y-1">
+                        Powrót do strony głównej
+                    </a>
+                </div>
             </div>
         </div>
     );
@@ -228,20 +227,20 @@ export default function ClientTestView(props: ClientTestViewProps) {
     const progress = totalPages > 1 ? ((currentPage + 1) / totalPages) * 100 : 0;
 
     return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 text-[var(--text-color)]">
-            <div className="w-full max-w-3xl">
-                <div className="bg-white rounded-xl shadow-2xl overflow-hidden border border-slate-200">
-                    <div className="p-8 prose max-w-none">
-                        <h1 className="text-3xl font-bold" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(test.title) }}></h1>
-                        <div className="mt-2 opacity-80" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(test.description) }}></div>
-                        <div className="mt-2 text-sm opacity-60" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(test.instructions) }}></div>
-                    </div>
-
-                    {totalPages > 1 && (
-                        <div className="w-full bg-gray-200 h-2.5">
-                            <div className="bg-green-500 h-2.5" style={{ width: `${progress}%`, transition: 'width 0.5s ease-in-out' }}></div>
+        <div className="min-h-screen bg-gradient-to-br from-background via-surface to-background flex items-center justify-center p-4 text-text transition-all duration-500">
+            <div className="w-full max-w-3xl animate-fade-in-up">
+                <div className="bg-white/40 dark:bg-black/40 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/20 dark:border-white/10">
+                    <div className="px-8 py-6 bg-surface/50 backdrop-blur-sm border-b border-border/50">
+                        <h2 className="text-2xl font-bold text-primary">{test.title}</h2>
+                        <p className="text-text-muted mt-2">Część {currentPage + 1} z {totalPages}</p>
+                        
+                        {/* Progress Bar */}
+                        {totalPages > 1 && (
+                        <div className="mt-4 w-full bg-border/30 rounded-full h-3 overflow-hidden shadow-inner">
+                            <div className="bg-gradient-to-r from-primary to-accent h-3 rounded-full" style={{ width: `${progress}%`, transition: 'width 0.5s ease-in-out' }}></div>
                         </div>
-                    )}
+                        )}
+                    </div>
 
                     <form onSubmit={handleSubmit} className="p-8">
                         <div className="space-y-8">
@@ -265,7 +264,7 @@ export default function ClientTestView(props: ClientTestViewProps) {
                                                                 className="sr-only"
                                                             />
                                                             <div className={`w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full border-2 transition-all font-bold text-lg
-                                                                ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg scale-110' : 'bg-white border-slate-300 text-slate-600 group-hover:border-indigo-400 group-hover:bg-indigo-50'}
+                                                                ${isSelected ? 'bg-primary border-primary text-primary-contrast shadow-lg scale-110' : 'bg-surface border-border text-text group-hover:border-primary/50 group-hover:bg-primary/5'}
                                                             `}>
                                                                 {/* If text is just a number, show it. Otherwise show index + 1 */}
                                                                 {isNumber ? option.text : (idx + 1)}
@@ -280,7 +279,7 @@ export default function ClientTestView(props: ClientTestViewProps) {
                                             </div>
                                         ) : (
                                             q.options.map(option => (
-                                                <label key={option.id} className="flex items-center p-4 rounded-lg border border-slate-300 has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-500 transition-all cursor-pointer shadow-sm">
+                                                <label key={option.id} className="flex items-center p-4 rounded-xl border border-border/50 bg-surface/50 hover:bg-surface has-[:checked]:bg-primary/10 has-[:checked]:border-primary transition-all cursor-pointer shadow-sm hover:shadow-md">
                                                     <input
                                                         type={q.type === 'multiple-select' ? 'checkbox' : 'radio'}
                                                         name={q.id}
@@ -305,21 +304,21 @@ export default function ClientTestView(props: ClientTestViewProps) {
                         <div className="pt-8 flex justify-between items-center">
                             <div>
                                 {currentPage > 0 && (
-                                    <button type="button" onClick={handlePrevPage} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg hover:bg-slate-300 transition-colors">
+                                    <button type="button" onClick={handlePrevPage} className="px-6 py-3 bg-surface border border-border/50 text-text font-semibold rounded-xl shadow-sm hover:bg-border/30 hover:-translate-y-1 transition-all duration-300">
                                         Wstecz
                                     </button>
                                 )}
                             </div>
                             <div>
                                 {currentPage < totalPages - 1 ? (
-                                    <button type="button" onClick={handleNextPage} className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors duration-300">
+                                    <button type="button" onClick={handleNextPage} className="px-8 py-3 bg-primary text-primary-contrast font-bold rounded-xl shadow-lg hover:shadow-primary/30 hover:-translate-y-1 disabled:opacity-50 disabled:hover:translate-y-0 transition-all duration-300">
                                         Dalej
                                     </button>
                                 ) : (
                                     <button
                                         type="submit"
                                         disabled={isSubmitting}
-                                        className="px-8 py-3 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors duration-300"
+                                        className="px-8 py-3 bg-success text-white font-bold rounded-xl shadow-lg hover:shadow-success/30 hover:-translate-y-1 disabled:opacity-50 disabled:hover:translate-y-0 transition-all duration-300"
                                     >
                                         {isSubmitting ? 'Przesyłanie...' : 'Zakończ i prześlij odpowiedzi'}
                                     </button>
