@@ -27,7 +27,6 @@ export async function sendEmail({
         const transporter = nodemailer.createTransport({
             host: smtp.host,
             port: smtp.port,
-            // If port is 465, secure must be true. Otherwise let's use the explicit setting or default to false.
             secure: smtp.port === 465 ? true : !!smtp.secure,
             auth: {
                 user: smtp.username,
@@ -60,16 +59,12 @@ export async function sendTherapistNotification(
     const settings = await getInternalBrandingSettings();
     if (!settings) return;
 
-    const { therapistNotificationSubject, therapistNotificationBody, fromName } = settings.emailSettings;
+    const { therapistNotificationSubject, therapistNotificationBody } = settings.emailSettings;
 
-    // Simple template replacement
     const subject = therapistNotificationSubject
         .replace(/{testTitle}/g, testTitle)
         .replace(/{clientIdentifier}/g, clientIdentifier);
 
-    // Convert newlines to BR if needed, but the template is likely HTML.
-    // We assume the user configures HTML or we wrap plain text.
-    // For now, let's treat the body as HTML with simple replacements.
     const completionDate = new Date().toLocaleDateString('pl-PL');
 
     const htmlBody = therapistNotificationBody

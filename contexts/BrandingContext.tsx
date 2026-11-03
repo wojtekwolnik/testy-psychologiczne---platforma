@@ -23,6 +23,8 @@ const baseSettings = {
   appName: 'Real Moment',
   logoUrl: '/logo-realmoment-light.png',
   reportLogoUrl: '/logo-realmoment-main.png',
+  reportPrimaryColor: '#314293',
+  reportFooterText: 'Real Moment – Przestrzeń Rozwojowa i Diagnostyczna | www.realmoment.pl',
   fontFamily: `'Jost', system-ui, sans-serif`,
   borderRadius: 0.85,
   boxShadow: '0 10px 30px -5px rgba(20, 22, 29, 0.35)',

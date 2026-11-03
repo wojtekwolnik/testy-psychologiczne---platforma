@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useContext } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useContext, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { validateAccessCode } from '@/app/actions/accessCodeActions';
 import { BrandingContext } from '@/contexts/BrandingContext';
 import { SpinnerIcon } from './common/Icons';
@@ -13,7 +13,16 @@ const ClientCodeEntry: React.FC = () => {
     const [clientError, setClientError] = useState('');
 
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { branding } = useContext(BrandingContext);
+
+    useEffect(() => {
+        const urlCode = searchParams.get('code') || searchParams.get('clientCode');
+        if (urlCode && !clientCode) {
+            const normalized = urlCode.trim().toUpperCase();
+            setClientCode(normalized);
+        }
+    }, [searchParams]);
 
     const handleStartTest = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -26,10 +35,6 @@ const ClientCodeEntry: React.FC = () => {
         try {
             const result = await validateAccessCode(clientCode);
             if (result.isValid && result.testId) {
-                // Navigate to the confirmation/start page
-                // We can pass data via URL params or just redirect and let next page fetch
-                // ClientTestConfirmationPage usually expects testId and clientCode.
-                // Let's use URL query params for now as it's simplest for server components or client components reading params.
                 router.push(`/test-confirmation?testId=${result.testId}&clientCode=${clientCode}`);
             } else {
                 setClientError(result.error || 'Nieprawidłowy lub wygasły kod.');
@@ -44,7 +49,7 @@ const ClientCodeEntry: React.FC = () => {
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background via-surface to-background p-4 text-text transition-all duration-500">
             <div className="w-full max-w-md animate-fade-in-up">
-                <main className="bg-[var(--secondary-color)]/60 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl p-8 md:p-12 text-center transition-all duration-300">
+                <main className="bg-[var(--secondary-color)]/80 backdrop-blur-xl border border-border rounded-3xl shadow-2xl p-8 md:p-12 text-center transition-all duration-300">
                     <div className="mb-10 transform transition-transform hover:scale-105 duration-300">
                         {branding.logoUrl && <img src={branding.logoUrl} alt="Logo" className="max-h-20 mx-auto object-contain drop-shadow-md" />}
                     </div>
@@ -60,12 +65,12 @@ const ClientCodeEntry: React.FC = () => {
                                     placeholder="Wpisz swój kod..."
                                     value={clientCode}
                                     onChange={(e) => setClientCode(e.target.value.toUpperCase())}
-                                    className="w-full p-4 text-xl border-2 border-border/50 rounded-xl focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all text-center font-mono tracking-widest bg-input-bg text-input-text shadow-inner"
+                                    className="w-full p-4 text-xl border-2 border-border rounded-xl focus:ring-4 focus:ring-primary/20 focus:border-primary transition-all text-center font-mono tracking-widest bg-input-bg text-input-text shadow-inner"
                                     aria-label="Kod dostępu do testu"
                                 />
                             </div>
                             {clientError && (
-                                <div className="text-error bg-error/10 border border-error/20 rounded-lg p-3 text-sm animate-shake">
+                                <div className="text-error bg-error/10 border border-error/20 rounded-lg p-3 text-sm animate-shake" role="alert">
                                     {clientError}
                                 </div>
                             )}

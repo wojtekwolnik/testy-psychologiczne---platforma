@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { fetchActiveCodes, deleteAccessCode } from '@/app/actions/accessCodeActions';
 import { fetchTests } from '@/app/actions/testActions';
 import { AccessCode, Test } from './types';
-import { ClipboardCopyIcon, TrashIcon } from './common/Icons';
+import { ClipboardCopyIcon, TrashIcon, LinkIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
 
 const AdminCodes = () => {
@@ -13,6 +13,7 @@ const AdminCodes = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [copySuccess, setCopySuccess] = useState<string>('');
+    const [copyLinkSuccess, setCopyLinkSuccess] = useState<string>('');
     const [codeToDelete, setCodeToDelete] = useState<string | null>(null);
 
     // Filters
@@ -41,6 +42,15 @@ const AdminCodes = () => {
         navigator.clipboard.writeText(code).then(() => {
             setCopySuccess(code);
             setTimeout(() => setCopySuccess(''), 2000);
+        });
+    };
+
+    const handleCopyLink = (codeObj: AccessCode) => {
+        const origin = typeof window !== 'undefined' ? window.location.origin : '';
+        const link = `${origin}/test-confirmation?testId=${encodeURIComponent(codeObj.testId)}&clientCode=${encodeURIComponent(codeObj.code)}`;
+        navigator.clipboard.writeText(link).then(() => {
+            setCopyLinkSuccess(codeObj.code);
+            setTimeout(() => setCopyLinkSuccess(''), 2000);
         });
     };
 
@@ -74,12 +84,12 @@ const AdminCodes = () => {
     return (
         <div className="p-8 max-w-7xl mx-auto">
             <h1 className="text-4xl font-bold mb-2">Zarządzanie Kodami Dostępu</h1>
-            <p className="opacity-80 mb-8">Podgląd wszystkich wygenerowanych, ale jeszcze niewykorzystanych kodów na platformie.</p>
+            <p className="opacity-80 mb-8">Podgląd wszystkich wygenerowanych, ale jeszcze niewykorzystanych anonimowych kodów na platformie.</p>
 
-            <div className="bg-[var(--secondary-color)] rounded-xl shadow-lg">
+            <div className="bg-[var(--secondary-color)] rounded-xl shadow-lg border border-[var(--border-color)] overflow-hidden">
                 <div className="p-4 bg-[var(--background-color)] border-b border-[var(--border-color)] flex flex-col sm:flex-row gap-4 items-end">
                     <div className="flex-grow w-full sm:w-auto">
-                        <label className="block text-xs font-medium text-slate-500 mb-1">Szukaj po Kodzie</label>
+                        <label className="block text-xs font-medium text-text-muted mb-1">Szukaj po Kodzie</label>
                         <input
                             type="text"
                             placeholder="Wpisz kod..."
@@ -89,7 +99,7 @@ const AdminCodes = () => {
                         />
                     </div>
                     <div className="flex-grow w-full sm:w-auto">
-                        <label className="block text-xs font-medium text-slate-500 mb-1">Filtruj po Terapeucie</label>
+                        <label className="block text-xs font-medium text-text-muted mb-1">Filtruj po Terapeucie</label>
                         <select
                             value={filterTherapist}
                             onChange={e => setFilterTherapist(e.target.value)}
@@ -138,15 +148,26 @@ const AdminCodes = () => {
                                                     {new Date(code.expiresAt).toLocaleDateString()} {isExpired && '(Wygasł)'}
                                                 </td>
                                                 <td className="p-4 flex items-center justify-end gap-2">
-                                                    <button onClick={() => handleCopyCode(code.code)} className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-md transition-colors text-xs" title="Kopiuj do schowka">
-                                                        {copySuccess === code.code ? <span className="text-green-600">Skopiowano!</span> : <><ClipboardCopyIcon /> Kopiuj</>}
+                                                    <button
+                                                        onClick={() => handleCopyCode(code.code)}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-background hover:bg-border/30 text-text font-semibold rounded-lg transition-colors text-xs border border-border"
+                                                        title="Kopiuj sam kod"
+                                                    >
+                                                        {copySuccess === code.code ? <span className="text-primary">Skopiowano kod!</span> : <><ClipboardCopyIcon className="w-4 h-4" /> Kopiuj kod</>}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleCopyLink(code)}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/15 hover:bg-primary/25 text-primary font-semibold rounded-lg transition-colors text-xs border border-primary/30"
+                                                        title="Kopiuj bezpośredni link do badania (bez konieczności wpisywania kodu przez klienta)"
+                                                    >
+                                                        {copyLinkSuccess === code.code ? <span>Skopiowano link!</span> : <><LinkIcon className="w-4 h-4" /> Kopiuj link</>}
                                                     </button>
                                                     <button
                                                         onClick={() => setCodeToDelete(code.code)}
-                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-600 font-semibold rounded-md transition-colors text-xs"
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-error/10 hover:bg-error/20 text-error font-semibold rounded-lg transition-colors text-xs border border-error/20"
                                                         title="Unieważnij ten kod"
                                                     >
-                                                        <TrashIcon /> Unieważnij
+                                                        <TrashIcon className="w-4 h-4" /> Unieważnij
                                                     </button>
                                                 </td>
                                             </tr>

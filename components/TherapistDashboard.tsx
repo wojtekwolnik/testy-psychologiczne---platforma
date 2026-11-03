@@ -7,7 +7,7 @@ import { generateAccessCode, fetchActiveCodes, deleteAccessCode } from '@/app/ac
 import { fetchTests } from '@/app/actions/testActions';
 import { getUsers, UserData } from '@/app/actions/userActions';
 import { TestResult, Test, AccessCode } from './types';
-import { ChartBarIcon, TrashIcon, PlusIcon, ClipboardCopyIcon } from './common/Icons';
+import { ChartBarIcon, TrashIcon, PlusIcon, ClipboardCopyIcon, LinkIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -24,13 +24,12 @@ const InfoTooltip: React.FC<{ id: string, label: string, text: string, activeId:
         ?
       </button>
       {isOpen && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-text text-background text-xs rounded-xl shadow-2xl border border-border/50 z-50 animate-fade-in pointer-events-auto text-left font-normal">
-          <div className="font-semibold mb-1 text-[var(--primary-contrast-text-color)] flex justify-between items-center border-b border-slate-700 pb-1">
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-surface text-text text-xs rounded-xl shadow-2xl border border-border z-50 animate-fade-in pointer-events-auto text-left font-normal">
+          <div className="font-semibold mb-1 text-primary flex justify-between items-center border-b border-border pb-1">
             <span>{label}</span>
-            <button onClick={() => setActiveId(null)} className="hover:text-white text-slate-400 font-bold ml-2">✕</button>
+            <button onClick={() => setActiveId(null)} className="hover:text-white text-text-muted font-bold ml-2">✕</button>
           </div>
-          <p className="text-slate-200 leading-relaxed mt-1.5">{text}</p>
-          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-800"></div>
+          <p className="text-text-muted leading-relaxed mt-1.5">{text}</p>
         </div>
       )}
     </div>
@@ -48,6 +47,7 @@ const TherapistDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState<string>('');
+  const [copyLinkSuccess, setCopyLinkSuccess] = useState<string>('');
   const [resultToDelete, setResultToDelete] = useState<string | null>(null);
   const [codeToDelete, setCodeToDelete] = useState<string | null>(null);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
@@ -145,11 +145,19 @@ const TherapistDashboard = () => {
     }
   };
 
-
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code).then(() => {
       setCopySuccess(code);
       setTimeout(() => setCopySuccess(''), 2000);
+    });
+  };
+
+  const handleCopyLink = (codeObj: AccessCode) => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const link = `${origin}/test-confirmation?testId=${encodeURIComponent(codeObj.testId)}&clientCode=${encodeURIComponent(codeObj.code)}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setCopyLinkSuccess(codeObj.code);
+      setTimeout(() => setCopyLinkSuccess(''), 2000);
     });
   };
 
@@ -208,15 +216,15 @@ const TherapistDashboard = () => {
     <>
       <div className="p-8 max-w-7xl mx-auto">
         <h1 className="text-4xl font-bold mb-2">{user?.role === 'admin' ? 'Zarządzanie Wynikami' : 'Panel terapeuty'}</h1>
-        <p className="opacity-80 mb-8">Przeglądaj wyniki, generuj kody dostępu i zarządzaj danymi klientów.</p>
+        <p className="opacity-80 mb-8">Przeglądaj wyniki, generuj anonimowe kody dostępu i zarządzaj raportami.</p>
 
         {/* Code Generator */}
         <div className="bg-surface/60 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden border border-border/50 mb-8 p-6">
           <div className="flex flex-col sm:flex-row items-end gap-4 mb-4">
             <div className="flex-grow w-full sm:w-auto">
-              <label htmlFor="test-select" className="block text-xs font-medium text-slate-500 mb-1">
+              <label htmlFor="test-select" className="block text-xs font-medium text-text-muted mb-1">
                 Wybierz test
-                <InfoTooltip id="genTest" label="Wybierz test" text="Wybierz test psychologiczny z listy dostępnych narzędzi, do którego chcesz wygenerować jednorazowy kod dostępu dla klienta." activeId={activeTooltip} setActiveId={setActiveTooltip} />
+                <InfoTooltip id="genTest" label="Wybierz test" text="Wybierz test psychologiczny z listy dostępnych narzędzi, do którego chcesz wygenerować jednorazowy anonimowy kod dostępu dla klienta." activeId={activeTooltip} setActiveId={setActiveTooltip} />
               </label>
               <select id="test-select" value={selectedTest} onChange={e => setSelectedTest(e.target.value)} className="w-full h-[48px] px-4 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner">
                 {tests.map(t => <option key={t.id} value={t.id}>{t.title} (v{t.version})</option>)}
@@ -225,7 +233,7 @@ const TherapistDashboard = () => {
 
             {user?.role === 'admin' && (
               <div className="flex-grow w-full sm:w-auto">
-                <label htmlFor="therapist-select" className="block text-xs font-medium text-slate-500 mb-1">
+                <label htmlFor="therapist-select" className="block text-xs font-medium text-text-muted mb-1">
                   Przypisz do
                   <InfoTooltip id="genTherapist" label="Przypisz do" text="Wybierz terapeutę, do którego konta zostanie przypisany ten kod dostępu oraz późniejszy wynik testu." activeId={activeTooltip} setActiveId={setActiveTooltip} />
                 </label>
@@ -245,7 +253,7 @@ const TherapistDashboard = () => {
             )}
 
             <div className="flex-grow w-full sm:w-auto">
-              <label htmlFor="expiry-date" className="block text-xs font-medium text-slate-500 mb-1">
+              <label htmlFor="expiry-date" className="block text-xs font-medium text-text-muted mb-1">
                 Data ważności
                 <InfoTooltip id="genExpiry" label="Data ważności" text="Określa datę, do której wygenerowany kod dostępu pozostaje aktywny. Po tej dacie klient nie będzie mógł uruchomić testu." activeId={activeTooltip} setActiveId={setActiveTooltip} />
               </label>
@@ -284,15 +292,26 @@ const TherapistDashboard = () => {
                           <td className="p-3">{associatedTest?.title} <span className="text-xs opacity-50">(v{associatedTest?.version})</span></td>
                           <td className="p-3">{new Date(code.expiresAt).toLocaleDateString()}</td>
                           <td className="p-3 flex items-center justify-end gap-2">
-                            <button onClick={() => handleCopyCode(code.code)} className="flex items-center gap-1.5 px-3 py-1.5 bg-background hover:bg-border/30 text-text font-semibold rounded-lg transition-colors shadow-sm text-xs border border-border" title="Kopiuj do schowka">
-                              {copySuccess === code.code ? <span className="text-green-600">Skopiowano!</span> : <><ClipboardCopyIcon /> Kopiuj</>}
+                            <button
+                              onClick={() => handleCopyCode(code.code)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-background hover:bg-border/30 text-text font-semibold rounded-lg transition-colors shadow-sm text-xs border border-border"
+                              title="Kopiuj sam kod"
+                            >
+                              {copySuccess === code.code ? <span className="text-primary">Skopiowano kod!</span> : <><ClipboardCopyIcon className="w-4 h-4" /> Kopiuj kod</>}
+                            </button>
+                            <button
+                              onClick={() => handleCopyLink(code)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/15 hover:bg-primary/25 text-primary font-semibold rounded-lg transition-colors shadow-sm text-xs border border-primary/30"
+                              title="Kopiuj bezpośredni link do badania (bez konieczności wpisywania kodu przez klienta)"
+                            >
+                              {copyLinkSuccess === code.code ? <span>Skopiowano link!</span> : <><LinkIcon className="w-4 h-4" /> Kopiuj link</>}
                             </button>
                             <button
                               onClick={() => setCodeToDelete(code.code)}
                               className="flex items-center gap-1.5 px-3 py-1.5 bg-error/10 hover:bg-error/20 text-error font-semibold rounded-lg transition-colors shadow-sm text-xs border border-error/20"
                               title="Unieważnij ten kod"
                             >
-                              <TrashIcon /> Unieważnij
+                              <TrashIcon className="w-4 h-4" /> Unieważnij
                             </button>
                           </td>
                         </tr>
@@ -311,10 +330,10 @@ const TherapistDashboard = () => {
               <h2 className="text-xl font-semibold self-center">Ukończone testy</h2>
               <button onClick={clearFilters} className="text-sm text-[var(--primary-color)] font-semibold hover:underline">Wyczyść filtry</button>
             </div>
-            <p className="text-xs text-slate-500 max-w-2xl -mt-2">Skorzystaj z poniższych filtrów, aby szybko wyszukać określone wyniki testów według identyfikatora klienta, rodzaju testu lub przedziału czasowego ukończenia.</p>
+            <p className="text-xs text-text-muted max-w-2xl -mt-2">Skorzystaj z poniższych filtrów, aby szybko wyszukać określone wyniki testów według identyfikatora klienta (kodu), rodzaju testu lub przedziału czasowego ukończenia.</p>
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end w-full">
               <div className="sm:col-span-2">
-                <label htmlFor="search-client-id" className="block text-xs font-medium text-slate-500 mb-1">
+                <label htmlFor="search-client-id" className="block text-xs font-medium text-text-muted mb-1">
                   Szukaj po ID klienta
                   <InfoTooltip id="filtClient" label="ID klienta" text="Filtruje listę ukończonych testów według unikalnego, jednorazowego kodu dostępu (ID klienta), który został wygenerowany w sekcji powyżej i przekazany klientowi przed rozpoczęciem testu." activeId={activeTooltip} setActiveId={setActiveTooltip} />
                 </label>
@@ -328,7 +347,7 @@ const TherapistDashboard = () => {
                 />
               </div>
               <div className="sm:col-span-4">
-                <label htmlFor="filter-test-select" className="block text-xs font-medium text-slate-500 mb-1">
+                <label htmlFor="filter-test-select" className="block text-xs font-medium text-text-muted mb-1">
                   Filtruj po teście
                   <InfoTooltip id="filtTest" label="Filtruj po teście" text="Zawęża wyświetlane wyniki na liście wyłącznie do wybranego rodzaju testu psychologicznego." activeId={activeTooltip} setActiveId={setActiveTooltip} />
                 </label>
@@ -346,7 +365,7 @@ const TherapistDashboard = () => {
                 </select>
               </div>
               <div className="sm:col-span-3">
-                <label htmlFor="filter-start-date" className="block text-xs font-medium text-slate-500 mb-1">
+                <label htmlFor="filter-start-date" className="block text-xs font-medium text-text-muted mb-1">
                   Data początkowa
                   <InfoTooltip id="filtStart" label="Data początkowa" text="Filtruje wyniki testów, wyświetlając wyłącznie te ukończone od wskazanej daty włącznie." activeId={activeTooltip} setActiveId={setActiveTooltip} />
                 </label>
@@ -359,7 +378,7 @@ const TherapistDashboard = () => {
                 />
               </div>
               <div className="sm:col-span-3">
-                <label htmlFor="filter-end-date" className="block text-xs font-medium text-slate-500 mb-1">
+                <label htmlFor="filter-end-date" className="block text-xs font-medium text-text-muted mb-1">
                   Data końcowa
                   <InfoTooltip id="filtEnd" label="Data końcowa" text="Filtruje wyniki testów, wyświetlając wyłącznie te ukończone do wskazanej daty włącznie." activeId={activeTooltip} setActiveId={setActiveTooltip} />
                 </label>
@@ -412,7 +431,7 @@ const TherapistDashboard = () => {
                           <td className={`p-4 ${urgencyClass}`}>{daysLeft > 0 ? `${daysLeft} dni` : 'Dziś'}</td>
                           <td className="p-4 flex items-center gap-2">
                             <button
-                              onClick={() => router.push(`/report/${result.id}`)} // Updated navigation
+                              onClick={() => router.push(`/report/${result.id}`)}
                               className="flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent font-semibold rounded-lg hover:bg-accent/20 transition-all text-sm border border-accent/20"
                             >
                               <ChartBarIcon />
@@ -420,7 +439,7 @@ const TherapistDashboard = () => {
                             </button>
                             <button
                               onClick={() => setResultToDelete(result.id)}
-                              className="p-2 opacity-60 hover:bg-red-100 hover:text-[var(--error-color)] rounded-full transition-colors"
+                              className="p-2 opacity-60 hover:bg-error/15 hover:text-[var(--error-color)] rounded-full transition-colors"
                               title="Usuń wynik"
                             >
                               <TrashIcon />

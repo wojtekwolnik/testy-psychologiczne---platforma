@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 const COOKIE_NAME = 'auth_token';
 const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret-for-development-only');
@@ -29,6 +30,14 @@ export async function verifyToken(token: string) {
 }
 
 export async function login(email: string, password: string): Promise<{ success: boolean; user?: User; error?: string; needs2FA?: boolean }> {
+    const rate = checkRateLimit('login', 8, 60_000);
+    if (!rate.allowed) {
+        return {
+            success: false,
+            error: `Zbyt wiele prób logowania. Odczekaj ${rate.retryAfterSeconds} s i spróbuj ponownie.`
+        };
+    }
+
     const user = await prisma.user.findUnique({
         where: { email }
     });

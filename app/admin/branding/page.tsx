@@ -127,7 +127,7 @@ export default function BrandingPage() {
                 <div className="flex gap-4">
                     <button
                         onClick={() => setLocalSettings(branding)} // Reset to last saved
-                        className="px-6 py-2 bg-slate-200 text-slate-700 rounded hover:bg-slate-300 font-bold shadow-sm transition-all"
+                        className="px-6 py-2 bg-slate-200 text-text rounded hover:bg-slate-300 font-bold shadow-sm transition-all"
                     >
                         Anuluj
                     </button>
@@ -143,37 +143,37 @@ export default function BrandingPage() {
             {error && <div className="bg-red-100 text-red-700 p-4 rounded mb-4">{error}</div>}
 
             <Tab.Group>
-                <Tab.List className="flex space-x-1 rounded-xl bg-slate-200 p-1 mb-6">
-                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm font-medium leading-5', selected ? 'bg-white shadow text-[var(--primary-color)]' : 'text-slate-600 hover:bg-white/[0.12] hover:text-slate-800')}>
+                <Tab.List className="flex space-x-1 rounded-xl bg-surface border border-border p-1 mb-6">
+                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-colors', selected ? 'bg-primary shadow text-white' : 'text-text-muted hover:bg-background/60 hover:text-text')}>
                         <div className="flex items-center justify-center gap-2"><FaCog /> Ogólne</div>
                     </Tab>
-                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm font-medium leading-5', selected ? 'bg-white shadow text-[var(--primary-color)]' : 'text-slate-600 hover:bg-white/[0.12] hover:text-slate-800')}>
+                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-colors', selected ? 'bg-primary shadow text-white' : 'text-text-muted hover:bg-background/60 hover:text-text')}>
                         <div className="flex items-center justify-center gap-2"><FaGlobe /> Portal Klienta</div>
                     </Tab>
-                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm font-medium leading-5', selected ? 'bg-white shadow text-[var(--primary-color)]' : 'text-slate-600 hover:bg-white/[0.12] hover:text-slate-800')}>
+                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-colors', selected ? 'bg-primary shadow text-white' : 'text-text-muted hover:bg-background/60 hover:text-text')}>
                         <div className="flex items-center justify-center gap-2"><FaPalette /> Kolorystyka</div>
                     </Tab>
-                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm font-medium leading-5', selected ? 'bg-white shadow text-[var(--primary-color)]' : 'text-slate-600 hover:bg-white/[0.12] hover:text-slate-800')}>
+                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-colors', selected ? 'bg-primary shadow text-white' : 'text-text-muted hover:bg-background/60 hover:text-text')}>
                         <div className="flex items-center justify-center gap-2"><FaEnvelope /> E-mail</div>
                     </Tab>
-                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm font-medium leading-5', selected ? 'bg-white shadow text-[var(--primary-color)]' : 'text-slate-600 hover:bg-white/[0.12] hover:text-slate-800')}>
+                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-colors', selected ? 'bg-primary shadow text-white' : 'text-text-muted hover:bg-background/60 hover:text-text')}>
                         <div className="flex items-center justify-center gap-2"><FaRobot /> AI</div>
                     </Tab>
-                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm font-medium leading-5', selected ? 'bg-white shadow text-[var(--primary-color)]' : 'text-slate-600 hover:bg-white/[0.12] hover:text-slate-800')}>
+                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-colors', selected ? 'bg-primary shadow text-white' : 'text-text-muted hover:bg-background/60 hover:text-text')}>
                         <div className="flex items-center justify-center gap-2"><FaCog /> Raporty PDF</div>
                     </Tab>
                 </Tab.List>
 
                 <Tab.Panels>
                     {/* General Settings */}
-                    <Tab.Panel className="bg-white p-6 rounded-lg shadow-sm space-y-6">
+                    <Tab.Panel className="bg-surface border border-border p-6 rounded-2xl shadow-lg space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Nazwa Aplikacji</label>
-                                <input type="text" className="w-full p-2 border rounded" value={localSettings.appName} onChange={e => updateSetting('appName', e.target.value)} />
+                                <label className="block text-sm font-medium text-text mb-1">Nazwa Aplikacji</label>
+                                <input type="text" className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text" value={localSettings.appName} onChange={e => updateSetting('appName', e.target.value)} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Logo Aplikacji</label>
+                                <label className="block text-sm font-medium text-text mb-1">Logo Aplikacji</label>
                                 <div className="flex items-center gap-4">
                                     {localSettings.logoUrl && (
                                         <div className="relative group">
@@ -192,7 +192,7 @@ export default function BrandingPage() {
                                         </div>
                                     )}
                                     <div className="flex-1">
-                                        <label className="cursor-pointer inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-slate-700 hover:bg-slate-50 shadow-sm transition-all">
+                                        <label className="cursor-pointer inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-text hover:bg-slate-50 shadow-sm transition-all">
                                             <FaUpload className="mr-2" />
                                             {localSettings.logoUrl ? 'Zmień Logo' : 'Wgraj Logo'}
                                             <input
@@ -202,7 +202,7 @@ export default function BrandingPage() {
                                                 onChange={handleLogoUpload}
                                             />
                                         </label>
-                                        <p className="text-xs text-slate-500 mt-1">
+                                        <p className="text-xs text-text-muted mt-1">
                                             Maks. 500KB. Zalecane: PNG, SVG, WebP. (Wymiary ok. 200x50px)
                                         </p>
                                         {logoError && <p className="text-xs text-red-600 mt-1 font-bold">{logoError}</p>}
@@ -213,55 +213,55 @@ export default function BrandingPage() {
                     </Tab.Panel>
 
                     {/* Client Portal Settings */}
-                    <Tab.Panel className="bg-white p-6 rounded-lg shadow-sm space-y-6">
+                    <Tab.Panel className="bg-surface border border-border p-6 rounded-2xl shadow-lg space-y-6">
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Tytuł Strony Logowania</label>
-                                <input type="text" className="w-full p-2 border rounded" value={localSettings.clientPageTitle} onChange={e => updateSetting('clientPageTitle', e.target.value)} />
+                                <label className="block text-sm font-medium text-text mb-1">Tytuł Strony Logowania</label>
+                                <input type="text" className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text" value={localSettings.clientPageTitle} onChange={e => updateSetting('clientPageTitle', e.target.value)} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Opis Strony Logowania</label>
-                                <textarea className="w-full p-2 border rounded" rows={3} value={localSettings.clientPageDescription} onChange={e => updateSetting('clientPageDescription', e.target.value)} />
+                                <label className="block text-sm font-medium text-text mb-1">Opis Strony Logowania</label>
+                                <textarea className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text" rows={3} value={localSettings.clientPageDescription} onChange={e => updateSetting('clientPageDescription', e.target.value)} />
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Tytuł Podziękowania</label>
-                                    <input type="text" className="w-full p-2 border rounded" value={localSettings.clientThankYouTitle} onChange={e => updateSetting('clientThankYouTitle', e.target.value)} />
+                                    <label className="block text-sm font-medium text-text mb-1">Tytuł Podziękowania</label>
+                                    <input type="text" className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text" value={localSettings.clientThankYouTitle} onChange={e => updateSetting('clientThankYouTitle', e.target.value)} />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Wiadomość Podziękowania</label>
-                                    <textarea className="w-full p-2 border rounded" rows={2} value={localSettings.clientThankYouMessage} onChange={e => updateSetting('clientThankYouMessage', e.target.value)} />
+                                    <label className="block text-sm font-medium text-text mb-1">Wiadomość Podziękowania</label>
+                                    <textarea className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text" rows={2} value={localSettings.clientThankYouMessage} onChange={e => updateSetting('clientThankYouMessage', e.target.value)} />
                                 </div>
                             </div>
                         </div>
                     </Tab.Panel>
 
                     {/* Colors Settings */}
-                    <Tab.Panel className="bg-white p-6 rounded-lg shadow-sm space-y-8">
+                    <Tab.Panel className="bg-surface border border-border p-6 rounded-2xl shadow-lg space-y-8">
                         {currentPalette ? (
                             <>
                                 <div>
-                                    <h3 className="font-bold text-lg mb-4 text-slate-700 border-b pb-2">Główne Elementy</h3>
+                                    <h3 className="font-bold text-lg mb-4 text-text border-b pb-2">Główne Elementy</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Kolor Podstawowy (Primary)</label>
+                                            <label className="block text-sm font-medium text-text mb-1">Kolor Podstawowy (Primary)</label>
                                             <div className="flex gap-2">
                                                 <input type="color" className="h-10 w-10 border rounded cursor-pointer" value={currentPalette?.primaryColor || '#0d9488'} onChange={e => updateThemeSetting('primaryColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border rounded uppercase" value={currentPalette?.primaryColor || '#0d9488'} onChange={e => updateThemeSetting('primaryColor', e.target.value)} />
+                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette?.primaryColor || '#0d9488'} onChange={e => updateThemeSetting('primaryColor', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Kolor Akcentu (Accent)</label>
+                                            <label className="block text-sm font-medium text-text mb-1">Kolor Akcentu (Accent)</label>
                                             <div className="flex gap-2">
                                                 <input type="color" className="h-10 w-10 border rounded cursor-pointer" value={currentPalette.accentColor} onChange={e => updateThemeSetting('accentColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border rounded uppercase" value={currentPalette.accentColor} onChange={e => updateThemeSetting('accentColor', e.target.value)} />
+                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.accentColor} onChange={e => updateThemeSetting('accentColor', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Kolor Dodatkowy (Secondary)</label>
+                                            <label className="block text-sm font-medium text-text mb-1">Kolor Dodatkowy (Secondary)</label>
                                             <div className="flex gap-2">
                                                 <input type="color" className="h-10 w-10 border rounded cursor-pointer" value={currentPalette.secondaryColor} onChange={e => updateThemeSetting('secondaryColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border rounded uppercase" value={currentPalette.secondaryColor} onChange={e => updateThemeSetting('secondaryColor', e.target.value)} />
+                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.secondaryColor} onChange={e => updateThemeSetting('secondaryColor', e.target.value)} />
                                             </div>
                                         </div>
                                     </div>
@@ -270,36 +270,36 @@ export default function BrandingPage() {
 
                                 {/* Sidebar Colors */}
                                 <div>
-                                    <h3 className="font-bold text-lg mb-4 text-slate-700 border-b pb-2">Panel Boczny (Sidebar)</h3>
+                                    <h3 className="font-bold text-lg mb-4 text-text border-b pb-2">Panel Boczny (Sidebar)</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Tło Panelu</label>
+                                            <label className="block text-sm font-medium text-text mb-1">Tło Panelu</label>
                                             <div className="flex gap-2">
                                                 <input type="color" className="h-10 w-10 border rounded cursor-pointer" value={currentPalette.sidebarBackground} onChange={e => updateThemeSetting('sidebarBackground', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border rounded uppercase" value={currentPalette.sidebarBackground} onChange={e => updateThemeSetting('sidebarBackground', e.target.value)} />
+                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.sidebarBackground} onChange={e => updateThemeSetting('sidebarBackground', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Kolor Tekstu</label>
+                                            <label className="block text-sm font-medium text-text mb-1">Kolor Tekstu</label>
                                             <div className="flex gap-2">
                                                 <input type="color" className="h-10 w-10 border rounded cursor-pointer" value={currentPalette.sidebarTextColor} onChange={e => updateThemeSetting('sidebarTextColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border rounded uppercase" value={currentPalette.sidebarTextColor} onChange={e => updateThemeSetting('sidebarTextColor', e.target.value)} />
+                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.sidebarTextColor} onChange={e => updateThemeSetting('sidebarTextColor', e.target.value)} />
                                             </div>
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Tło Aktywnego Elementu</label>
+                                            <label className="block text-sm font-medium text-text mb-1">Tło Aktywnego Elementu</label>
                                             <div className="flex gap-2">
                                                 <input type="color" className="h-10 w-10 border rounded cursor-pointer" value={currentPalette.sidebarActiveBackground} onChange={e => updateThemeSetting('sidebarActiveBackground', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border rounded uppercase" value={currentPalette.sidebarActiveBackground} onChange={e => updateThemeSetting('sidebarActiveBackground', e.target.value)} />
+                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.sidebarActiveBackground} onChange={e => updateThemeSetting('sidebarActiveBackground', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Tekst Aktywnego Slementu</label>
+                                            <label className="block text-sm font-medium text-text mb-1">Tekst Aktywnego Slementu</label>
                                             <div className="flex gap-2">
                                                 <input type="color" className="h-10 w-10 border rounded cursor-pointer" value={currentPalette.sidebarActiveText} onChange={e => updateThemeSetting('sidebarActiveText', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border rounded uppercase" value={currentPalette.sidebarActiveText} onChange={e => updateThemeSetting('sidebarActiveText', e.target.value)} />
+                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.sidebarActiveText} onChange={e => updateThemeSetting('sidebarActiveText', e.target.value)} />
                                             </div>
                                         </div>
                                     </div>
@@ -307,27 +307,27 @@ export default function BrandingPage() {
 
                                 {/* Page & Text */}
                                 <div>
-                                    <h3 className="font-bold text-lg mb-4 text-slate-700 border-b pb-2">Tło i Tekst</h3>
+                                    <h3 className="font-bold text-lg mb-4 text-text border-b pb-2">Tło i Tekst</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Tło Strony (Body)</label>
+                                            <label className="block text-sm font-medium text-text mb-1">Tło Strony (Body)</label>
                                             <div className="flex gap-2">
                                                 <input type="color" className="h-10 w-10 border rounded cursor-pointer" value={currentPalette.backgroundColor} onChange={e => updateThemeSetting('backgroundColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border rounded uppercase" value={currentPalette.backgroundColor} onChange={e => updateThemeSetting('backgroundColor', e.target.value)} />
+                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.backgroundColor} onChange={e => updateThemeSetting('backgroundColor', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Główny Kolor Tekstu</label>
+                                            <label className="block text-sm font-medium text-text mb-1">Główny Kolor Tekstu</label>
                                             <div className="flex gap-2">
                                                 <input type="color" className="h-10 w-10 border rounded cursor-pointer" value={currentPalette.textColor} onChange={e => updateThemeSetting('textColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border rounded uppercase" value={currentPalette.textColor} onChange={e => updateThemeSetting('textColor', e.target.value)} />
+                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.textColor} onChange={e => updateThemeSetting('textColor', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Kolor Obramowań</label>
+                                            <label className="block text-sm font-medium text-text mb-1">Kolor Obramowań</label>
                                             <div className="flex gap-2">
                                                 <input type="color" className="h-10 w-10 border rounded cursor-pointer" value={currentPalette.borderColor} onChange={e => updateThemeSetting('borderColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border rounded uppercase" value={currentPalette.borderColor} onChange={e => updateThemeSetting('borderColor', e.target.value)} />
+                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.borderColor} onChange={e => updateThemeSetting('borderColor', e.target.value)} />
                                             </div>
                                         </div>
                                     </div>
@@ -335,20 +335,20 @@ export default function BrandingPage() {
 
                                 {/* Inputs */}
                                 <div>
-                                    <h3 className="font-bold text-lg mb-4 text-slate-700 border-b pb-2">Formularze</h3>
+                                    <h3 className="font-bold text-lg mb-4 text-text border-b pb-2">Formularze</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Tło Pól Input</label>
+                                            <label className="block text-sm font-medium text-text mb-1">Tło Pól Input</label>
                                             <div className="flex gap-2">
                                                 <input type="color" className="h-10 w-10 border rounded cursor-pointer" value={currentPalette.inputBackgroundColor} onChange={e => updateThemeSetting('inputBackgroundColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border rounded uppercase" value={currentPalette.inputBackgroundColor} onChange={e => updateThemeSetting('inputBackgroundColor', e.target.value)} />
+                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.inputBackgroundColor} onChange={e => updateThemeSetting('inputBackgroundColor', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Tekst w Polach</label>
+                                            <label className="block text-sm font-medium text-text mb-1">Tekst w Polach</label>
                                             <div className="flex gap-2">
                                                 <input type="color" className="h-10 w-10 border rounded cursor-pointer" value={currentPalette.inputTextColor} onChange={e => updateThemeSetting('inputTextColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border rounded uppercase" value={currentPalette.inputTextColor} onChange={e => updateThemeSetting('inputTextColor', e.target.value)} />
+                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.inputTextColor} onChange={e => updateThemeSetting('inputTextColor', e.target.value)} />
                                             </div>
                                         </div>
                                     </div>
@@ -356,27 +356,27 @@ export default function BrandingPage() {
 
                                 {/* Status Colors */}
                                 <div>
-                                    <h3 className="font-bold text-lg mb-4 text-slate-700 border-b pb-2">Statusy i Komunikaty</h3>
+                                    <h3 className="font-bold text-lg mb-4 text-text border-b pb-2">Statusy i Komunikaty</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Sukces (Success)</label>
+                                            <label className="block text-sm font-medium text-text mb-1">Sukces (Success)</label>
                                             <div className="flex gap-2">
                                                 <input type="color" className="h-10 w-10 border rounded cursor-pointer" value={currentPalette.successColor} onChange={e => updateThemeSetting('successColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border rounded uppercase" value={currentPalette.successColor} onChange={e => updateThemeSetting('successColor', e.target.value)} />
+                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.successColor} onChange={e => updateThemeSetting('successColor', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Ostrzeżenie (Warning)</label>
+                                            <label className="block text-sm font-medium text-text mb-1">Ostrzeżenie (Warning)</label>
                                             <div className="flex gap-2">
                                                 <input type="color" className="h-10 w-10 border rounded cursor-pointer" value={currentPalette.warningColor} onChange={e => updateThemeSetting('warningColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border rounded uppercase" value={currentPalette.warningColor} onChange={e => updateThemeSetting('warningColor', e.target.value)} />
+                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.warningColor} onChange={e => updateThemeSetting('warningColor', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Błąd (Error)</label>
+                                            <label className="block text-sm font-medium text-text mb-1">Błąd (Error)</label>
                                             <div className="flex gap-2">
                                                 <input type="color" className="h-10 w-10 border rounded cursor-pointer" value={currentPalette.errorColor} onChange={e => updateThemeSetting('errorColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border rounded uppercase" value={currentPalette.errorColor} onChange={e => updateThemeSetting('errorColor', e.target.value)} />
+                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.errorColor} onChange={e => updateThemeSetting('errorColor', e.target.value)} />
                                             </div>
                                         </div>
                                     </div>
@@ -384,30 +384,30 @@ export default function BrandingPage() {
 
                                 {/* Roles */}
                                 <div>
-                                    <h3 className="font-bold text-lg mb-4 text-slate-700 border-b pb-2">Role Użytkowników</h3>
+                                    <h3 className="font-bold text-lg mb-4 text-text border-b pb-2">Role Użytkowników</h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Admin (Kolor)</label>
+                                            <label className="block text-sm font-medium text-text mb-1">Admin (Kolor)</label>
                                             <div className="flex gap-2">
                                                 <input type="color" className="h-10 w-10 border rounded cursor-pointer" value={currentPalette.adminColor} onChange={e => updateThemeSetting('adminColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border rounded uppercase" value={currentPalette.adminColor} onChange={e => updateThemeSetting('adminColor', e.target.value)} />
+                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.adminColor} onChange={e => updateThemeSetting('adminColor', e.target.value)} />
                                             </div>
-                                            <label className="block text-sm font-medium text-slate-700 mt-2 mb-1">Admin (Tło)</label>
+                                            <label className="block text-sm font-medium text-text mt-2 mb-1">Admin (Tło)</label>
                                             <div className="flex gap-2">
                                                 <input type="color" className="h-10 w-10 border rounded cursor-pointer" value={currentPalette.adminBackgroundColor} onChange={e => updateThemeSetting('adminBackgroundColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border rounded uppercase" value={currentPalette.adminBackgroundColor} onChange={e => updateThemeSetting('adminBackgroundColor', e.target.value)} />
+                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.adminBackgroundColor} onChange={e => updateThemeSetting('adminBackgroundColor', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Terapeuta (Kolor)</label>
+                                            <label className="block text-sm font-medium text-text mb-1">Terapeuta (Kolor)</label>
                                             <div className="flex gap-2">
                                                 <input type="color" className="h-10 w-10 border rounded cursor-pointer" value={currentPalette.therapistColor} onChange={e => updateThemeSetting('therapistColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border rounded uppercase" value={currentPalette.therapistColor} onChange={e => updateThemeSetting('therapistColor', e.target.value)} />
+                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.therapistColor} onChange={e => updateThemeSetting('therapistColor', e.target.value)} />
                                             </div>
-                                            <label className="block text-sm font-medium text-slate-700 mt-2 mb-1">Terapeuta (Tło)</label>
+                                            <label className="block text-sm font-medium text-text mt-2 mb-1">Terapeuta (Tło)</label>
                                             <div className="flex gap-2">
                                                 <input type="color" className="h-10 w-10 border rounded cursor-pointer" value={currentPalette.therapistBackgroundColor} onChange={e => updateThemeSetting('therapistBackgroundColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border rounded uppercase" value={currentPalette.therapistBackgroundColor} onChange={e => updateThemeSetting('therapistBackgroundColor', e.target.value)} />
+                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.therapistBackgroundColor} onChange={e => updateThemeSetting('therapistBackgroundColor', e.target.value)} />
                                             </div>
                                         </div>
                                     </div>
@@ -418,7 +418,7 @@ export default function BrandingPage() {
                     </Tab.Panel>
 
                     {/* Email Settings */}
-                    <Tab.Panel className="bg-white p-6 rounded-lg shadow-sm space-y-6">
+                    <Tab.Panel className="bg-surface border border-border p-6 rounded-2xl shadow-lg space-y-6">
                         <div className="flex items-center gap-2 mb-4">
                             <input
                                 type="checkbox"
@@ -427,56 +427,56 @@ export default function BrandingPage() {
                                 onChange={e => updateNestedSetting('emailSettings', 'enabled', e.target.checked)}
                                 className="h-5 w-5"
                             />
-                            <label htmlFor="emailEnabled" className="font-medium text-slate-700">Włącz powiadomienia e-mail</label>
+                            <label htmlFor="emailEnabled" className="font-medium text-text">Włącz powiadomienia e-mail</label>
                         </div>
 
                         <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 ${!localSettings.emailSettings.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Nadawca (Nazwa)</label>
-                                <input type="text" className="w-full p-2 border rounded" value={localSettings.emailSettings.fromName} onChange={e => updateNestedSetting('emailSettings', 'fromName', e.target.value)} />
+                                <label className="block text-sm font-medium text-text mb-1">Nadawca (Nazwa)</label>
+                                <input type="text" className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text" value={localSettings.emailSettings.fromName} onChange={e => updateNestedSetting('emailSettings', 'fromName', e.target.value)} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Nadawca (Email)</label>
-                                <input type="email" className="w-full p-2 border rounded" value={localSettings.emailSettings.fromEmail} onChange={e => updateNestedSetting('emailSettings', 'fromEmail', e.target.value)} />
+                                <label className="block text-sm font-medium text-text mb-1">Nadawca (Email)</label>
+                                <input type="email" className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text" value={localSettings.emailSettings.fromEmail} onChange={e => updateNestedSetting('emailSettings', 'fromEmail', e.target.value)} />
                             </div>
                         </div>
 
                         <h3 className={`font-bold text-lg mt-4 mb-2 ${!localSettings.emailSettings.enabled ? 'opacity-50' : ''}`}>Szablon Powiadomienia dla Terapeuty</h3>
                         <div className={`space-y-4 ${!localSettings.emailSettings.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Temat Wiadomości</label>
-                                <input type="text" className="w-full p-2 border rounded" value={localSettings.emailSettings.therapistNotificationSubject} onChange={e => updateNestedSetting('emailSettings', 'therapistNotificationSubject', e.target.value)} />
+                                <label className="block text-sm font-medium text-text mb-1">Temat Wiadomości</label>
+                                <input type="text" className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text" value={localSettings.emailSettings.therapistNotificationSubject} onChange={e => updateNestedSetting('emailSettings', 'therapistNotificationSubject', e.target.value)} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Treść Wiadomości (HTML)</label>
+                                <label className="block text-sm font-medium text-text mb-1">Treść Wiadomości (HTML)</label>
                                 <textarea className="w-full p-2 border rounded font-mono text-sm" rows={6} value={localSettings.emailSettings.therapistNotificationBody} onChange={e => updateNestedSetting('emailSettings', 'therapistNotificationBody', e.target.value)} />
-                                <p className="text-xs text-slate-500 mt-1">Dostępne zmienne: {`{therapistName}, {clientIdentifier}, {testTitle}, {completionDate}, {reportLink}, {appName}`}</p>
+                                <p className="text-xs text-text-muted mt-1">Dostępne zmienne: {`{therapistName}, {clientIdentifier}, {testTitle}, {completionDate}, {reportLink}, {appName}`}</p>
                             </div>
                         </div>
 
                         <h3 className={`font-bold text-lg mt-4 mb-2 ${!localSettings.emailSettings.enabled ? 'opacity-50' : ''}`}>Konfiguracja SMTP</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Host SMTP</label>
-                                <input type="text" className="w-full p-2 border rounded" value={localSettings.emailSettings.smtp.host} onChange={e => updateSmtpSetting('host', e.target.value)} />
+                                <label className="block text-sm font-medium text-text mb-1">Host SMTP</label>
+                                <input type="text" className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text" value={localSettings.emailSettings.smtp.host} onChange={e => updateSmtpSetting('host', e.target.value)} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Port</label>
-                                <input type="number" className="w-full p-2 border rounded" value={localSettings.emailSettings.smtp.port} onChange={e => updateSmtpSetting('port', parseInt(e.target.value))} />
+                                <label className="block text-sm font-medium text-text mb-1">Port</label>
+                                <input type="number" className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text" value={localSettings.emailSettings.smtp.port} onChange={e => updateSmtpSetting('port', parseInt(e.target.value))} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Użytkownik</label>
-                                <input type="text" className="w-full p-2 border rounded" value={localSettings.emailSettings.smtp.username} onChange={e => updateSmtpSetting('username', e.target.value)} />
+                                <label className="block text-sm font-medium text-text mb-1">Użytkownik</label>
+                                <input type="text" className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text" value={localSettings.emailSettings.smtp.username} onChange={e => updateSmtpSetting('username', e.target.value)} />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Hasło</label>
-                                <input type="password" className="w-full p-2 border rounded" value={localSettings.emailSettings.smtp.password || ''} onChange={e => updateSmtpSetting('password', e.target.value)} placeholder="Zostaw puste aby nie zmieniać" />
+                                <label className="block text-sm font-medium text-text mb-1">Hasło</label>
+                                <input type="password" className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text" value={localSettings.emailSettings.smtp.password || ''} onChange={e => updateSmtpSetting('password', e.target.value)} placeholder="Zostaw puste aby nie zmieniać" />
                             </div>
                         </div>
 
                         <div className={`mt-8 pt-6 border-t border-slate-200 ${!localSettings.emailSettings.enabled ? 'opacity-50 pointer-events-none' : ''}`}>
                             <h3 className="font-bold text-lg mb-2">Test Konfiguracji SMTP</h3>
-                            <p className="text-sm text-slate-500 mb-4">Pamiętaj o zapisaniu ustawień przed wykonaniem testu (test używa danych zapisanych w bazie).</p>
+                            <p className="text-sm text-text-muted mb-4">Pamiętaj o zapisaniu ustawień przed wykonaniem testu (test używa danych zapisanych w bazie).</p>
                             <div className="flex gap-4 items-center">
                                 <input 
                                     type="email" 
@@ -502,7 +502,7 @@ export default function BrandingPage() {
                     </Tab.Panel>
 
                     {/* AI Settings */}
-                    <Tab.Panel className="bg-white p-6 rounded-lg shadow-sm space-y-6">
+                    <Tab.Panel className="bg-surface border border-border p-6 rounded-2xl shadow-lg space-y-6">
                         <div className="flex items-center gap-2 mb-4">
                             <input
                                 type="checkbox"
@@ -511,13 +511,13 @@ export default function BrandingPage() {
                                 onChange={e => updateNestedSetting('aiSettings', 'enabled', e.target.checked)}
                                 className="h-5 w-5"
                             />
-                            <label htmlFor="aiEnabled" className="font-medium text-slate-700">Włącz analizę AI</label>
+                            <label htmlFor="aiEnabled" className="font-medium text-text">Włącz analizę AI</label>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Dostawca</label>
+                                <label className="block text-sm font-medium text-text mb-1">Dostawca</label>
                                 <select
-                                    className="w-full p-2 border rounded"
+                                    className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text"
                                     value={localSettings.aiSettings.provider}
                                     onChange={e => {
                                         const nextProvider = e.target.value;
@@ -538,7 +538,7 @@ export default function BrandingPage() {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Model AI</label>
+                                <label className="block text-sm font-medium text-text mb-1">Model AI</label>
                                 <input
                                     type="text"
                                     list="ai-models-list"
@@ -570,23 +570,23 @@ export default function BrandingPage() {
                                 </datalist>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">API Key (szyfrowany AES-256-GCM)</label>
-                                <input type="password" className="w-full p-2 border rounded" value={localSettings.aiSettings.apiKey} onChange={e => updateNestedSetting('aiSettings', 'apiKey', e.target.value)} />
+                                <label className="block text-sm font-medium text-text mb-1">API Key (szyfrowany AES-256-GCM)</label>
+                                <input type="password" className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text" value={localSettings.aiSettings.apiKey} onChange={e => updateNestedSetting('aiSettings', 'apiKey', e.target.value)} />
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">System Prompt</label>
-                            <textarea className="w-full p-2 border rounded" rows={4} value={localSettings.aiSettings.systemPrompt} onChange={e => updateNestedSetting('aiSettings', 'systemPrompt', e.target.value)} />
-                            <p className="text-xs text-slate-500 mt-1">Instrukcja dla modelu AI opisująca jego rolę i zachowanie.</p>
+                            <label className="block text-sm font-medium text-text mb-1">System Prompt</label>
+                            <textarea className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text" rows={4} value={localSettings.aiSettings.systemPrompt} onChange={e => updateNestedSetting('aiSettings', 'systemPrompt', e.target.value)} />
+                            <p className="text-xs text-text-muted mt-1">Instrukcja dla modelu AI opisująca jego rolę i zachowanie.</p>
                         </div>
                     </Tab.Panel>
 
                     {/* Report Settings */}
-                    <Tab.Panel className="bg-white p-6 rounded-lg shadow-sm space-y-6">
+                    <Tab.Panel className="bg-surface border border-border p-6 rounded-2xl shadow-lg space-y-6">
                         {/* Logo */}
                         <div>
                             <h3 className="text-lg font-semibold flex items-center gap-2 mb-3"><FaImage className="text-blue-500" /> Logo na raportach</h3>
-                            <p className="text-sm text-slate-500 mb-4">Jeśli nie wgrasz osobnego logo dla raportów, system użyje domyślnego logo platformy.</p>
+                            <p className="text-sm text-text-muted mb-4">Jeśli nie wgrasz osobnego logo dla raportów, system użyje domyślnego logo platformy.</p>
                             
                             <div className="flex items-center gap-6">
                                 <div className="w-48 h-32 border-2 border-dashed rounded-lg flex items-center justify-center bg-slate-50 relative overflow-hidden">
@@ -615,7 +615,7 @@ export default function BrandingPage() {
                         {/* Primary Color */}
                         <div>
                             <h3 className="text-lg font-semibold flex items-center gap-2 mb-3"><FaPalette className="text-purple-500" /> Kolor wiodący</h3>
-                            <p className="text-sm text-slate-500 mb-4">Ten kolor będzie używany jako akcent w nagłówkach i przy generowaniu wykresów w pliku PDF.</p>
+                            <p className="text-sm text-text-muted mb-4">Ten kolor będzie używany jako akcent w nagłówkach i przy generowaniu wykresów w pliku PDF.</p>
                             
                             <div className="flex items-center gap-4">
                                 <input 
@@ -638,7 +638,7 @@ export default function BrandingPage() {
                         {/* Footer */}
                         <div>
                             <h3 className="text-lg font-semibold flex items-center gap-2 mb-3"><FaAlignLeft className="text-green-500" /> Stopka strony</h3>
-                            <p className="text-sm text-slate-500 mb-4">Tekst, który będzie drukowany na samym dole każdej strony raportu. Paginacja (numer strony) dodawana jest automatycznie.</p>
+                            <p className="text-sm text-text-muted mb-4">Tekst, który będzie drukowany na samym dole każdej strony raportu. Paginacja (numer strony) dodawana jest automatycznie.</p>
                             
                             <textarea 
                                 value={localSettings.reportFooterText || ''}

@@ -53,7 +53,7 @@ async function drawHeader(ctx: PdfContext, component: ReportComponent, branding:
     ctx.checkNewPage(80);
     const font = ctx.boldFont;
     const normalFont = ctx.regularFont;
-    const pColor = branding.reportPrimaryColor ? hexToRgb(branding.reportPrimaryColor) : rgb(0, 0, 0);
+    const pColor = hexToRgb(branding.reportPrimaryColor || branding.primaryColor || '#314293');
 
     let maxLogoHeight = 0;
 
@@ -130,7 +130,7 @@ async function drawScoresTable(ctx: PdfContext, component: ReportComponent, resu
     ctx.checkNewPage(50);
     const headerFont = ctx.boldFont;
     const bodyFont = ctx.regularFont;
-    const pColor = branding.reportPrimaryColor ? hexToRgb(branding.reportPrimaryColor) : rgb(0, 0, 0);
+    const pColor = hexToRgb(branding.reportPrimaryColor || branding.primaryColor || '#314293');
 
     // Title for the table
     if (component.title) {
@@ -442,7 +442,7 @@ async function drawRichText(ctx: PdfContext, component: ReportComponent, result?
 async function drawInterpretations(ctx: PdfContext, component: ReportComponent, result: TestResult, test: Test, branding: BrandingSettings) {
     ctx.checkNewPage(50);
     const headerFont = ctx.boldFont;
-    const pColor = branding.reportPrimaryColor ? hexToRgb(branding.reportPrimaryColor) : rgb(0, 0, 0);
+    const pColor = hexToRgb(branding.reportPrimaryColor || branding.primaryColor || '#314293');
     
     if (component.title) {
         ctx.page.drawText(safeText(component.title), { x: 50, y: ctx.y, size: 14, font: headerFont, color: pColor });
@@ -483,7 +483,7 @@ async function drawInterpretations(ctx: PdfContext, component: ReportComponent, 
 async function drawTestDescription(ctx: PdfContext, component: ReportComponent, test: Test, branding: BrandingSettings) {
     ctx.checkNewPage(50);
     const headerFont = ctx.boldFont;
-    const pColor = branding.reportPrimaryColor ? hexToRgb(branding.reportPrimaryColor) : rgb(0, 0, 0);
+    const pColor = hexToRgb(branding.reportPrimaryColor || branding.primaryColor || '#314293');
     
     const title = component.title || 'Opis testu';
     ctx.page.drawText(safeText(title), { x: 50, y: ctx.y, size: 14, font: headerFont, color: pColor });
@@ -507,7 +507,7 @@ async function drawAnswersList(ctx: PdfContext, component: ReportComponent, resu
     const headerFont = ctx.boldFont;
     const bodyFont = ctx.regularFont;
     const italicFont = ctx.italicFont;
-    const pColor = branding.reportPrimaryColor ? hexToRgb(branding.reportPrimaryColor) : rgb(0, 0, 0);
+    const pColor = hexToRgb(branding.reportPrimaryColor || branding.primaryColor || '#314293');
     
     const title = component.title || 'Udzielone odpowiedzi';
     ctx.page.drawText(safeText(title), { x: 50, y: ctx.y, size: 14, font: headerFont, color: pColor });
@@ -547,7 +547,7 @@ async function drawAiInterpretation(ctx: PdfContext, component: ReportComponent,
 
     ctx.checkNewPage(50);
     const headerFont = ctx.boldFont;
-    const pColor = branding.reportPrimaryColor ? hexToRgb(branding.reportPrimaryColor) : rgb(0, 0, 0);
+    const pColor = hexToRgb(branding.reportPrimaryColor || branding.primaryColor || '#314293');
     
     const title = component.title || 'Opis zindywidualizowany';
     ctx.page.drawText(safeText(title), { x: 50, y: ctx.y, size: 14, font: headerFont, color: pColor });
@@ -644,7 +644,7 @@ export async function generatePdf(
     if (customInterpretation) {
         ctx.checkNewPage(40);
         const headerFont = ctx.boldFont;
-        const pColor = branding.reportPrimaryColor ? hexToRgb(branding.reportPrimaryColor) : rgb(0, 0, 0);
+        const pColor = hexToRgb(branding.reportPrimaryColor || branding.primaryColor || '#314293');
         ctx.page.drawText(safeText('Interpretacja Terapeuty'), { x: 50, y: ctx.y, size: 14, font: headerFont, color: pColor });
         ctx.moveDown(25);
         await drawRichText(ctx, { id: 'cust-int', type: 'RichText', options: { content: customInterpretation } }, result, test);

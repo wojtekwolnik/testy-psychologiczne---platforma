@@ -5,6 +5,7 @@ import type { AccessCode } from '@/components/types';
 import { revalidatePath } from 'next/cache';
 import crypto from 'crypto';
 import { checkAuth, requireAuth } from './authActions';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 export async function generateAccessCode(testId: string, expiresAt: Date, therapistId: string): Promise<AccessCode> {
     const user = await requireAuth();
@@ -60,6 +61,14 @@ export async function fetchActiveCodes(): Promise<(AccessCode & { therapistName?
 }
 
 export async function validateAccessCode(code: string): Promise<{ isValid: boolean, testId?: string, error?: string }> {
+    const rate = checkRateLimit('access-code', 10, 60_000);
+    if (!rate.allowed) {
+        return {
+            isValid: false,
+            error: `Zbyt wiele prób weryfikacji kodu. Odczekaj ${rate.retryAfterSeconds} s i spróbuj ponownie.`
+        };
+    }
+
     const trimmed = (code || '').trim().toUpperCase();
     if (!trimmed) {
         return { isValid: false, error: 'Proszę wprowadzić kod dostępu.' };
