@@ -47,6 +47,7 @@ export async function fetchTests(): Promise<Test[]> {
 }
 
 export async function fetchTestById(testId: string): Promise<Test | null> {
+    await requireAuth();
     const test = await prisma.test.findUnique({
         where: { id: testId },
         include: {

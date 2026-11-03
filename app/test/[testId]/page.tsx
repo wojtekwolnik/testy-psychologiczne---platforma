@@ -1,14 +1,26 @@
 'use client';
 
+import React, { Suspense } from 'react';
 import ClientTestView from '@/components/ClientTestView';
 import { useSearchParams } from 'next/navigation';
 
-export default function TestPage({ params }: { params: { testId: string } }) {
+function TestPageInner({ testId }: { testId: string }) {
     const searchParams = useSearchParams();
     const clientCode = searchParams.get('clientCode') || '';
-
-    // Casting to any to avoid stubborn build error regarding IntrinsicAttributes
     const View = ClientTestView as any;
+    return <View testId={testId} clientCode={clientCode} />;
+}
 
-    return <View testId={params.testId} clientCode={clientCode} />;
+export default function TestPage({ params }: { params: { testId: string } }) {
+    return (
+        <Suspense
+            fallback={
+                <div className="flex justify-center items-center h-screen bg-background">
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
+                </div>
+            }
+        >
+            <TestPageInner testId={params.testId} />
+        </Suspense>
+    );
 }

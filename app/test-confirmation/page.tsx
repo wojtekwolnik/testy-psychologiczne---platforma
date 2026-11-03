@@ -1,12 +1,18 @@
 'use client';
 
+import React, { Suspense } from 'react';
 import ClientTestConfirmationPage from '@/components/ClientTestConfirmationPage';
-import { useSearchParams } from 'next/navigation';
 
 export default function TestConfirmationPage() {
-    const searchParams = useSearchParams();
-    const testId = searchParams.get('testId');
-    const clientCode = searchParams.get('clientCode');
-
-    return <ClientTestConfirmationPage />;
+    return (
+        <Suspense
+            fallback={
+                <div className="flex justify-center items-center h-screen bg-background">
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
+                </div>
+            }
+        >
+            <ClientTestConfirmationPage />
+        </Suspense>
+    );
 }
