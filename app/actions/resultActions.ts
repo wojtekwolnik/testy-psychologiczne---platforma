@@ -1,21 +1,18 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import type { TestResult, Test, Scale, Question, ClientAnswer, ScoringRule } from '@/components/types';
+import type { TestResult, Test, Scale, Question, ClientAnswer, ScoringRule, PdfTemplate } from '@/components/types';
 import { revalidatePath } from 'next/cache';
-import { generateUniqueId } from '@/utils/idUtils'; // We might need to handle this or let Prisma UUID handle it. 
 import { evaluate } from 'mathjs';
-// Prisma schema uses String @id @default(cuid()) or similar usually. 
-// Let's check schema.
+import { checkAuth, requireAuth } from './authActions';
 
-// Helper for formula evaluation
+// Helper for formula evaluation (supports any alphanumeric scale ID, with or without hyphens)
 const evaluateFormula = (formula: string, availableScores: Record<string, number>): number => {
-    const populatedFormula = formula.replace(/\{(\w+?-\w+?)\}/g, (match, scaleId) => {
+    const populatedFormula = formula.replace(/\{([a-zA-Z0-9_-]+)\}/g, (_match, scaleId) => {
         return availableScores[scaleId]?.toString() || '0';
     });
 
     try {
-        // Safe evaluation using mathjs
         const result = evaluate(populatedFormula);
 
         if (typeof result !== 'number' || !isFinite(result) || isNaN(result)) {
@@ -29,6 +26,7 @@ const evaluateFormula = (formula: string, availableScores: Record<string, number
 };
 
 export async function submitTest(testId: string, answers: Record<string, string[]>, clientIdentifier: string): Promise<TestResult> {
+    const trimmedCode = (clientIdentifier || '').trim().toUpperCase();
 
     // 1. Fetch Test Data
     const test = await prisma.test.findUnique({
@@ -45,7 +43,6 @@ export async function submitTest(testId: string, answers: Record<string, string[
 
     if (!test) throw new Error("Test not found");
 
-    // Deserialize questions (options/scoring are JSON in DB)
     const processedTest = {
         ...test,
         scales: test.scales.map(s => ({ ...s, maxScore: s.maxScore ?? undefined, formula: s.formula ?? undefined })),
@@ -94,7 +91,7 @@ export async function submitTest(testId: string, answers: Record<string, string[
     let iterations = 0;
     let scoresChanged = true;
     const maxIterations = 10;
-    let currentAllScores = { ...standardScores, ...calculatedScores };
+    const currentAllScores: Record<string, number> = { ...standardScores, ...calculatedScores };
 
     while (scoresChanged && iterations < maxIterations) {
         scoresChanged = false;
@@ -118,82 +115,93 @@ export async function submitTest(testId: string, answers: Record<string, string[
     const dbAnswers = JSON.stringify(answers);
     const dbScores = JSON.stringify(finalScores);
 
-    // 3. Handle Therapist ID
-    let therapistId = 'default-therapist-id';
+    // 3. Atomic verification of access code + creation of TestResult
+    const { result, therapistId } = await prisma.$transaction(async (tx) => {
+        let resolvedTherapistId = 'default-therapist-id';
 
-    // Check if code provides therapist linkage
-    if (clientIdentifier) {
-        const code = await prisma.accessCode.findUnique({ where: { code: clientIdentifier } });
-        if (code) {
-            therapistId = code.therapistId;
-            // Mark code as used? Maybe in separate action or here.
-            // Let's assume validation happened before, but we mark used here or after success.
-            await prisma.accessCode.update({ where: { code: clientIdentifier }, data: { isUsed: true } });
+        if (trimmedCode) {
+            const codeRecord = await tx.accessCode.findUnique({ where: { code: trimmedCode } });
+            if (!codeRecord) {
+                throw new Error("Nieprawidłowy kod dostępu.");
+            }
+            if (codeRecord.isUsed) {
+                throw new Error("Ten kod dostępu został już wykorzystany.");
+            }
+            if (new Date() > codeRecord.expiresAt) {
+                throw new Error("Ten kod dostępu wygasł.");
+            }
+            resolvedTherapistId = codeRecord.therapistId;
+            await tx.accessCode.update({
+                where: { code: trimmedCode },
+                data: { isUsed: true }
+            });
         }
-    }
 
-    // Ensure therapist exists to avoid Foreign Key error (Quick Fix for Prototype)
-    const therapist = await prisma.user.findUnique({ where: { id: therapistId } });
-    if (!therapist) {
-        // Create a default user if not exists
-        await prisma.user.create({
+        const therapist = await tx.user.findUnique({ where: { id: resolvedTherapistId } });
+        if (!therapist) {
+            await tx.user.create({
+                data: {
+                    id: resolvedTherapistId,
+                    email: 'default@example.com',
+                    username: 'Default Therapist',
+                    role: 'therapist'
+                }
+            });
+        }
+
+        const createdResult = await tx.testResult.create({
             data: {
-                id: therapistId,
-                email: 'default@example.com',
-                username: 'Default Therapist',
-                role: 'therapist'
+                testId: test.id,
+                therapistId: resolvedTherapistId,
+                clientIdentifier: trimmedCode || clientIdentifier,
+                scores: dbScores,
+                answers: dbAnswers,
+                completedAt: new Date()
             }
         });
-    }
 
-    const result = await prisma.testResult.create({
-        data: {
-            testId: test.id,
-            therapistId: therapistId,
-            clientIdentifier: clientIdentifier,
-            scores: dbScores,
-            answers: dbAnswers,
-            completedAt: new Date()
-        }
+        return { result: createdResult, therapistId: resolvedTherapistId };
     });
 
     // Send Notification Email
     try {
         const therapistUser = await prisma.user.findUnique({ where: { id: therapistId } });
         if (therapistUser && therapistUser.email) {
-            // Dynamically import to avoid circular dep issues if any, though likely fine here.
             const { sendTherapistNotification } = await import('../services/emailService');
-            // We need a report link - constructing it based on result ID
             const reportLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/report/${result.id}`;
 
             await sendTherapistNotification(
                 therapistUser.email,
                 therapistUser.username || 'Terapeuta',
-                clientIdentifier,
+                trimmedCode || clientIdentifier,
                 test.title,
                 reportLink
             );
         }
     } catch (emailError) {
         console.error("Failed to send notification email:", emailError);
-        // Do not fail the submission if email fails
     }
 
     revalidatePath('/therapist/dashboard');
 
     return {
         ...result,
-        testTitle: test.title, // Enrich return object
-        testVersion: test.version, // Enrich return object
+        testTitle: test.title,
+        testVersion: test.version,
         completedAt: result.completedAt.toISOString(),
         scores: JSON.parse(result.scores as string),
         answers: JSON.parse(result.answers as string)
     };
 }
 
-
-
 export async function saveAnalysis(resultId: string, analysis: string): Promise<void> {
+    const user = await requireAuth();
+    const existing = await prisma.testResult.findUnique({ where: { id: resultId } });
+    if (!existing) throw new Error('Result not found');
+    if (user.role !== 'admin' && existing.therapistId !== user.id) {
+        throw new Error('Brak uprawnień do edycji tego raportu.');
+    }
+
     await prisma.testResult.update({
         where: { id: resultId },
         data: { analysis } as any
@@ -202,6 +210,13 @@ export async function saveAnalysis(resultId: string, analysis: string): Promise<
 }
 
 export async function triggerAnalysis(resultId: string): Promise<string | null> {
+    const user = await requireAuth();
+    const existing = await prisma.testResult.findUnique({ where: { id: resultId } });
+    if (!existing) throw new Error('Result not found');
+    if (user.role !== 'admin' && existing.therapistId !== user.id) {
+        throw new Error('Brak uprawnień.');
+    }
+
     const { generateAnalysis } = await import('../services/aiService');
     const analysis = await generateAnalysis(resultId);
     if (analysis) {
@@ -209,8 +224,6 @@ export async function triggerAnalysis(resultId: string): Promise<string | null> 
     }
     return analysis;
 }
-
-import { checkAuth } from './authActions';
 
 export async function fetchResults(): Promise<TestResult[]> {
     const user = await checkAuth();
@@ -224,7 +237,7 @@ export async function fetchResults(): Promise<TestResult[]> {
     const results = await prisma.testResult.findMany({
         where,
         orderBy: { completedAt: 'desc' },
-        include: { test: true } // Include test to get title/version
+        include: { test: true }
     });
 
     return results.map(r => ({
@@ -238,6 +251,13 @@ export async function fetchResults(): Promise<TestResult[]> {
 }
 
 export async function deleteResult(resultId: string): Promise<void> {
+    const user = await requireAuth();
+    const existing = await prisma.testResult.findUnique({ where: { id: resultId } });
+    if (!existing) throw new Error('Result not found');
+    if (user.role !== 'admin' && existing.therapistId !== user.id) {
+        throw new Error('Brak uprawnień do usunięcia tego wyniku.');
+    }
+
     await prisma.testResult.delete({
         where: { id: resultId }
     });
@@ -245,12 +265,16 @@ export async function deleteResult(resultId: string): Promise<void> {
 }
 
 export async function fetchResultById(resultId: string): Promise<TestResult | null> {
+    const user = await requireAuth();
     const result = await prisma.testResult.findUnique({
         where: { id: resultId },
         include: { test: true }
     });
 
     if (!result) return null;
+    if (user.role !== 'admin' && result.therapistId !== user.id) {
+        throw new Error('Brak uprawnień do odczytu tego wyniku.');
+    }
 
     return {
         ...result,
@@ -259,5 +283,85 @@ export async function fetchResultById(resultId: string): Promise<TestResult | nu
         completedAt: result.completedAt.toISOString(),
         scores: JSON.parse(result.scores as string),
         answers: JSON.parse(result.answers as string)
+    };
+}
+
+/**
+ * Single server-side parallel loader for ReportView (eliminates 3-step client waterfall).
+ */
+export async function fetchReportBundle(resultId: string): Promise<{
+    result: TestResult;
+    test: Test;
+    templates: PdfTemplate[];
+} | null> {
+    const user = await requireAuth();
+    const resultRecord = await prisma.testResult.findUnique({
+        where: { id: resultId },
+        include: {
+            test: {
+                include: {
+                    scales: true,
+                    sections: {
+                        include: { questions: true }
+                    }
+                }
+            }
+        }
+    });
+
+    if (!resultRecord) return null;
+    if (user.role !== 'admin' && resultRecord.therapistId !== user.id) {
+        throw new Error('Brak uprawnień do tego raportu.');
+    }
+
+    const rawTemplates = await prisma.pdfTemplate.findMany({
+        where: { test: { canonicalId: resultRecord.test.canonicalId } },
+        include: { test: { select: { canonicalId: true } } }
+    });
+
+    const t = resultRecord.test;
+    const serializedTest: Test = {
+        ...t,
+        status: (t.status as 'DRAFT' | 'PUBLISHED') || 'DRAFT',
+        createdAt: t.createdAt.toISOString(),
+        scales: t.scales.map(s => ({
+            ...s,
+            type: s.type as Scale['type'],
+            description: s.description || '',
+            maxScore: s.maxScore ?? undefined,
+            formula: s.formula ?? undefined,
+            levels: s.levels ? JSON.parse(s.levels) : undefined,
+        })),
+        sections: t.sections.map(sec => ({
+            ...sec,
+            questions: sec.questions.map(q => ({
+                ...q,
+                type: q.type as Question['type'],
+                options: JSON.parse(q.options),
+                scoring: JSON.parse(q.scoring),
+            })),
+        })),
+    };
+
+    const serializedResult: TestResult = {
+        ...resultRecord,
+        analysis: resultRecord.analysis ?? undefined,
+        testTitle: t.title,
+        testVersion: t.version,
+        completedAt: resultRecord.completedAt.toISOString(),
+        scores: JSON.parse(resultRecord.scores as string),
+        answers: JSON.parse(resultRecord.answers as string),
+    };
+
+    const serializedTemplates: PdfTemplate[] = rawTemplates.map(tpl => ({
+        ...tpl,
+        testCanonicalId: tpl.test.canonicalId,
+        components: JSON.parse(tpl.components as string),
+    }));
+
+    return {
+        result: serializedResult,
+        test: serializedTest,
+        templates: serializedTemplates,
     };
 }

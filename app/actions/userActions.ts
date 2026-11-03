@@ -5,11 +5,13 @@ import type { User } from '@/components/types';
 import { UserRole } from '@/components/types';
 import { revalidatePath } from 'next/cache';
 import bcrypt from 'bcryptjs';
+import { checkAuth, requireAuth } from './authActions';
 
 // Backwards-compatible type alias for consumers that still reference UserData
 export type UserData = User;
 
 export async function getAllUsers(): Promise<User[]> {
+    await requireAuth('admin');
     try {
         const users = await prisma.user.findMany({
             select: {
@@ -31,7 +33,8 @@ export async function getAllUsers(): Promise<User[]> {
             fullName: user.username || '',
             role: user.role as UserRole,
             createdAt: user.createdAt.toISOString(),
-            twoFactorSecret: user.twoFactorSecret || undefined,
+            // Never expose raw TOTP secret to client
+            twoFactorSecret: user.twoFactorSecret ? 'enabled' : undefined,
         }));
     } catch (error) {
         console.error('Failed to fetch users:', error);
@@ -40,11 +43,9 @@ export async function getAllUsers(): Promise<User[]> {
 }
 
 export async function deleteUser(userId: string): Promise<void> {
+    const currentUser = await requireAuth('admin');
     try {
-        const { checkAuth } = await import('./authActions');
-        const currentUser = await checkAuth();
-
-        if (currentUser && currentUser.id === userId) {
+        if (currentUser.id === userId) {
             throw new Error('Nie możesz usunąć własnego konta.');
         }
 
@@ -73,6 +74,7 @@ export async function deleteUser(userId: string): Promise<void> {
 }
 
 export async function saveUser(user: Partial<User>, hashedPassword?: string): Promise<User> {
+    await requireAuth('admin');
     try {
         const dataToSave = {
             email: user.email!,
@@ -82,14 +84,12 @@ export async function saveUser(user: Partial<User>, hashedPassword?: string): Pr
 
         let savedUser;
         if (user.id) {
-            // Update — never touch the password unless explicitly provided
             savedUser = await prisma.user.update({
                 where: { id: user.id },
                 data: dataToSave,
                 select: { id: true, email: true, username: true, role: true, createdAt: true, twoFactorSecret: true },
             });
         } else {
-            // Create — require a hashed password
             if (!hashedPassword) throw new Error('Password is required when creating a new user');
             savedUser = await prisma.user.create({
                 data: { ...dataToSave, password: hashedPassword },
@@ -106,7 +106,7 @@ export async function saveUser(user: Partial<User>, hashedPassword?: string): Pr
             fullName: savedUser.username || '',
             role: savedUser.role as UserRole,
             createdAt: savedUser.createdAt.toISOString(),
-            twoFactorSecret: savedUser.twoFactorSecret || undefined,
+            twoFactorSecret: savedUser.twoFactorSecret ? 'enabled' : undefined,
         };
     } catch (error) {
         console.error('Failed to save user:', error);
@@ -114,10 +114,10 @@ export async function saveUser(user: Partial<User>, hashedPassword?: string): Pr
     }
 }
 
-// Backwards-compatible aliases
 export const getUsers = getAllUsers;
 
 export async function createUser(data: { email: string; username: string; password: string; role: 'admin' | 'therapist' }): Promise<User> {
+    await requireAuth('admin');
     const hashedPassword = await bcrypt.hash(data.password, 10);
     return saveUser({
         email: data.email,
@@ -129,7 +129,6 @@ export async function createUser(data: { email: string; username: string; passwo
 
 export async function updateUserPassword(userId: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
     try {
-        const { checkAuth } = await import('./authActions');
         const currentUser = await checkAuth();
 
         if (!currentUser) {
@@ -163,7 +162,6 @@ export async function updateUserDetails(
     data: { username: string; email: string; role?: 'admin' | 'therapist'; password?: string }
 ): Promise<{ success: boolean; user?: User; error?: string }> {
     try {
-        const { checkAuth } = await import('./authActions');
         const currentUser = await checkAuth();
 
         if (!currentUser || (currentUser.role !== 'admin' && currentUser.id !== userId)) {
@@ -189,7 +187,7 @@ export async function updateUserDetails(
         const updated = await prisma.user.update({
             where: { id: userId },
             data: updateData,
-            select: { id: true, email: true, username: true, role: true, createdAt: true, twoFactorSecret: true },
+            select: { id: true, email: true, username: true, createdAt: true, role: true, twoFactorSecret: true },
         });
 
         revalidatePath('/admin/users');
@@ -203,7 +201,7 @@ export async function updateUserDetails(
                 fullName: updated.username || '',
                 role: updated.role as UserRole,
                 createdAt: updated.createdAt.toISOString(),
-                twoFactorSecret: updated.twoFactorSecret || undefined,
+                twoFactorSecret: updated.twoFactorSecret ? 'enabled' : undefined,
             },
         };
     } catch (error: any) {

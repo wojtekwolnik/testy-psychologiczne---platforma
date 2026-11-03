@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { BoldIcon, ItalicIcon, UnderlineIcon, LinkIcon } from './Icons';
 import DOMPurify from 'isomorphic-dompurify';
 
@@ -18,27 +18,56 @@ interface RichTextInputProps {
 
 const RichTextInput: React.FC<RichTextInputProps> = ({ value, onChange, label, placeholder, availableTags }) => {
     const editorRef = useRef<HTMLDivElement>(null);
+    const lastEmittedValueRef = useRef<string>(value);
+
+    // Synchronize external value changes without resetting cursor position during active typing
+    useEffect(() => {
+        if (!editorRef.current) return;
+        const sanitized = DOMPurify.sanitize(value || '');
+        const isFocused = document.activeElement === editorRef.current;
+
+        if (!isFocused && editorRef.current.innerHTML !== sanitized) {
+            editorRef.current.innerHTML = sanitized;
+            lastEmittedValueRef.current = value || '';
+        } else if (isFocused && value !== lastEmittedValueRef.current) {
+            // External programmatic update while focused (e.g. AI generation replaced text)
+            editorRef.current.innerHTML = sanitized;
+            lastEmittedValueRef.current = value || '';
+        }
+    }, [value]);
 
     const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
-        onChange(e.currentTarget.innerHTML);
+        const html = e.currentTarget.innerHTML;
+        lastEmittedValueRef.current = html;
+        onChange(html);
+    };
+
+    const emitCurrentContent = () => {
+        if (!editorRef.current) return;
+        const html = editorRef.current.innerHTML;
+        lastEmittedValueRef.current = html;
+        onChange(html);
     };
 
     const applyFormat = (command: string) => {
-        document.execCommand(command, false);
         editorRef.current?.focus();
+        document.execCommand(command, false);
+        emitCurrentContent();
     };
 
     const applyLink = () => {
         const url = prompt("Wprowadź adres URL linku:", 'https://');
         if (url) {
+            editorRef.current?.focus();
             document.execCommand('createLink', false, url);
+            emitCurrentContent();
         }
-        editorRef.current?.focus();
     };
 
     const insertTag = (tag: string) => {
-        document.execCommand('insertText', false, `{${tag}}`);
         editorRef.current?.focus();
+        document.execCommand('insertText', false, `{${tag}}`);
+        emitCurrentContent();
     };
 
     const FormatButton: React.FC<{ onClick: () => void; children: React.ReactNode, title: string }> = ({ onClick, children, title }) => (
@@ -90,14 +119,14 @@ const RichTextInput: React.FC<RichTextInputProps> = ({ value, onChange, label, p
                 <div
                     ref={editorRef}
                     contentEditable
+                    suppressContentEditableWarning
                     onInput={handleInput}
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(value) }}
                     data-placeholder={placeholder}
                     className="w-full p-4 min-h-[120px] max-h-[400px] overflow-y-auto text-[var(--input-text-color)] prose prose-sm max-w-none focus:outline-none bg-[var(--input-background-color)]"
                     style={{ minHeight: '120px' }}
                 />
             </div>
-            <p className="text-xs text-gray-400 mt-1 text-right">Edytor tekstu bogatego (Legacy Mode)</p>
+            <p className="text-xs text-gray-400 mt-1 text-right">Edytor tekstu bogatego</p>
         </div>
     );
 };

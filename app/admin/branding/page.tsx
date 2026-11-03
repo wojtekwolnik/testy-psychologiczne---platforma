@@ -513,17 +513,64 @@ export default function BrandingPage() {
                             />
                             <label htmlFor="aiEnabled" className="font-medium text-slate-700">Włącz analizę AI</label>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 mb-1">Dostawca</label>
-                                <select className="w-full p-2 border rounded" value={localSettings.aiSettings.provider} onChange={e => updateNestedSetting('aiSettings', 'provider', e.target.value)}>
+                                <select
+                                    className="w-full p-2 border rounded"
+                                    value={localSettings.aiSettings.provider}
+                                    onChange={e => {
+                                        const nextProvider = e.target.value;
+                                        updateNestedSetting('aiSettings', 'provider', nextProvider);
+                                        const defaultModels: Record<string, string> = {
+                                            gemini: 'gemini-2.5-flash',
+                                            openai: 'gpt-4o-mini',
+                                            anthropic: 'claude-sonnet-4-20250514',
+                                        };
+                                        if (defaultModels[nextProvider]) {
+                                            updateNestedSetting('aiSettings', 'model', defaultModels[nextProvider]);
+                                        }
+                                    }}
+                                >
                                     <option value="gemini">Google Gemini</option>
                                     <option value="openai">OpenAI (GPT)</option>
                                     <option value="anthropic">Anthropic (Claude)</option>
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">API Key</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Model AI</label>
+                                <input
+                                    type="text"
+                                    list="ai-models-list"
+                                    placeholder="np. gemini-2.5-flash"
+                                    className="w-full p-2 border rounded font-mono text-sm"
+                                    value={localSettings.aiSettings.model || ''}
+                                    onChange={e => updateNestedSetting('aiSettings', 'model', e.target.value)}
+                                />
+                                <datalist id="ai-models-list">
+                                    {localSettings.aiSettings.provider === 'gemini' && (
+                                        <>
+                                            <option value="gemini-2.5-flash" />
+                                            <option value="gemini-2.5-pro" />
+                                        </>
+                                    )}
+                                    {localSettings.aiSettings.provider === 'openai' && (
+                                        <>
+                                            <option value="gpt-4o-mini" />
+                                            <option value="gpt-4o" />
+                                            <option value="gpt-4.1-mini" />
+                                        </>
+                                    )}
+                                    {localSettings.aiSettings.provider === 'anthropic' && (
+                                        <>
+                                            <option value="claude-sonnet-4-20250514" />
+                                            <option value="claude-3-7-sonnet-latest" />
+                                        </>
+                                    )}
+                                </datalist>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">API Key (szyfrowany AES-256-GCM)</label>
                                 <input type="password" className="w-full p-2 border rounded" value={localSettings.aiSettings.apiKey} onChange={e => updateNestedSetting('aiSettings', 'apiKey', e.target.value)} />
                             </div>
                         </div>

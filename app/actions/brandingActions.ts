@@ -3,6 +3,7 @@
 import { BrandingSettings } from '@/components/types';
 import { sendEmail } from '@/app/services/emailService';
 import { getInternalBrandingSettings, saveInternalBrandingSettings } from '@/app/services/settingsService';
+import { requireAuth } from './authActions';
 
 const MASK_STRING = '********';
 
@@ -27,6 +28,7 @@ export async function getBrandingSettings(): Promise<BrandingSettings | null> {
 }
 
 export async function saveBrandingSettings(settings: BrandingSettings): Promise<void> {
+    await requireAuth('admin');
     try {
         const existingSettings = await getInternalBrandingSettings();
 
@@ -48,11 +50,12 @@ export async function saveBrandingSettings(settings: BrandingSettings): Promise<
 }
 
 export async function sendTestEmailAction(toEmail: string): Promise<{ success: boolean; message: string }> {
+    await requireAuth('admin');
     try {
         const result = await sendEmail({
             to: toEmail,
-            subject: 'Wiadomość testowa z Platformy',
-            html: '<p>Witaj!</p><p>To jest automatyczna wiadomość testowa wysłana z panelu administratora.</p><p>Jeśli ją widzisz, oznacza to, że konfiguracja SMTP działa poprawnie!</p>',
+            subject: 'Wiadomość testowa z Platformy Real Moment',
+            html: '<p>Witaj!</p><p>To jest automatyczna wiadomość testowa wysłana z panelu administratora Real Moment.</p><p>Jeśli ją widzisz, oznacza to, że konfiguracja SMTP działa poprawnie!</p>',
         });
 
         if (result.success) {

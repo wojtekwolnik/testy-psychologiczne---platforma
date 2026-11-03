@@ -1,15 +1,13 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { User, UserRole } from '../components/types';
 import { login as authLogin, logout as authLogout, checkAuth, verify2FA as authVerify2FA } from '@/app/actions/authActions';
 
-// --- Type Definitions ---
-
 interface AuthContextValue {
   user: User | null;
-  userFor2FA: User | null; // User pending 2FA verification
+  userFor2FA: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   verify2FA: (code: string) => Promise<void>;
@@ -17,19 +15,17 @@ interface AuthContextValue {
   cancel2FA: () => void;
 }
 
-// --- Context Creation ---
-
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-
-// --- Auth Provider Component ---
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [userFor2FA, setUserFor2FA] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
-  // Effect to check for an existing session on initial load
+  const isProtectedRoute = pathname?.startsWith('/admin') || pathname?.startsWith('/therapist') || pathname?.startsWith('/report');
+
   useEffect(() => {
     const checkSession = async () => {
       setIsLoading(true);
@@ -54,12 +50,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error(response.error || 'Login failed');
       }
 
-      // 2FA logic placeholder (assuming direct login for migration v2)
-      // If 2FA needed, response would differ.
       setUser(response.user);
       const redirectPath = response.user.role === UserRole.Admin ? '/admin/dashboard' : '/therapist/dashboard';
       router.push(redirectPath);
-
     } catch (err) {
       throw err;
     } finally {
@@ -121,12 +114,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {!isLoading ? children : <div className="flex justify-center items-center h-screen w-full"><div className="animate-spin rounded-full h-24 w-24 border-b-2 border-indigo-600"></div></div>}
+      {(!isLoading || !isProtectedRoute) ? (
+        children
+      ) : (
+        <div className="flex justify-center items-center h-screen w-full bg-background" role="status" aria-label="Weryfikacja sesji">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div>
+        </div>
+      )}
     </AuthContext.Provider>
   );
 };
-
-// --- Custom Hook for easy context access ---
 
 export const useAuth = (): AuthContextValue => {
   const context = useContext(AuthContext);

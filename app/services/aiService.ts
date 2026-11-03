@@ -23,7 +23,6 @@ export async function generateAnalysis(resultId: string): Promise<string | null>
     if (!result) return null;
 
     const scores = JSON.parse(result.scores as string) as Record<string, number>;
-    // const answers = JSON.parse(result.answers as string); // Not used yet but available
 
     // Prepare prompt
     let promptContext = `Test: ${result.test.title}\n`;
@@ -39,31 +38,33 @@ export async function generateAnalysis(resultId: string): Promise<string | null>
     try {
         if (provider === 'gemini') {
             const genAI = new GoogleGenerativeAI(apiKey);
-            const aiModel = genAI.getGenerativeModel({ model: model || 'gemini-1.5-flash' });
+            const resolvedModel = (!model || model === 'gemini-1.5-flash') ? 'gemini-2.5-flash' : model;
+            const aiModel = genAI.getGenerativeModel({ model: resolvedModel });
 
-            const result = await aiModel.generateContent({
+            const genResult = await aiModel.generateContent({
                 contents: [
                     { role: 'user', parts: [{ text: fullPrompt }] }
                 ]
             });
-            return result.response.text();
+            return genResult.response.text();
         }
         else if (provider === 'openai') {
             const openai = new OpenAI({ apiKey: apiKey });
+            const resolvedModel = (!model || model === 'gpt-3.5-turbo' || model.startsWith('gemini')) ? 'gpt-4o-mini' : model;
             const completion = await openai.chat.completions.create({
                 messages: [{ role: "system", content: systemPrompt }, { role: "user", content: promptContext }],
-                model: model || "gpt-3.5-turbo",
+                model: resolvedModel,
             });
             return completion.choices[0].message.content;
         }
         else if (provider === 'anthropic') {
             const anthropic = new Anthropic({ apiKey: apiKey });
+            const resolvedModel = (!model || model === 'claude-3-opus-20240229' || model.startsWith('gemini')) ? 'claude-sonnet-4-20250514' : model;
             const message = await anthropic.messages.create({
-                max_tokens: 1024,
+                max_tokens: 1536,
                 messages: [{ role: 'user', content: fullPrompt }],
-                model: model || 'claude-3-opus-20240229',
+                model: resolvedModel,
             });
-            // Handle ContentBlock[] response
             if (message.content && message.content.length > 0) {
                 const block = message.content[0];
                 if (block.type === 'text') {

@@ -4,23 +4,23 @@ import { prisma } from '@/lib/prisma';
 import type { Test, Question, Scale, Section, PdfTemplate } from '@/components/types';
 import { revalidatePath } from 'next/cache';
 import crypto from 'crypto';
+import { requireAuth } from './authActions';
 
-
-// Helper to parse JSON fields from Prisma (SQLite) to Frontend Types
+// Helper to parse JSON fields from Prisma to Frontend Types
 const serializeTest = (prismaTest: any): Test => {
     return {
         ...prismaTest,
-        status: prismaTest.status || 'DRAFT', // Default to DRAFT if null (legacy data)
+        status: prismaTest.status || 'DRAFT',
         createdAt: prismaTest.createdAt.toISOString(),
-        scales: prismaTest.scales.map((s: any) => ({
+        scales: (prismaTest.scales || []).map((s: any) => ({
             ...s,
             maxScore: s.maxScore ?? undefined,
             formula: s.formula ?? undefined,
             levels: s.levels ? JSON.parse(s.levels) : undefined
         })),
-        sections: prismaTest.sections.map((sec: any) => ({
+        sections: (prismaTest.sections || []).map((sec: any) => ({
             ...sec,
-            questions: sec.questions.map((q: any) => ({
+            questions: (sec.questions || []).map((q: any) => ({
                 ...q,
                 options: JSON.parse(q.options),
                 scoring: JSON.parse(q.scoring),
@@ -30,6 +30,7 @@ const serializeTest = (prismaTest: any): Test => {
 };
 
 export async function fetchTests(): Promise<Test[]> {
+    await requireAuth();
     const tests = await prisma.test.findMany({
         include: {
             scales: true,
@@ -62,28 +63,60 @@ export async function fetchTestById(testId: string): Promise<Test | null> {
     return serializeTest(test);
 }
 
+/**
+ * Public action for test-takers: validates access code and strips out all scoring keys & scale formulas
+ * so answers cannot be reverse-engineered in browser DevTools.
+ */
+export async function fetchPublicTestForClient(testId: string, clientCode: string): Promise<Test | null> {
+    const trimmedCode = (clientCode || '').trim().toUpperCase();
+    if (!trimmedCode) return null;
+
+    const accessCode = await prisma.accessCode.findUnique({
+        where: { code: trimmedCode }
+    });
+
+    if (!accessCode || accessCode.isUsed || new Date() > accessCode.expiresAt || accessCode.testId !== testId) {
+        return null;
+    }
+
+    const test = await prisma.test.findUnique({
+        where: { id: testId },
+        include: {
+            sections: {
+                include: {
+                    questions: true,
+                },
+            },
+        },
+    });
+
+    if (!test) return null;
+
+    return {
+        ...test,
+        status: (test.status as 'DRAFT' | 'PUBLISHED') || 'PUBLISHED',
+        createdAt: test.createdAt.toISOString(),
+        scales: [],
+        sections: test.sections.map((sec) => ({
+            ...sec,
+            questions: sec.questions.map((q) => ({
+                ...q,
+                type: q.type as Question['type'],
+                options: JSON.parse(q.options).map((opt: any) => ({
+                    id: opt.id,
+                    text: opt.text,
+                })),
+                scoring: {},
+            })),
+        })),
+    };
+}
+
 export async function saveTest(testData: Test, asNewVersion: boolean): Promise<Test> {
-    // Logic to save Test. 
-    // NOTE: Prisma Update with nested relations is tricky. 
-    // Usually simpler to Delete relations and Re-create, or handle meticulously.
-    // For Prototype migration, we will use a "Transaction" approach: Update Test, and Upsert/Delete Children?
-    // Actually, simplest strategy for "Drafting":
-    // If asNewVersion: Create completely new Test with new ID.
-    // If update: Update basic fields, and re-create sub-collections (or smart update).
-
-    // Implementation for "Upserting" the whole tree is complex in one go.
-    // Let's implement a "Smart Delete-Insert" for sub-collections for now to ensure consistency, 
-    // or use `upsert` where IDs match.
-
+    await requireAuth('admin');
     const { id, scales, sections, ...basicInfo } = testData;
 
-    // If new version, generate new IDs? For "asNewVersion", the FE usually handles ID gen call? 
-    // Or we do it here. The prompt implies we receive a Test object.
-
-    // Let's try to update the existing test.
-
     await prisma.$transaction(async (tx) => {
-        // 1. Update Test Basic Info
         await tx.test.update({
             where: { id },
             data: {
@@ -95,25 +128,14 @@ export async function saveTest(testData: Test, asNewVersion: boolean): Promise<T
             }
         });
 
-        // 2. Handle Scales
-        // Ideally we diff changes, but deleting all and recreating is safer for prototype if IDs allow.
-        // But we want to preserve IDs if possible for Results linking? 
-        // Actually, if we edit a test, do we break old results?
-        // For this step, let's assume "Overwrite" of structure for the EDIT mode.
-
-        // Delete existing scales and sections/questions for this test and re-create.
-        // This is drastic but ensures clean state vs the FE state.
         await tx.scale.deleteMany({ where: { testId: id } });
-        await tx.question.deleteMany({ where: { section: { testId: id } } }); // Cascade? 
-        // Wait, deleting section deletes questions via Cascade in Schema?
-        // Schema says: Section -> Questions (OnDelete: Cascade). Good.
+        await tx.question.deleteMany({ where: { section: { testId: id } } });
         await tx.section.deleteMany({ where: { testId: id } });
 
-        // Create Scales
         if (scales.length > 0) {
             await tx.scale.createMany({
                 data: scales.map(s => ({
-                    id: s.id, // Keep ID from FE
+                    id: s.id,
                     testId: id,
                     type: s.type,
                     name: s.name,
@@ -125,8 +147,6 @@ export async function saveTest(testData: Test, asNewVersion: boolean): Promise<T
             });
         }
 
-        // Create Sections & Questions
-        // createMany doesn't support nested relations easily for deep nesting.
         for (const section of sections) {
             await tx.section.create({
                 data: {
@@ -155,7 +175,6 @@ export async function saveTest(testData: Test, asNewVersion: boolean): Promise<T
     return updated;
 }
 
-// Helper to generate a standardized default template
 const generateDefaultTemplate = (test: Test, testId: string): PdfTemplate => {
     return {
         id: crypto.randomUUID(),
@@ -170,15 +189,15 @@ const generateDefaultTemplate = (test: Test, testId: string): PdfTemplate => {
             { id: crypto.randomUUID(), type: 'Interpretations', options: { title: 'Szczegółowa interpretacja' } },
             { id: crypto.randomUUID(), type: 'AiInterpretation', options: { title: 'Opis zindywidualizowany' } },
             { id: crypto.randomUUID(), type: 'AnswersList', options: { title: 'Udzielone odpowiedzi' } },
-            { id: crypto.randomUUID(), type: 'RichText', options: { content: '---\n*Raport wygenerowany automatycznie przez Platformę Testów Psychologicznych.*' } }
+            { id: crypto.randomUUID(), type: 'RichText', options: { content: '---\n*Raport wygenerowany automatycznie przez Platformę Real Moment.*' } }
         ]
     };
 };
 
 export async function createNewTest(testData: Test): Promise<Test> {
+    await requireAuth('admin');
     const { id, scales, sections, defaultTemplateId, createdAt, ...basicInfo } = testData;
 
-    // 1. Create the Test first
     await prisma.test.create({
         data: {
             id: id,
@@ -219,7 +238,6 @@ export async function createNewTest(testData: Test): Promise<Test> {
         }
     });
 
-    // 2. Generate and Save Default Template
     const defaultTemplate = generateDefaultTemplate(testData, id);
     await prisma.pdfTemplate.create({
         data: {
@@ -230,7 +248,6 @@ export async function createNewTest(testData: Test): Promise<Test> {
         }
     });
 
-    // 3. Update Test with Default Template ID
     await prisma.test.update({
         where: { id },
         data: { defaultTemplateId: defaultTemplate.id }
@@ -242,6 +259,7 @@ export async function createNewTest(testData: Test): Promise<Test> {
 }
 
 export async function setDefaultTemplate(testId: string, templateId: string): Promise<void> {
+    await requireAuth('admin');
     await prisma.test.update({
         where: { id: testId },
         data: { defaultTemplateId: templateId }
@@ -251,6 +269,7 @@ export async function setDefaultTemplate(testId: string, templateId: string): Pr
 }
 
 export async function createDefaultTemplatesForExistingTests(): Promise<{ count: number }> {
+    await requireAuth('admin');
     const tests = await prisma.test.findMany({
         where: { defaultTemplateId: null },
         include: { scales: true, sections: { include: { questions: true } } }
@@ -258,8 +277,7 @@ export async function createDefaultTemplatesForExistingTests(): Promise<{ count:
 
     let count = 0;
     for (const test of tests) {
-        // Serialize to match Test type expected by helper (optional, strictly helper needs title/canonicalId)
-        const serialized = serializeTest(test); // Only needed if helper uses complex fields, but simpler wrapper works
+        const serialized = serializeTest(test);
         const template = generateDefaultTemplate(serialized, test.id);
 
         await prisma.pdfTemplate.create({
@@ -283,6 +301,7 @@ export async function createDefaultTemplatesForExistingTests(): Promise<{ count:
 }
 
 export async function fetchPdfTemplates(): Promise<PdfTemplate[]> {
+    await requireAuth();
     const templates = await prisma.pdfTemplate.findMany({
         include: { test: { select: { canonicalId: true } } }
     });
@@ -294,6 +313,7 @@ export async function fetchPdfTemplates(): Promise<PdfTemplate[]> {
 }
 
 export async function fetchPdfTemplateById(id: string): Promise<PdfTemplate | null> {
+    await requireAuth();
     const template = await prisma.pdfTemplate.findUnique({
         where: { id },
         include: { test: { select: { canonicalId: true } } }
@@ -307,10 +327,9 @@ export async function fetchPdfTemplateById(id: string): Promise<PdfTemplate | nu
 }
 
 export async function savePdfTemplate(template: PdfTemplate): Promise<PdfTemplate> {
-    // Upsert logic
+    await requireAuth('admin');
     const { id, name, testCanonicalId, components } = template;
 
-    // Find test to connect
     const test = await prisma.test.findFirst({
         where: { canonicalId: testCanonicalId },
         orderBy: { version: 'desc' }
@@ -342,11 +361,13 @@ export async function savePdfTemplate(template: PdfTemplate): Promise<PdfTemplat
 }
 
 export async function deletePdfTemplate(id: string): Promise<void> {
+    await requireAuth('admin');
     await prisma.pdfTemplate.delete({ where: { id } });
     revalidatePath('/admin/templates');
 }
 
 export async function fetchTestVersions(canonicalId: string): Promise<Test[]> {
+    await requireAuth();
     const tests = await prisma.test.findMany({
         where: { canonicalId },
         orderBy: { version: 'desc' },
@@ -363,6 +384,7 @@ export async function fetchTestVersions(canonicalId: string): Promise<Test[]> {
 }
 
 export async function updateTestStatus(testId: string, newStatus: 'DRAFT' | 'PUBLISHED'): Promise<Test> {
+    await requireAuth('admin');
     await prisma.test.update({
         where: { id: testId },
         data: { status: newStatus }
@@ -373,4 +395,3 @@ export async function updateTestStatus(testId: string, newStatus: 'DRAFT' | 'PUB
     if (!updated) throw new Error("Failed to update test status.");
     return updated;
 }
-

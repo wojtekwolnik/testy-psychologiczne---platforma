@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchResultById } from '@/app/actions/resultActions';
-import { fetchPdfTemplates, fetchTestById } from '@/app/actions/testActions';
+import { fetchReportBundle } from '@/app/actions/resultActions';
 import type { TestResult, Test, PdfTemplate, Question } from './types';
 import { DownloadIcon, SparklesIcon, ChevronLeftIcon } from './common/Icons';
 import { BrandingContext } from '@/contexts/BrandingContext';
@@ -38,8 +37,10 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
 
         const loadData = async () => {
             try {
-                const fetchedResult = await fetchResultById(resultId);
-                if (!fetchedResult) throw new Error("Result not found");
+                const bundle = await fetchReportBundle(resultId);
+                if (!bundle) throw new Error("Result or Test not found");
+
+                const { result: fetchedResult, test: fetchedTest, templates: testTemplates } = bundle;
                 setResult(fetchedResult);
 
                 // Set initial analysis if exists
@@ -47,20 +48,12 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                     setCustomInterpretation(fetchedResult.analysis);
                 }
 
-                const fetchedTest = await fetchTestById(fetchedResult.testId);
-                if (!fetchedTest) throw new Error("Test not found");
                 setTest(fetchedTest);
-
-                const templates = await fetchPdfTemplates();
-                const testTemplates = templates.filter(t => t.testCanonicalId === fetchedTest.canonicalId);
                 setPdfTemplates(testTemplates);
 
                 if (fetchedTest.defaultTemplateId) {
                     setSelectedTemplate(fetchedTest.defaultTemplateId);
-                } else if (testTemplates.length > 0) {
-                    // Fallback to first if no default set but template exists (optional, maybe keep 'default' hardcoded)
                 }
-
             } catch (err: any) {
                 console.error(err);
                 setError("Wystąpił błąd podczas ładowania danych.");

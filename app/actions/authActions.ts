@@ -29,25 +29,19 @@ export async function verifyToken(token: string) {
 }
 
 export async function login(email: string, password: string): Promise<{ success: boolean; user?: User; error?: string; needs2FA?: boolean }> {
-    // 1. Find user
     const user = await prisma.user.findUnique({
         where: { email }
     });
 
-    if (!user) {
+    if (!user || !user.password) {
         return { success: false, error: 'Nieprawidłowy email lub hasło.' };
     }
 
-    // 2. Verify password with bcrypt
-    if (!user.password) {
-        return { success: false, error: 'Nieprawidłowy email lub hasło.' };
-    }
     const passwordValid = await bcrypt.compare(password, user.password);
     if (!passwordValid) {
         return { success: false, error: 'Nieprawidłowy email lub hasło.' };
     }
 
-    // 3. Check for 2FA
     if (user.twoFactorSecret) {
         return {
             success: true,
@@ -59,12 +53,11 @@ export async function login(email: string, password: string): Promise<{ success:
                 role: user.role as UserRole,
                 createdAt: user.createdAt.toISOString(),
                 fullName: user.username || '',
-                twoFactorSecret: undefined // Hide secret
+                twoFactorSecret: undefined
             }
         };
     }
 
-    // 4. Set Cookie (JWT Session) if no 2FA
     const token = await signToken({ userId: user.id, role: user.role });
     cookies().set(COOKIE_NAME, token, { httpOnly: true, secure: process.env.COOKIE_SECURE === 'true', sameSite: 'lax', path: '/' });
 
@@ -100,7 +93,6 @@ export async function verify2FA(userId: string, code: string): Promise<{ success
         return { success: false, error: 'Nieprawidłowy kod weryfikacyjny' };
     }
 
-    // Set Cookie on success
     const token = await signToken({ userId: user.id, role: user.role });
     cookies().set(COOKIE_NAME, token, { httpOnly: true, secure: process.env.COOKIE_SECURE === 'true', sameSite: 'lax', path: '/' });
 
@@ -119,10 +111,14 @@ export async function verify2FA(userId: string, code: string): Promise<{ success
 }
 
 export async function generate2FASecret(userId: string): Promise<{ secret: string; qrCodeDataUrl: string } | { error: string }> {
+    const current = await requireAuth();
+    if (current.role !== 'admin' && current.id !== userId) {
+        return { error: 'Brak uprawnień' };
+    }
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) return { error: 'User not found' };
 
-    const secretObj = speakeasy.generateSecret({ name: `Platforma Testów (${user.email})` });
+    const secretObj = speakeasy.generateSecret({ name: `Real Moment (${user.email})` });
     const secret = secretObj.base32;
     const qrCodeDataUrl = await QRCode.toDataURL(secretObj.otpauth_url || '');
 
@@ -130,6 +126,11 @@ export async function generate2FASecret(userId: string): Promise<{ secret: strin
 }
 
 export async function verifyAndEnable2FA(userId: string, secret: string, code: string): Promise<{ success: boolean; error?: string }> {
+    const current = await requireAuth();
+    if (current.role !== 'admin' && current.id !== userId) {
+        return { success: false, error: 'Brak uprawnień' };
+    }
+
     const isValid = speakeasy.totp.verify({
         secret,
         encoding: 'base32',
@@ -171,4 +172,15 @@ export async function checkAuth(): Promise<User | null> {
         fullName: user.username || '',
         twoFactorSecret: undefined
     };
+}
+
+export async function requireAuth(requiredRole?: 'admin' | 'therapist'): Promise<User> {
+    const user = await checkAuth();
+    if (!user) {
+        throw new Error('Brak autoryzacji. Zaloguj się ponownie.');
+    }
+    if (requiredRole === 'admin' && user.role !== 'admin') {
+        throw new Error('Brak uprawnień administratora.');
+    }
+    return user;
 }

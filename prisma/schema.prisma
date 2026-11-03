@@ -83,6 +83,9 @@ model TestResult {
   scores           String   // JSON: Record<string, number>
   answers          String   // JSON: Record<string, any>
   analysis         String?  // AI generated analysis (Markdown)
+
+  @@index([testId])
+  @@index([therapistId, completedAt])
 }
 
 model PdfTemplate {
@@ -91,6 +94,8 @@ model PdfTemplate {
   test            Test     @relation(fields: [testId], references: [id])
   name            String
   components      String   // JSON: ReportComponent[]
+
+  @@index([testId])
 }
 
 model AccessCode {
@@ -102,6 +107,8 @@ model AccessCode {
   isUsed          Boolean  @default(false)
   expiresAt       DateTime
   createdAt       DateTime @default(now())
+
+  @@index([therapistId, isUsed])
 }
 
 model SystemSettings {
@@ -118,4 +125,6 @@ model Notification {
   isRead    Boolean  @default(false)
   context   String?  // JSON: { view: string, params: any }
   createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
 }

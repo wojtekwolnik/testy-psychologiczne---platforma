@@ -3,18 +3,22 @@
 import { prisma } from '@/lib/prisma';
 import type { AccessCode } from '@/components/types';
 import { revalidatePath } from 'next/cache';
-import { generateUniqueId } from '@/utils/idUtils';
-
-import { checkAuth } from './authActions';
+import crypto from 'crypto';
+import { checkAuth, requireAuth } from './authActions';
 
 export async function generateAccessCode(testId: string, expiresAt: Date, therapistId: string): Promise<AccessCode> {
-    const code = `AC-${Math.random().toString(36).substr(2, 6).toUpperCase()}`; // Simple code gen
+    const user = await requireAuth();
+    const effectiveTherapistId = user.role === 'admin' && therapistId ? therapistId : user.id;
+
+    // Cryptographically secure 8-char alphanumeric code
+    const randomPart = crypto.randomBytes(4).toString('hex').toUpperCase();
+    const code = `AC-${randomPart}`;
 
     const accessCode = await prisma.accessCode.create({
         data: {
             code,
             testId,
-            therapistId,
+            therapistId: effectiveTherapistId,
             expiresAt,
             isUsed: false
         }
@@ -56,8 +60,13 @@ export async function fetchActiveCodes(): Promise<(AccessCode & { therapistName?
 }
 
 export async function validateAccessCode(code: string): Promise<{ isValid: boolean, testId?: string, error?: string }> {
+    const trimmed = (code || '').trim().toUpperCase();
+    if (!trimmed) {
+        return { isValid: false, error: 'Proszę wprowadzić kod dostępu.' };
+    }
+
     const accessCode = await prisma.accessCode.findUnique({
-        where: { code }
+        where: { code: trimmed }
     });
 
     if (!accessCode) {
@@ -83,8 +92,7 @@ export async function markAccessCodeAsUsed(code: string): Promise<void> {
 }
 
 export async function deleteAccessCode(code: string): Promise<void> {
-    const user = await checkAuth();
-    if (!user) throw new Error("Unauthorized");
+    const user = await requireAuth();
 
     const accessCode = await prisma.accessCode.findUnique({ where: { code } });
     if (!accessCode) throw new Error("Code not found");

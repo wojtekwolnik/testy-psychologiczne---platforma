@@ -41,7 +41,7 @@ const baseSettings = {
     provider: 'gemini',
     apiKey: '',
     endpoint: '',
-    model: 'gemini-1.5-flash',
+    model: 'gemini-2.5-flash',
     systemPrompt: 'Jesteś pomocnym asystentem AI dla psychologów i coachów w centrum Real Moment. Twoim zadaniem jest dostarczanie zwięzłych, profesjonalnych i empatycznych interpretacji zanonimizowanych wyników testów. Nie stawiaj diagnoz medycznych. Skup się na wskazaniu potencjalnych wzorców i obszarów do dalszej pracy terapeutycznej lub coachingowej.',
   },
   emailSettings: {
