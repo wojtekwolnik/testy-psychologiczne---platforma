@@ -74,7 +74,7 @@ export const StaffLoginPage: React.FC = () => {
                         <button
                             type="submit"
                             disabled={auth.isLoading}
-                            className="w-full px-8 py-3 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-bold rounded-lg shadow-md hover:opacity-90 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors duration-300"
+                            className="w-full px-8 py-3 bg-[var(--primary-color)] text-[var(--primary-contrast)] font-bold rounded-lg shadow-md hover:opacity-90 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors duration-300"
                         >
                             {auth.isLoading ? "Logowanie..." : "Zaloguj się"}
                         </button>

@@ -18,30 +18,31 @@ const deepMerge = (target: any, source: any) => {
 };
 
 
-// --- Base Settings --- //
+// --- Base Settings (Real Moment - realmoment.pl) --- //
 const baseSettings = {
-  appName: 'MindCare Platform',
-  logoUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjU2IiBoZWlnaHQ9IjY0IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNFMkU4RjAiIHJ4PSI4IiByeT0iOCIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIyNCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiM0NzU1NjkiPgogICAgTE9HTwogIDwvdGV4dD4KPC9zdmc+Cg==',
-  fontFamily: `system-ui, sans-serif`,
-  borderRadius: 0.75,
-  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-  chartColors: ['#0d9488', '#2563eb', '#f59e0b', '#dc2626', '#9333ea'],
-  clientPageTitle: 'Platforma testów MindCare',
-  clientPageDescription: 'Witaj. Wpisz poniżej unikalny kod dostępu, który otrzymałeś/aś, aby rozpocząć badanie.',
+  appName: 'Real Moment',
+  logoUrl: '/logo-realmoment-light.png',
+  reportLogoUrl: '/logo-realmoment-main.png',
+  fontFamily: `'Jost', system-ui, sans-serif`,
+  borderRadius: 0.85,
+  boxShadow: '0 10px 30px -5px rgba(20, 22, 29, 0.35)',
+  chartColors: ['#4e9054', '#314293', '#e89183', '#7c85a3', '#d0a5db'],
+  clientPageTitle: 'Real Moment – Przestrzeń Diagnostyczna',
+  clientPageDescription: 'Witaj w spokojnej przestrzeni Real Moment. Wpisz poniżej swój indywidualny kod dostępu otrzymany od terapeuty lub coacha, aby rozpocząć badanie.',
   clientPageButtonText: 'Rozpocznij badanie',
   clientThankYouTitle: 'Dziękujemy za udział w badaniu.',
-  clientThankYouMessage: 'Twoje odpowiedzi zostały zapisane. Wyniki zostaną omówione z Tobą przez specjalistę podczas najbliższej wizyty. Dziękujemy za zaufanie do platformy {appName}.',
+  clientThankYouMessage: 'Twoje odpowiedzi zostały bezpiecznie zapisane. Wyniki zostaną omówione z Tobą przez specjalistę podczas najbliższego spotkania w {appName}.',
   clientThankYouButtonText: 'Zamknij',
   clientConfirmationTitle: 'Gotowy/a do rozpoczęcia?',
-  clientConfirmationMessage: 'Za chwilę rozpoczniesz test: <strong>{testTitle}</strong>. Składa się on z <strong>{questionCount}</strong> pytań. Prosimy o zarezerwowanie wystarczającej ilości czasu na jego ukończenie.',
-  clientConfirmationButtonText: 'Rozumiem, rozpocznij',
+  clientConfirmationMessage: 'Za chwilę rozpoczniesz badanie: <strong>{testTitle}</strong>. Składa się ono z <strong>{questionCount}</strong> pytań. Zadbaj o spokojną chwilę tylko dla siebie.',
+  clientConfirmationButtonText: 'Rozumiem, zaczynamy',
   aiSettings: {
     enabled: false,
     provider: 'gemini',
     apiKey: '',
     endpoint: '',
     model: 'gemini-1.5-flash',
-    systemPrompt: 'Jesteś pomocnym asystentem AI dla psychologów. Twoim zadaniem jest dostarczanie zwięzłych, profesjonalnych i neutralnych interpretacji zanonimizowanych wyników testów. Nie stawiaj diagnoz. Skup się na wskazaniu potencjalnych wzorców i obszarów do dalszej eksploracji przez terapeutę.',
+    systemPrompt: 'Jesteś pomocnym asystentem AI dla psychologów i coachów w centrum Real Moment. Twoim zadaniem jest dostarczanie zwięzłych, profesjonalnych i empatycznych interpretacji zanonimizowanych wyników testów. Nie stawiaj diagnoz medycznych. Skup się na wskazaniu potencjalnych wzorców i obszarów do dalszej pracy terapeutycznej lub coachingowej.',
   },
   emailSettings: {
     enabled: false,
@@ -52,35 +53,35 @@ const baseSettings = {
       username: 'user@example.com',
       password: '',
     },
-    fromName: 'MindCare Platform',
-    fromEmail: 'noreply@example.com',
-    therapistNotificationSubject: 'Nowy wynik testu: {testTitle}',
-    therapistNotificationBody: 'Witaj {therapistName},<br><br>Klient o identyfikatorze <strong>{clientIdentifier}</strong> ukończył test "<strong>{testTitle}</strong>" w dniu {completionDate}.<br><br>Możesz zobaczyć pełny raport, klikając link poniżej:<br>{reportLink}<br><br>Pozdrawiamy,<br>Zespół {appName}',
+    fromName: 'Real Moment',
+    fromEmail: 'kontakt@realmoment.pl',
+    therapistNotificationSubject: 'Nowy wynik badania: {testTitle}',
+    therapistNotificationBody: 'Witaj {therapistName},<br><br>Klient o identyfikatorze <strong>{clientIdentifier}</strong> ukończył badanie "<strong>{testTitle}</strong>" w dniu {completionDate}.<br><br>Możesz zobaczyć pełny raport, klikając link poniżej:<br>{reportLink}<br><br>Pozdrawiamy,<br>Zespół {appName}',
   },
 };
 
-// --- Unified Default Theme (Dark) --- //
+// --- Unified Real Moment Theme (realmoment.pl) --- //
 export const unifiedPalette: ThemePalette = {
-  primaryColor: '#2dd4bf',
-  secondaryColor: '#1e293b',
-  accentColor: '#60a5fa',
-  backgroundColor: '#0f172a',
-  textColor: '#e2e8f0',
-  borderColor: '#334155',
-  inputBackgroundColor: '#1e293b',
-  inputTextColor: '#e2e8f0',
-  errorColor: '#f87171',
-  warningColor: '#fbbf24',
-  successColor: '#4ade80',
-  adminColor: '#c084fc',
-  adminBackgroundColor: '#3b0764',
-  therapistColor: '#2dd4bf',
-  therapistBackgroundColor: '#115e59',
-  sidebarBackground: '#020617',
-  sidebarTextColor: '#e2e8f0',
-  sidebarActiveBackground: '#1e293b',
+  primaryColor: '#4e9054',
+  secondaryColor: '#1f222b',
+  accentColor: '#e89183',
+  backgroundColor: '#14161d',
+  textColor: '#fbfaf7',
+  borderColor: '#313647',
+  inputBackgroundColor: '#14161d',
+  inputTextColor: '#fbfaf7',
+  errorColor: '#e42806',
+  warningColor: '#fcb900',
+  successColor: '#4e9054',
+  adminColor: '#e89183',
+  adminBackgroundColor: '#314293',
+  therapistColor: '#7bdcb5',
+  therapistBackgroundColor: '#1b3620',
+  sidebarBackground: '#0c0d0e',
+  sidebarTextColor: '#e5e7ee',
+  sidebarActiveBackground: '#314293',
   sidebarActiveText: '#ffffff',
-  sidebarHoverBackground: '#1e293b',
+  sidebarHoverBackground: '#1f222b',
   sidebarHoverText: '#ffffff',
 };
 
@@ -110,20 +111,15 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       try {
         const serverSettings = await getBrandingSettings();
         if (serverSettings) {
-          // MIGRATION LOGIC:
-          // If the user had set a custom darkTheme before, pull values from it
-          // to preserve their exact color overrides.
           let migrationData: Partial<BrandingSettings> = {};
           
           if (serverSettings.darkTheme) {
-            console.log("Migrating legacy darkTheme settings...");
             Object.keys(unifiedPalette).forEach((key) => {
               const themeKey = key as keyof ThemePalette;
               if (serverSettings.darkTheme[themeKey]) {
                 migrationData[themeKey] = serverSettings.darkTheme[themeKey];
               }
             });
-            // Cleanup legacy fields to prevent issues with deepMerge
             delete serverSettings.darkTheme;
             delete serverSettings.lightTheme;
             delete serverSettings.mode;
@@ -136,7 +132,12 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         } else {
           const storedBranding = localStorage.getItem('brandingSettings');
           if (storedBranding) {
-            setBrandingState(deepMerge(defaultBranding, JSON.parse(storedBranding)));
+            const parsed = JSON.parse(storedBranding);
+            if (parsed.appName !== 'MindCare Platform') {
+              setBrandingState(deepMerge(defaultBranding, parsed));
+            } else {
+              localStorage.removeItem('brandingSettings');
+            }
           }
         }
       } catch (error) {

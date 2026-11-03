@@ -123,7 +123,7 @@ export default function BrandingPage() {
     return (
         <div className="p-8 max-w-6xl mx-auto">
             <div className="flex justify-between items-center mb-8">
-                <h1 className="text-3xl font-bold text-slate-800">Ustawienia Platformy</h1>
+                <h1 className="text-3xl font-bold text-[var(--text-color)]">Ustawienia Platformy</h1>
                 <div className="flex gap-4">
                     <button
                         onClick={() => setLocalSettings(branding)} // Reset to last saved
