@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useContext, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { validateAccessCode } from '@/app/actions/accessCodeActions';
 import { BrandingContext } from '@/contexts/BrandingContext';
 import { SpinnerIcon } from './common/Icons';
@@ -13,16 +13,17 @@ const ClientCodeEntry: React.FC = () => {
     const [clientError, setClientError] = useState('');
 
     const router = useRouter();
-    const searchParams = useSearchParams();
     const { branding } = useContext(BrandingContext);
 
     useEffect(() => {
-        const urlCode = searchParams.get('code') || searchParams.get('clientCode');
-        if (urlCode && !clientCode) {
-            const normalized = urlCode.trim().toUpperCase();
-            setClientCode(normalized);
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const urlCode = params.get('code') || params.get('clientCode');
+            if (urlCode) {
+                setClientCode(urlCode.trim().toUpperCase());
+            }
         }
-    }, [searchParams]);
+    }, []);
 
     const handleStartTest = async (e: React.FormEvent) => {
         e.preventDefault();
