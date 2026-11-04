@@ -204,16 +204,14 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
                     )}
                     <h1 className="text-base font-bold leading-tight tracking-tight break-words max-w-[180px]">{branding.appName}</h1>
                 </div>
-                {user.role === UserRole.Therapist && (
-                    <div className="flex-shrink-0 mt-1">
-                        <NotificationBell
-                            user={user}
-                            notifications={notifications}
-                            setNotifications={setNotifications}
-                            onNavigate={(path) => router.push(path)}
-                        />
-                    </div>
-                )}
+                <div className="flex-shrink-0 mt-1">
+                    <NotificationBell
+                        user={user}
+                        notifications={notifications}
+                        setNotifications={setNotifications}
+                        onNavigate={(path) => router.push(path)}
+                    />
+                </div>
             </div>
 
             <div className="flex-grow space-y-1 relative">

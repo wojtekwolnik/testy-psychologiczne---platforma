@@ -51,7 +51,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       setUser(response.user);
-      const redirectPath = response.user.role === UserRole.Admin ? '/admin/dashboard' : '/therapist/dashboard';
+      let redirectPath = response.user.role === UserRole.Admin ? '/admin/dashboard' : '/therapist/dashboard';
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const callbackUrl = params.get('callbackUrl');
+        if (callbackUrl && (callbackUrl.startsWith('/report/') || callbackUrl.startsWith('/therapist/') || (response.user.role === UserRole.Admin && callbackUrl.startsWith('/admin/')))) {
+          redirectPath = callbackUrl;
+        }
+      }
       router.push(redirectPath);
     } catch (err) {
       throw err;

@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import SideNav from './common/SideNav';
 import { Notification } from './types';
 import { useRouter } from 'next/navigation';
+import { getNotificationsForUser } from '@/app/actions/notificationActions';
 
 export default function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     const { user, logout, isLoading } = useAuth();
@@ -12,11 +13,18 @@ export default function DashboardLayoutContent({ children }: { children: React.R
     const router = useRouter();
 
     useEffect(() => {
-        // Redirect if not logged in is handled by AuthContext usually, but double check
         if (!isLoading && !user) {
             router.push('/login');
         }
     }, [user, isLoading, router]);
+
+    useEffect(() => {
+        if (user?.id) {
+            getNotificationsForUser(user.id)
+                .then(setNotifications)
+                .catch(err => console.error('Failed to load notifications:', err));
+        }
+    }, [user?.id]);
 
     if (isLoading || !user) {
         return <div className="flex h-screen items-center justify-center">Ładowanie...</div>;

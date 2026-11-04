@@ -99,8 +99,9 @@ const TherapistDashboard = () => {
       setTests(fetchedTests);
       setActiveCodes(fetchedCodes);
 
-      if (fetchedTests.length > 0 && !selectedTest) {
-        setSelectedTest(fetchedTests[0].id);
+      const published = fetchedTests.filter(t => t.status === 'PUBLISHED');
+      if (published.length > 0 && !selectedTest) {
+        setSelectedTest(published[0].id);
       }
     } catch (err) {
       setError("Nie udało się załadować danych. Odśwież stronę, aby spróbować ponownie.");
@@ -108,6 +109,8 @@ const TherapistDashboard = () => {
       setIsLoading(false);
     }
   };
+
+  const publishedTests = useMemo(() => tests.filter(t => t.status === 'PUBLISHED'), [tests]);
 
   const getDaysUntilDeletion = (date: Date | string) => {
     const completionDate = new Date(date);
@@ -136,12 +139,14 @@ const TherapistDashboard = () => {
     const targetTherapistId = user.role === 'admin' && selectedTherapistId ? selectedTherapistId : user.id;
 
     try {
+      setError(null);
       const newCode = await generateAccessCode(selectedTest, expiry, targetTherapistId);
       if (newCode) {
         setActiveCodes(prev => [newCode, ...prev]);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error generating code:", err);
+      setError(err?.message || "Nie udało się wygenerować kodu dostępu.");
     }
   };
 
@@ -227,7 +232,11 @@ const TherapistDashboard = () => {
                 <InfoTooltip id="genTest" label="Wybierz test" text="Wybierz test psychologiczny z listy dostępnych narzędzi, do którego chcesz wygenerować jednorazowy anonimowy kod dostępu dla klienta." activeId={activeTooltip} setActiveId={setActiveTooltip} />
               </label>
               <select id="test-select" value={selectedTest} onChange={e => setSelectedTest(e.target.value)} className="w-full h-[48px] px-4 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner">
-                {tests.map(t => <option key={t.id} value={t.id}>{t.title} (v{t.version})</option>)}
+                {publishedTests.length === 0 ? (
+                  <option value="">Brak opublikowanych testów</option>
+                ) : (
+                  publishedTests.map(t => <option key={t.id} value={t.id}>{t.title} (v{t.version})</option>)
+                )}
               </select>
             </div>
 

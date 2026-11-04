@@ -91,7 +91,7 @@ export async function fetchPublicTestForClient(testId: string, clientCode: strin
         },
     });
 
-    if (!test) return null;
+    if (!test || test.status !== 'PUBLISHED') return null;
 
     return {
         ...test,

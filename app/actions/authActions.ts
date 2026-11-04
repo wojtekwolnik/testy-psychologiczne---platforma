@@ -51,22 +51,6 @@ export async function login(email: string, password: string): Promise<{ success:
         return { success: false, error: 'Nieprawidłowy email lub hasło.' };
     }
 
-    if (user.twoFactorSecret) {
-        return {
-            success: true,
-            needs2FA: true,
-            user: {
-                id: user.id,
-                username: user.username || '',
-                email: user.email,
-                role: user.role as UserRole,
-                createdAt: user.createdAt.toISOString(),
-                fullName: user.username || '',
-                twoFactorSecret: undefined
-            }
-        };
-    }
-
     const token = await signToken({ userId: user.id, role: user.role });
     cookies().set(COOKIE_NAME, token, { httpOnly: true, secure: process.env.COOKIE_SECURE === 'true', sameSite: 'lax', path: '/' });
 

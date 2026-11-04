@@ -2,23 +2,28 @@
 
 import { prisma } from '@/lib/prisma';
 import type { Notification } from '@/components/types';
+import { requireAuth } from './authActions';
 
 export async function markNotificationsAsRead(userId: string, notificationIds: string[]): Promise<void> {
+    const currentUser = await requireAuth();
+    const targetUserId = currentUser.role === 'admin' && userId ? userId : currentUser.id;
     if (notificationIds.length === 0) return;
     await prisma.notification.updateMany({
         where: {
             id: { in: notificationIds },
-            userId, // Scoped to the user for security
+            userId: targetUserId,
         },
         data: { isRead: true },
     });
 }
 
 export async function getNotificationsForUser(userId: string): Promise<Notification[]> {
+    const currentUser = await requireAuth();
+    const targetUserId = currentUser.role === 'admin' && userId ? userId : currentUser.id;
     const rows = await prisma.notification.findMany({
-        where: { userId },
+        where: { userId: targetUserId },
         orderBy: { createdAt: 'desc' },
-        take: 50, // Last 50 notifications
+        take: 50,
     });
     return rows.map(n => ({
         id: n.id,

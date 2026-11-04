@@ -11,6 +11,23 @@ export async function generateAccessCode(testId: string, expiresAt: Date, therap
     const user = await requireAuth();
     const effectiveTherapistId = user.role === 'admin' && therapistId ? therapistId : user.id;
 
+    if (!expiresAt || new Date(expiresAt) <= new Date()) {
+        throw new Error('Data ważności kodu musi być w przyszłości.');
+    }
+
+    const test = await prisma.test.findUnique({
+        where: { id: testId },
+        select: { id: true, status: true }
+    });
+
+    if (!test) {
+        throw new Error('Wybrany test nie istnieje.');
+    }
+
+    if (test.status !== 'PUBLISHED') {
+        throw new Error('Kody dostępu można generować wyłącznie dla opublikowanych testów (PUBLISHED).');
+    }
+
     // Cryptographically secure 8-char alphanumeric code
     const randomPart = crypto.randomBytes(4).toString('hex').toUpperCase();
     const code = `AC-${randomPart}`;
@@ -37,7 +54,24 @@ export async function fetchActiveCodes(): Promise<(AccessCode & { therapistName?
     const user = await checkAuth();
     if (!user) return [];
 
-    const where: any = { isUsed: false };
+    const now = new Date();
+
+    // Auto-cleanup expired unused codes so they don't clutter the database or active codes table
+    try {
+        await prisma.accessCode.deleteMany({
+            where: {
+                isUsed: false,
+                expiresAt: { lt: now }
+            }
+        });
+    } catch (err) {
+        console.error('Failed to cleanup expired access codes:', err);
+    }
+
+    const where: any = {
+        isUsed: false,
+        expiresAt: { gt: now }
+    };
     if (user.role !== 'admin') {
         where.therapistId = user.id;
     }
@@ -88,6 +122,15 @@ export async function validateAccessCode(code: string): Promise<{ isValid: boole
 
     if (new Date() > accessCode.expiresAt) {
         return { isValid: false, error: 'Ten kod wygasł.' };
+    }
+
+    const test = await prisma.test.findUnique({
+        where: { id: accessCode.testId },
+        select: { id: true, status: true }
+    });
+
+    if (!test || test.status !== 'PUBLISHED') {
+        return { isValid: false, error: 'Test przypisany do tego kodu nie jest obecnie opublikowany.' };
     }
 
     return { isValid: true, testId: accessCode.testId };

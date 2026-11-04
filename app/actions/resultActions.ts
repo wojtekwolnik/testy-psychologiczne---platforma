@@ -25,8 +25,40 @@ const evaluateFormula = (formula: string, availableScores: Record<string, number
     }
 };
 
+const RETENTION_DAYS = 60;
+
+/**
+ * Automatically purges test results older than 60 days (matching the 60-day countdown in the UI)
+ * as well as expired unused access codes and old used access codes.
+ */
+async function cleanupExpiredData(): Promise<void> {
+    try {
+        const now = new Date();
+        const cutoffDate = new Date(now.getTime() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
+
+        await Promise.all([
+            prisma.testResult.deleteMany({
+                where: { completedAt: { lt: cutoffDate } }
+            }),
+            prisma.accessCode.deleteMany({
+                where: {
+                    OR: [
+                        { isUsed: false, expiresAt: { lt: now } },
+                        { isUsed: true, createdAt: { lt: cutoffDate } }
+                    ]
+                }
+            })
+        ]);
+    } catch (error) {
+        console.error('[Retention Cleanup] Failed to purge expired records:', error);
+    }
+}
+
 export async function submitTest(testId: string, answers: Record<string, string[]>, clientIdentifier: string): Promise<TestResult> {
     const trimmedCode = (clientIdentifier || '').trim().toUpperCase();
+    if (!trimmedCode) {
+        throw new Error("Kod dostępu jest wymagany do zapisania wyniku testu.");
+    }
 
     // 1. Fetch Test Data
     const test = await prisma.test.findUnique({
@@ -42,6 +74,9 @@ export async function submitTest(testId: string, answers: Record<string, string[
     });
 
     if (!test) throw new Error("Test not found");
+    if (test.status !== 'PUBLISHED') {
+        throw new Error("Ten test nie jest obecnie opublikowany.");
+    }
 
     const processedTest = {
         ...test,
@@ -59,7 +94,7 @@ export async function submitTest(testId: string, answers: Record<string, string[
     const standardScores: Record<string, number> = {};
     const standardScales = processedTest.scales.filter(s => s.type === 'standard');
 
-    // Phase 1: Calculate Standard Scores
+    // Phase 1: Validate all questions are answered & Calculate Standard Scores
     for (const scale of standardScales) {
         standardScores[scale.id] = 0;
     }
@@ -67,9 +102,11 @@ export async function submitTest(testId: string, answers: Record<string, string[
     for (const section of processedTest.sections) {
         for (const question of section.questions) {
             const givenAnswer = answers[question.id];
-            if (!givenAnswer) continue;
+            const answerIds = Array.isArray(givenAnswer) ? givenAnswer : (givenAnswer ? [givenAnswer] : []);
+            if (answerIds.length === 0) {
+                throw new Error("Proszę odpowiedzieć na wszystkie pytania przed zakończeniem testu.");
+            }
 
-            const answerIds = Array.isArray(givenAnswer) ? givenAnswer : [givenAnswer];
             for (const answerId of answerIds) {
                 const scoringRules = question.scoring[answerId];
                 if (scoringRules) {
@@ -115,27 +152,27 @@ export async function submitTest(testId: string, answers: Record<string, string[
     const dbAnswers = JSON.stringify(answers);
     const dbScores = JSON.stringify(finalScores);
 
-    // 3. Atomic verification of access code + creation of TestResult
+    // 3. Atomic verification of access code + creation of TestResult + in-app Notification
     const { result, therapistId } = await prisma.$transaction(async (tx) => {
-        let resolvedTherapistId = 'default-therapist-id';
-
-        if (trimmedCode) {
-            const codeRecord = await tx.accessCode.findUnique({ where: { code: trimmedCode } });
-            if (!codeRecord) {
-                throw new Error("Nieprawidłowy kod dostępu.");
-            }
-            if (codeRecord.isUsed) {
-                throw new Error("Ten kod dostępu został już wykorzystany.");
-            }
-            if (new Date() > codeRecord.expiresAt) {
-                throw new Error("Ten kod dostępu wygasł.");
-            }
-            resolvedTherapistId = codeRecord.therapistId;
-            await tx.accessCode.update({
-                where: { code: trimmedCode },
-                data: { isUsed: true }
-            });
+        const codeRecord = await tx.accessCode.findUnique({ where: { code: trimmedCode } });
+        if (!codeRecord) {
+            throw new Error("Nieprawidłowy kod dostępu.");
         }
+        if (codeRecord.isUsed) {
+            throw new Error("Ten kod dostępu został już wykorzystany.");
+        }
+        if (new Date() > codeRecord.expiresAt) {
+            throw new Error("Ten kod dostępu wygasł.");
+        }
+        if (codeRecord.testId !== test.id) {
+            throw new Error("Ten kod dostępu jest przypisany do innego testu.");
+        }
+
+        const resolvedTherapistId = codeRecord.therapistId;
+        await tx.accessCode.update({
+            where: { code: trimmedCode },
+            data: { isUsed: true }
+        });
 
         const therapist = await tx.user.findUnique({ where: { id: resolvedTherapistId } });
         if (!therapist) {
@@ -153,15 +190,26 @@ export async function submitTest(testId: string, answers: Record<string, string[
             data: {
                 testId: test.id,
                 therapistId: resolvedTherapistId,
-                clientIdentifier: trimmedCode || clientIdentifier,
+                clientIdentifier: trimmedCode,
                 scores: dbScores,
                 answers: dbAnswers,
                 completedAt: new Date()
             }
         });
 
+        await tx.notification.create({
+            data: {
+                userId: resolvedTherapistId,
+                message: `Nowy ukończony test "${test.title}" (kod: ${trimmedCode})`,
+                context: JSON.stringify({ view: 'ReportView', params: { resultId: createdResult.id } })
+            }
+        });
+
         return { result: createdResult, therapistId: resolvedTherapistId };
     });
+
+    // Trigger background retention cleanup
+    await cleanupExpiredData();
 
     // Send Notification Email
     try {
@@ -228,6 +276,8 @@ export async function triggerAnalysis(resultId: string): Promise<string | null> 
 export async function fetchResults(): Promise<TestResult[]> {
     const user = await checkAuth();
     if (!user) return [];
+
+    await cleanupExpiredData();
 
     const where: any = {};
     if (user.role !== 'admin') {

@@ -11,15 +11,20 @@ export async function middleware(request: NextRequest) {
     // Define protected routes
     const isAdminRoute = path.startsWith('/admin');
     const isTherapistRoute = path.startsWith('/therapist');
+    const isReportRoute = path.startsWith('/report');
 
-    if (!isAdminRoute && !isTherapistRoute) {
+    if (!isAdminRoute && !isTherapistRoute && !isReportRoute) {
         return NextResponse.next();
     }
 
     const token = request.cookies.get(COOKIE_NAME)?.value;
 
     if (!token) {
-        return NextResponse.redirect(new URL('/login', request.url));
+        const loginUrl = new URL('/login', request.url);
+        if (isReportRoute || isTherapistRoute || isAdminRoute) {
+            loginUrl.searchParams.set('callbackUrl', path);
+        }
+        return NextResponse.redirect(loginUrl);
     }
 
     try {
@@ -31,17 +36,19 @@ export async function middleware(request: NextRequest) {
             return NextResponse.redirect(new URL('/therapist/dashboard', request.url));
         }
 
-        if (isTherapistRoute && role !== 'therapist' && role !== 'admin') {
+        if ((isTherapistRoute || isReportRoute) && role !== 'therapist' && role !== 'admin') {
             return NextResponse.redirect(new URL('/login', request.url));
         }
 
         return NextResponse.next();
     } catch (error) {
         // Token is invalid or expired
-        return NextResponse.redirect(new URL('/login', request.url));
+        const loginUrl = new URL('/login', request.url);
+        loginUrl.searchParams.set('callbackUrl', path);
+        return NextResponse.redirect(loginUrl);
     }
 }
 
 export const config = {
-    matcher: ['/admin/:path*', '/therapist/:path*'],
+    matcher: ['/admin/:path*', '/therapist/:path*', '/report/:path*'],
 };
