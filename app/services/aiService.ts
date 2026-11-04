@@ -24,13 +24,35 @@ export async function generateAnalysis(resultId: string): Promise<string | null>
 
     const scores = JSON.parse(result.scores as string) as Record<string, number>;
 
-    // Prepare prompt
+    // Prepare prompt with scale levels and psychometric norms
     let promptContext = `Test: ${result.test.title}\n`;
-    promptContext += `Description: ${result.test.description}\n\n`;
-    promptContext += `Scores:\n`;
+    promptContext += `Opis testu: ${result.test.description}\n\n`;
+    promptContext += `Wyniki badanego w poszczególnych skalach:\n`;
 
     result.test.scales.forEach(scale => {
-        promptContext += `- ${scale.name}: ${scores[scale.id] ?? 0} (Range: 0-${scale.maxScore || 'N/A'})\n`;
+        const val = scores[scale.id] ?? 0;
+        let levelStr = '';
+        let levelDesc = '';
+
+        if (scale.levels) {
+            try {
+                const parsedLevels = JSON.parse(scale.levels);
+                if (Array.isArray(parsedLevels) && parsedLevels.length > 0) {
+                    const matched = parsedLevels.find((l: any) => val >= l.minScore && val <= l.maxScore);
+                    if (matched) {
+                        levelStr = ` | Poziom wg norm testu: ${matched.name} (${matched.minScore}-${matched.maxScore} pkt)`;
+                        if (matched.description) {
+                            levelDesc = `\n  Interpretacja normatywna poziomu: ${String(matched.description).replace(/<[^>]+>/g, ' ').trim()}`;
+                        }
+                    }
+                }
+            } catch {
+                // ignore malformed levels JSON
+            }
+        }
+
+        const cleanScaleDesc = scale.description ? `\n  Opis skali: ${scale.description.replace(/<[^>]+>/g, ' ').trim()}` : '';
+        promptContext += `- ${scale.name}: ${val} pkt (Zakres: 0-${scale.maxScore || 'N/A'})${levelStr}${levelDesc}${cleanScaleDesc}\n`;
     });
 
     const fullPrompt = systemPrompt + "\n\n" + promptContext;

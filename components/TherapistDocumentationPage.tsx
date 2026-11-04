@@ -1,9 +1,9 @@
 import React from 'react';
 
 const DocSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-  <section className="bg-[var(--secondary-color)] p-8 rounded-xl shadow-lg mb-8">
-    <h2 className="text-3xl font-bold mb-4 border-b border-[var(--border-color)] pb-3">{title}</h2>
-    <div className="prose prose-lg max-w-none text-[var(--text-color)] prose-headings:text-[var(--text-color)] prose-strong:text-[var(--text-color)]">
+  <section className="bg-surface/90 border border-border p-6 sm:p-8 rounded-2xl shadow-xl mb-8">
+    <h2 className="text-2xl sm:text-3xl font-bold mb-4 border-b border-border pb-3 text-text">{title}</h2>
+    <div className="prose prose-invert max-w-none text-text-muted prose-headings:text-text prose-strong:text-text">
       {children}
     </div>
   </section>
@@ -11,90 +11,45 @@ const DocSection: React.FC<{ title: string; children: React.ReactNode }> = ({ ti
 
 const TherapistDocumentationPage: React.FC = () => {
   return (
-    <div className="p-8 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-8 max-w-5xl mx-auto text-text">
       <div className="mb-8">
-        <h1 className="text-5xl font-extrabold">Instrukcja dla Terapeuty</h1>
-        <p className="opacity-80 mt-2 text-lg">Przewodnik krok po kroku po procesie przeprowadzania testu z klientem.</p>
+        <h1 className="text-4xl sm:text-5xl font-extrabold">Instrukcja dla Terapeuty</h1>
+        <p className="text-text-muted mt-2 text-lg">Przewodnik krok po kroku po przeprowadzaniu badań na platformie Real Moment.</p>
       </div>
 
-      <DocSection title="Krok 1: Generowanie Kodu Dostępu">
-        <p>
-          Pierwszym krokiem jest wygenerowanie unikalnego, jednorazowego kodu dostępu dla Twojego klienta.
-        </p>
-        <ol>
+      <DocSection title="Krok 1: Generowanie Kodu lub Bezpośredniego Linku">
+        <ol className="list-decimal pl-5 space-y-2">
           <li>Przejdź do <strong>Panelu Głównego</strong>.</li>
-          <li>W sekcji <strong>"Generator kodów dostępu"</strong> znajdź rozwijaną listę ze wszystkimi dostępnymi testami.</li>
-          <li>Wybierz z listy test, który ma wypełnić klient.</li>
-          <li>Ustaw datę ważności kodu. Domyślnie jest to 7 dni, ale możesz ją skrócić lub wydłużyć.</li>
-          <li>Kliknij przycisk <strong>"Generuj kod"</strong>. Nowy kod pojawi się na liście "Aktywne kody" poniżej.</li>
+          <li>W sekcji <strong>Generator kodów dostępu</strong> wybierz z listy opublikowany test psychologiczny.</li>
+          <li>Ustaw datę ważności kodu (domyślnie 7 dni) i kliknij <strong>„Generuj kod”</strong>.</li>
+          <li>Na liście aktywnych kodów możesz kliknąć <strong>„Kopiuj kod”</strong> (sam kod <code>AC-...</code>) lub <strong>„Kopiuj link”</strong> (bezpośredni link, po kliknięciu którego klient od razu trafia do potwierdzenia testu bez konieczności ręcznego wpisywania kodu).</li>
         </ol>
-        <p>
-          <strong>Ważne:</strong> Każdy kod jest jednorazowy i ma datę ważności. Po jego użyciu lub po upływie terminu, kod znika z listy aktywnych i nie można go użyć ponownie.
-        </p>
       </DocSection>
 
-      <DocSection title="Krok 2: Przekazanie Kodu i Oczekiwanie na Wynik">
+      <DocSection title="Krok 2: Wypełnienie Testu przez Klienta i Powiadomienia">
         <p>
-          Skopiuj wygenerowany kod i przekaż go swojemu klientowi w bezpieczny sposób (np. podczas sesji, mailem lub komunikatorem).
+          Klient otwiera otrzymany link (lub wpisuje kod na stronie głównej) i odpowiada na pytania. Postęp odpowiedzi klienta jest zapisywany w pamięci jego przeglądarki na wypadek przypadkowego odświeżenia karty.
         </p>
-        <p>
-          Klient wprowadza ten kod na głównej stronie aplikacji, aby uzyskać dostęp do testu. Po wypełnieniu i przesłaniu wszystkich odpowiedzi, system automatycznie przetworzy wyniki.
-        </p>
-        <div className="p-4 bg-sky-100 border-l-4 border-sky-500 text-sky-800 rounded mt-4">
-          <p className="font-bold">Powiadomienia w Aplikacji i E-mail</p>
-          <p>
-            Gdy tylko klient ukończy test, <strong>otrzymasz powiadomienie na dwa sposoby</strong>:
+        <div className="p-4 bg-primary/10 border-l-4 border-primary rounded-r-xl mt-4">
+          <p className="font-bold text-text mb-1">Powiadomienia o ukończeniu badania</p>
+          <p className="text-sm text-text-muted">
+            Gdy klient zakończy badanie, otrzymasz powiadomienie w aplikacji (ikona dzwonka w menu bocznym) oraz wiadomość e-mail z bezpośrednim linkiem do raportu.
           </p>
-          <ul>
-            <li><strong>W aplikacji:</strong> Ikona dzwonka w prawym górnym rogu menu nawigacyjnego zaświeci się na czerwono.</li>
-            <li><strong>E-mail:</strong> Otrzymasz automatyczne powiadomienie na Twój adres e-mail zarejestrowany w systemie.</li>
-          </ul>
-           <p>Dzięki temu nie musisz ciągle sprawdzać, czy pojawiły się nowe wyniki.</p>
         </div>
       </DocSection>
 
-      <DocSection title="Krok 3: Analiza Raportu">
-        <p>
-          Nowy wynik będzie widoczny na górze listy w tabeli <strong>"Ukończone testy"</strong>. Możesz użyć wbudowanych filtrów, aby przeszukiwać wyniki po ID klienta, nazwie testu lub zakresie dat.
-        </p>
-        <ul>
-            <li>Kliknij przycisk <strong>"Zobacz raport"</strong>, aby przejść do szczegółowej analizy wyników.</li>
-            <li>W widoku raportu znajdziesz tabelę z punktacją, wizualne wykresy oraz, w zależności od wybranego szablonu, listę odpowiedzi klienta.</li>
-            <li><strong>Wybór szablonu:</strong> W prawym górnym rogu widoku raportu możesz dynamicznie zmieniać szablon PDF, aby dostosować wygląd do swoich potrzeb.</li>
-            <li><strong>Pobieranie PDF:</strong> Użyj przycisku <strong>"Pobierz PDF"</strong>, aby zapisać raport na swoim komputerze.</li>
+      <DocSection title="Krok 3: Analiza Raportu, Wykresy i Notatki">
+        <ul className="list-disc pl-5 space-y-2">
+          <li>Kliknij <strong>„Zobacz raport”</strong> przy wybranym wyniku w tabeli ukończonych testów.</li>
+          <li>W raporcie online możesz przełączać widok między <strong>wykresem słupkowym</strong> a <strong>wykresem radarowym (pajączkowym)</strong>.</li>
+          <li>W sekcji <strong>Interpretacja i notatki terapeuty</strong> możesz wygenerować wspomagającą analizę AI (przycisk <strong>„Generuj z AI”</strong>), edytować własne wnioski i zapisać je na stałe przyciskiem <strong>„Zapisz notatki w bazie”</strong>.</li>
+          <li>Przycisk <strong>„Pobierz PDF”</strong> generuje gotowy dokument PDF z wybranym szablonem.</li>
         </ul>
       </DocSection>
-      
-      <DocSection title="Korzystanie z Asystenta AI">
+
+      <DocSection title="Krok 4: 100% Anonimowości i 60-dniowa Retencja">
         <p>
-            Jeśli administrator włączył tę funkcję, w widoku raportu dostępny będzie przycisk <strong>"Asystent AI"</strong>. Narzędzie to generuje wstępną, neutralną sugestię interpretacji wyników na podstawie danych liczbowych.
-        </p>
-        <div className="p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 rounded mt-4">
-            <p className="font-bold">Ważne Zastrzeżenie</p>
-            <p>
-                Sugestie generowane przez AI mają <strong>charakter wyłącznie pomocniczy i informacyjny</strong>. Nie stanowią diagnozy i nie zastępują Twojej profesjonalnej oceny klinicznej. Zawsze traktuj je jako punkt wyjścia do własnej, pogłębionej analizy.
-            </p>
-        </div>
-      </DocSection>
-      
-      <DocSection title="Bezpieczeństwo i Anonimowość Klienta">
-        <p>
-            Dbamy o prywatność Twoich klientów. Wszystkie wyniki testów są przechowywane w systemie przez ograniczony czas i w sposób gwarantujący anonimowość.
-        </p>
-        <div className="p-4 bg-green-100 border-l-4 border-green-500 text-green-800 rounded mt-4">
-            <p className="font-bold">Gwarancja Anonimowości</p>
-            <p>
-                Podczas wypełniania testu, system <strong>nie zbiera żadnych danych identyfikujących klienta</strong>, takich jak adres IP, informacje o przeglądarce czy urządzeniu. Jedynym identyfikatorem jest przekazany przez Ciebie kod.
-            </p>
-        </div>
-        <div className="p-4 bg-amber-100 border-l-4 border-amber-500 text-amber-800 rounded mt-4">
-            <p className="font-bold">Automatyczne Usuwanie Danych</p>
-            <p>
-                Każdy wynik jest <strong>automatycznie i trwale usuwany z systemu po 60 dniach</strong> od daty jego ukończenia. Kolumna "Usuwanie za" w panelu głównym informuje, ile dni pozostało do usunięcia danego raportu.
-            </p>
-        </div>
-        <p className="mt-4">
-            Możesz również ręcznie usunąć wynik w dowolnym momencie, klikając ikonę kosza. Aby zapobiec przypadkowemu usunięciu, <strong>system poprosi Cię o dodatkowe potwierdzenie</strong> w oknie dialogowym. Pamiętaj, że po potwierdzeniu operacja jest nieodwracalna.
+          Platforma nie zbiera żadnych danych osobowych ani adresów e-mail osób badanych — tylko Ty w swoich notatkach poza systemem wiesz, któremu klientowi przekazałeś dany kod. Wyniki są automatycznie usuwane z bazy danych po upływie <strong>60 dni</strong> od ukończenia badania.
         </p>
       </DocSection>
     </div>

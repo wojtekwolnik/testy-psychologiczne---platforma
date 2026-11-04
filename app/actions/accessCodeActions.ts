@@ -160,3 +160,25 @@ export async function deleteAccessCode(code: string): Promise<void> {
     revalidatePath('/therapist/dashboard');
     revalidatePath('/admin/codes');
 }
+
+export async function reassignAccessCode(code: string, newTherapistId: string): Promise<void> {
+    await requireAuth('admin');
+
+    const targetUser = await prisma.user.findUnique({ where: { id: newTherapistId } });
+    if (!targetUser) {
+        throw new Error('Wybrany terapeuta nie istnieje.');
+    }
+
+    const existingCode = await prisma.accessCode.findUnique({ where: { code } });
+    if (!existingCode) {
+        throw new Error('Kod dostępu nie istnieje.');
+    }
+
+    await prisma.accessCode.update({
+        where: { code },
+        data: { therapistId: newTherapistId }
+    });
+
+    revalidatePath('/admin/codes');
+    revalidatePath('/therapist/dashboard');
+}

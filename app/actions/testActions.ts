@@ -22,12 +22,65 @@ const serializeTest = (prismaTest: any): Test => {
             ...sec,
             questions: (sec.questions || []).map((q: any) => ({
                 ...q,
+                isReversed: Boolean(q.isReversed),
                 options: JSON.parse(q.options),
                 scoring: JSON.parse(q.scoring),
             })),
         })),
     };
 };
+
+/**
+ * Remaps scale, section, and question IDs so a cloned test version or imported JSON test
+ * never collides with primary keys of existing Scale/Section/Question rows in PostgreSQL,
+ * while preserving all formula and scoring references.
+ */
+function remapTestEntityIds(scales: Scale[], sections: Section[]): { remappedScales: Scale[]; remappedSections: Section[] } {
+    const scaleIdMap = new Map<string, string>();
+    for (const s of scales) {
+        const suffix = crypto.randomBytes(4).toString('hex');
+        scaleIdMap.set(s.id, `s-${suffix}`);
+    }
+
+    const remappedScales: Scale[] = scales.map(s => {
+        const newId = scaleIdMap.get(s.id) || s.id;
+        let newFormula = s.formula;
+        if (newFormula) {
+            newFormula = newFormula.replace(/\{([a-zA-Z0-9_-]+)\}/g, (_m, refId) => {
+                const mapped = scaleIdMap.get(refId) || refId;
+                return `{${mapped}}`;
+            });
+        }
+        return {
+            ...s,
+            id: newId,
+            formula: newFormula,
+        };
+    });
+
+    const remappedSections: Section[] = sections.map(sec => ({
+        ...sec,
+        id: `sec-${crypto.randomBytes(4).toString('hex')}`,
+        questions: sec.questions.map(q => {
+            const newScoring: Record<string, any[]> = {};
+            for (const [optId, rules] of Object.entries(q.scoring || {})) {
+                if (Array.isArray(rules)) {
+                    newScoring[optId] = rules.map(r => ({
+                        ...r,
+                        scaleId: scaleIdMap.get(r.scaleId) || r.scaleId,
+                    }));
+                }
+            }
+            return {
+                ...q,
+                id: `q-${crypto.randomBytes(4).toString('hex')}`,
+                scoring: newScoring,
+            };
+        }),
+    }));
+
+    return { remappedScales, remappedSections };
+}
 
 export async function fetchTests(): Promise<Test[]> {
     await requireAuth();
@@ -117,6 +170,64 @@ export async function saveTest(testData: Test, asNewVersion: boolean): Promise<T
     await requireAuth('admin');
     const { id, scales, sections, ...basicInfo } = testData;
 
+    if (asNewVersion) {
+        const existingVersions = await prisma.test.findMany({
+            where: { canonicalId: basicInfo.canonicalId },
+            select: { version: true }
+        });
+        const maxVersion = existingVersions.reduce((max, v) => Math.max(max, v.version), basicInfo.version || 1);
+        const nextVersion = maxVersion + 1;
+        const newTestId = crypto.randomUUID();
+        const { remappedScales, remappedSections } = remapTestEntityIds(scales, sections);
+
+        await prisma.test.create({
+            data: {
+                id: newTestId,
+                canonicalId: basicInfo.canonicalId,
+                version: nextVersion,
+                title: basicInfo.title,
+                description: basicInfo.description,
+                instructions: basicInfo.instructions,
+                questionsPerPage: basicInfo.questionsPerPage,
+                status: basicInfo.status || 'DRAFT',
+                defaultTemplateId: basicInfo.defaultTemplateId || null,
+                scales: {
+                    create: remappedScales.map(s => ({
+                        id: s.id,
+                        type: s.type,
+                        name: s.name,
+                        description: s.description,
+                        maxScore: s.maxScore || null,
+                        formula: s.formula || null,
+                        levels: s.levels ? JSON.stringify(s.levels) : null
+                    }))
+                },
+                sections: {
+                    create: remappedSections.map(sec => ({
+                        id: sec.id,
+                        title: sec.title,
+                        questions: {
+                            create: sec.questions.map(q => ({
+                                id: q.id,
+                                text: q.text,
+                                type: q.type,
+                                isReversed: Boolean(q.isReversed),
+                                options: JSON.stringify(q.options),
+                                scoring: JSON.stringify(q.scoring)
+                            }))
+                        }
+                    }))
+                }
+            }
+        });
+
+        revalidatePath('/admin/dashboard');
+        revalidatePath('/therapist/dashboard');
+        const createdVersion = await fetchTestById(newTestId);
+        if (!createdVersion) throw new Error("Failed to save new version of test.");
+        return createdVersion;
+    }
+
     await prisma.$transaction(async (tx) => {
         await tx.test.update({
             where: { id },
@@ -125,7 +236,9 @@ export async function saveTest(testData: Test, asNewVersion: boolean): Promise<T
                 description: basicInfo.description,
                 instructions: basicInfo.instructions,
                 questionsPerPage: basicInfo.questionsPerPage,
-                version: basicInfo.version
+                version: basicInfo.version,
+                status: basicInfo.status || 'DRAFT',
+                defaultTemplateId: basicInfo.defaultTemplateId ?? null
             }
         });
 
@@ -159,6 +272,7 @@ export async function saveTest(testData: Test, asNewVersion: boolean): Promise<T
                             id: q.id,
                             text: q.text,
                             type: q.type,
+                            isReversed: Boolean(q.isReversed),
                             options: JSON.stringify(q.options),
                             scoring: JSON.stringify(q.scoring)
                         }))
@@ -169,6 +283,7 @@ export async function saveTest(testData: Test, asNewVersion: boolean): Promise<T
     });
 
     revalidatePath('/admin/dashboard');
+    revalidatePath('/therapist/dashboard');
     revalidatePath(`/test/${id}`);
 
     const updated = await fetchTestById(id);
@@ -199,6 +314,18 @@ export async function createNewTest(testData: Test): Promise<Test> {
     await requireAuth('admin');
     const { id, scales, sections, defaultTemplateId, createdAt, ...basicInfo } = testData;
 
+    // Ensure imported/new scale, section, and question IDs do not collide with existing rows in DB
+    const existingScaleCount = scales.length > 0
+        ? await prisma.scale.count({ where: { id: { in: scales.map(s => s.id) } } })
+        : 0;
+    const existingSectionCount = sections.length > 0
+        ? await prisma.section.count({ where: { id: { in: sections.map(s => s.id) } } })
+        : 0;
+
+    const { remappedScales, remappedSections } = (existingScaleCount > 0 || existingSectionCount > 0)
+        ? remapTestEntityIds(scales, sections)
+        : { remappedScales: scales, remappedSections: sections };
+
     await prisma.test.create({
         data: {
             id: id,
@@ -211,7 +338,7 @@ export async function createNewTest(testData: Test): Promise<Test> {
             createdAt: new Date(createdAt),
             status: basicInfo.status || 'DRAFT',
             scales: {
-                create: scales.map(s => ({
+                create: remappedScales.map(s => ({
                     id: s.id,
                     type: s.type,
                     name: s.name,
@@ -222,7 +349,7 @@ export async function createNewTest(testData: Test): Promise<Test> {
                 }))
             },
             sections: {
-                create: sections.map(sec => ({
+                create: remappedSections.map(sec => ({
                     id: sec.id,
                     title: sec.title,
                     questions: {
@@ -230,6 +357,7 @@ export async function createNewTest(testData: Test): Promise<Test> {
                             id: q.id,
                             text: q.text,
                             type: q.type,
+                            isReversed: Boolean(q.isReversed),
                             options: JSON.stringify(q.options),
                             scoring: JSON.stringify(q.scoring)
                         }))
@@ -392,7 +520,25 @@ export async function updateTestStatus(testId: string, newStatus: 'DRAFT' | 'PUB
     });
 
     revalidatePath('/admin/dashboard');
+    revalidatePath('/therapist/dashboard');
     const updated = await fetchTestById(testId);
     if (!updated) throw new Error("Failed to update test status.");
     return updated;
+}
+
+export async function deleteTest(testId: string): Promise<void> {
+    await requireAuth('admin');
+    await prisma.$transaction(async (tx) => {
+        await tx.accessCode.deleteMany({ where: { testId } });
+        await tx.testResult.deleteMany({ where: { testId } });
+        await tx.pdfTemplate.deleteMany({ where: { testId } });
+        await tx.scale.deleteMany({ where: { testId } });
+        await tx.question.deleteMany({ where: { section: { testId } } });
+        await tx.section.deleteMany({ where: { testId } });
+        await tx.test.delete({ where: { id: testId } });
+    });
+    revalidatePath('/admin/dashboard');
+    revalidatePath('/therapist/dashboard');
+    revalidatePath('/admin/templates');
+    revalidatePath('/admin/codes');
 }

@@ -1,19 +1,23 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { fetchActiveCodes, deleteAccessCode } from '@/app/actions/accessCodeActions';
+import { fetchActiveCodes, deleteAccessCode, reassignAccessCode } from '@/app/actions/accessCodeActions';
 import { fetchTests } from '@/app/actions/testActions';
+import { getUsers, UserData } from '@/app/actions/userActions';
 import { AccessCode, Test } from './types';
 import { ClipboardCopyIcon, TrashIcon, LinkIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
 
 const AdminCodes = () => {
-    const [codes, setCodes] = useState<AccessCode[]>([]);
+    const [codes, setCodes] = useState<(AccessCode & { therapistName?: string; therapistEmail?: string })[]>([]);
     const [tests, setTests] = useState<Test[]>([]);
+    const [users, setUsers] = useState<UserData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [copySuccess, setCopySuccess] = useState<string>('');
     const [copyLinkSuccess, setCopyLinkSuccess] = useState<string>('');
+    const [reassignSuccess, setReassignSuccess] = useState<string>('');
+    const [reassigningCode, setReassigningCode] = useState<string | null>(null);
     const [codeToDelete, setCodeToDelete] = useState<string | null>(null);
 
     // Filters
@@ -27,10 +31,14 @@ const AdminCodes = () => {
     const loadData = async () => {
         try {
             setIsLoading(true);
-            const fetchedCodes = await fetchActiveCodes();
-            const fetchedTests = await fetchTests();
+            const [fetchedCodes, fetchedTests, fetchedUsers] = await Promise.all([
+                fetchActiveCodes(),
+                fetchTests(),
+                getUsers()
+            ]);
             setCodes(fetchedCodes);
             setTests(fetchedTests);
+            setUsers(fetchedUsers);
         } catch (err) {
             setError('Nie udało się załadować listy kodów.');
         } finally {
@@ -54,6 +62,27 @@ const AdminCodes = () => {
         });
     };
 
+    const handleReassignCode = async (code: string, newTherapistId: string) => {
+        setReassigningCode(code);
+        setError(null);
+        try {
+            await reassignAccessCode(code, newTherapistId);
+            const targetUser = users.find(u => u.id === newTherapistId);
+            setCodes(prev => prev.map(c => c.code === code ? {
+                ...c,
+                therapistId: newTherapistId,
+                therapistName: targetUser?.username || undefined,
+                therapistEmail: targetUser?.email || undefined,
+            } : c));
+            setReassignSuccess(code);
+            setTimeout(() => setReassignSuccess(''), 2500);
+        } catch (err: any) {
+            setError(err?.message || 'Nie udało się przekazać kodu innemu terapeucie.');
+        } finally {
+            setReassigningCode(null);
+        }
+    };
+
     const confirmDeleteCode = async (code: string) => {
         try {
             await deleteAccessCode(code);
@@ -66,25 +95,15 @@ const AdminCodes = () => {
     const filteredCodes = useMemo(() => {
         return codes.filter(code => {
             const matchesSearch = code.code.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesTherapist = filterTherapist === 'all' || code.therapistName === filterTherapist || code.therapistEmail === filterTherapist;
+            const matchesTherapist = filterTherapist === 'all' || code.therapistId === filterTherapist || code.therapistName === filterTherapist || code.therapistEmail === filterTherapist;
             return matchesSearch && matchesTherapist;
         });
     }, [codes, searchTerm, filterTherapist]);
 
-    // Extract unique therapists for the filter dropdown
-    const uniqueTherapists = useMemo(() => {
-        const therapists = new Set<string>();
-        codes.forEach(c => {
-            if (c.therapistName) therapists.add(c.therapistName);
-            else if (c.therapistEmail) therapists.add(c.therapistEmail);
-        });
-        return Array.from(therapists);
-    }, [codes]);
-
     return (
         <div className="p-8 max-w-7xl mx-auto">
             <h1 className="text-4xl font-bold mb-2">Zarządzanie Kodami Dostępu</h1>
-            <p className="opacity-80 mb-8">Podgląd wszystkich wygenerowanych, ale jeszcze niewykorzystanych anonimowych kodów na platformie.</p>
+            <p className="opacity-80 mb-8">Podgląd wszystkich aktywnych, niewykorzystanych kodów oraz możliwość przekazania kodu innemu terapeucie.</p>
 
             <div className="bg-[var(--secondary-color)] rounded-xl shadow-lg border border-[var(--border-color)] overflow-hidden">
                 <div className="p-4 bg-[var(--background-color)] border-b border-[var(--border-color)] flex flex-col sm:flex-row gap-4 items-end">
@@ -106,7 +125,11 @@ const AdminCodes = () => {
                             className="w-full h-[42px] px-3 py-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)] text-sm"
                         >
                             <option value="all">Wszyscy terapeuci</option>
-                            {uniqueTherapists.map(t => <option key={t} value={t}>{t}</option>)}
+                            {users.map(u => (
+                                <option key={u.id} value={u.id}>
+                                    {u.username || u.email} ({u.role === 'admin' ? 'Admin' : 'Terapeuta'})
+                                </option>
+                            ))}
                         </select>
                     </div>
                 </div>
@@ -122,7 +145,7 @@ const AdminCodes = () => {
                                 <tr>
                                     <th className="p-4">Kod dostępu</th>
                                     <th className="p-4">Przypisany Test</th>
-                                    <th className="p-4">Wygenerowany przez</th>
+                                    <th className="p-4">Przypisany Terapeuta (Przekaż kod)</th>
                                     <th className="p-4">Ważny do</th>
                                     <th className="p-4 text-right">Akcje</th>
                                 </tr>
@@ -143,7 +166,26 @@ const AdminCodes = () => {
                                             <tr key={code.code} className="border-b border-[var(--border-color)]/50 hover:bg-[var(--background-color)]">
                                                 <td className="p-4 font-mono font-semibold text-[var(--primary-color)]">{code.code}</td>
                                                 <td className="p-4">{associatedTest?.title} <span className="text-xs opacity-50">(v{associatedTest?.version})</span></td>
-                                                <td className="p-4 font-medium">{code.therapistName || code.therapistEmail || 'Nieznany'}</td>
+                                                <td className="p-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <select
+                                                            value={code.therapistId}
+                                                            disabled={reassigningCode === code.code}
+                                                            onChange={e => handleReassignCode(code.code, e.target.value)}
+                                                            className="px-2.5 py-1.5 rounded-lg border border-border bg-input-bg text-input-text text-xs font-medium focus:ring-2 focus:ring-primary/50"
+                                                            title="Przekaż ten kod innemu terapeucie"
+                                                        >
+                                                            {users.map(u => (
+                                                                <option key={u.id} value={u.id}>
+                                                                    {u.username || u.email} ({u.role === 'admin' ? 'Admin' : 'Terapeuta'})
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                        {reassignSuccess === code.code && (
+                                                            <span className="text-xs text-primary font-semibold">Przekazano!</span>
+                                                        )}
+                                                    </div>
+                                                </td>
                                                 <td className={`p-4 ${isExpired ? 'text-red-500 font-bold' : ''}`}>
                                                     {new Date(code.expiresAt).toLocaleDateString()} {isExpired && '(Wygasł)'}
                                                 </td>

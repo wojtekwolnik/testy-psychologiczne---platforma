@@ -6,7 +6,7 @@ import bigFiveQuestions from '@/prisma/bigFiveQuestions.json';
 
 async function seedDefaultTestsIfNeeded() {
     try {
-        const existingDemo = await prisma.test.findUnique({ where: { canonicalId: 'demo-personality-test' } });
+        const existingDemo = await prisma.test.findFirst({ where: { canonicalId: 'demo-personality-test' } });
         if (!existingDemo) {
             await prisma.test.create({
                 data: {
@@ -49,7 +49,7 @@ async function seedDefaultTestsIfNeeded() {
             });
         }
 
-        const existingBigFive = await prisma.test.findUnique({ where: { canonicalId: 'big-five-johnson-120' } });
+        const existingBigFive = await prisma.test.findFirst({ where: { canonicalId: 'big-five-johnson-120' } });
         if (!existingBigFive) {
             const likertOptions = JSON.stringify([
                 { text: 'Bardzo nietrafne', value: 1, id: '1' },

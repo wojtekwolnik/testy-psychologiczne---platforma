@@ -7,7 +7,7 @@ async function main() {
     // Users are now created via Setup Wizard or admin panel.
 
     // Create Sample Test
-    const sampleTest = await prisma.test.findUnique({ where: { canonicalId: 'demo-personality-test' } }) || await prisma.test.create({
+    const sampleTest = await prisma.test.findFirst({ where: { canonicalId: 'demo-personality-test' } }) || await prisma.test.create({
         data: {
             title: 'Test Osobowości (Demo)',
             canonicalId: 'demo-personality-test',
@@ -48,7 +48,7 @@ async function main() {
     })
 
     // Check if Big Five Test already exists
-    let bigFiveTest = await prisma.test.findUnique({ where: { canonicalId: 'big-five-johnson-120' } });
+    let bigFiveTest = await prisma.test.findFirst({ where: { canonicalId: 'big-five-johnson-120' } });
     if (!bigFiveTest) {
         const bigFiveQuestions = require('./bigFiveQuestions.json');
         const likertOptions = JSON.stringify([

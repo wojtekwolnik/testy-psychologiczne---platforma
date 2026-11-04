@@ -8,11 +8,15 @@ import bcrypt from 'bcryptjs';
 import { checkAuth, requireAuth } from './authActions';
 
 // Backwards-compatible type alias for consumers that still reference UserData
-export type UserData = User;
+export type UserData = User & {
+    activeCodesCount?: number;
+    resultsCount?: number;
+};
 
-export async function getAllUsers(): Promise<User[]> {
+export async function getAllUsers(): Promise<UserData[]> {
     await requireAuth('admin');
     try {
+        const now = new Date();
         const users = await prisma.user.findMany({
             select: {
                 id: true,
@@ -21,6 +25,14 @@ export async function getAllUsers(): Promise<User[]> {
                 role: true,
                 createdAt: true,
                 twoFactorSecret: true,
+                _count: {
+                    select: {
+                        accessCodes: {
+                            where: { isUsed: false, expiresAt: { gt: now } }
+                        },
+                        results: true,
+                    }
+                }
             },
             orderBy: {
                 createdAt: 'desc',
@@ -35,6 +47,8 @@ export async function getAllUsers(): Promise<User[]> {
             createdAt: user.createdAt.toISOString(),
             // Never expose raw TOTP secret to client
             twoFactorSecret: user.twoFactorSecret ? 'enabled' : undefined,
+            activeCodesCount: user._count.accessCodes,
+            resultsCount: user._count.results,
         }));
     } catch (error) {
         console.error('Failed to fetch users:', error);
@@ -42,7 +56,7 @@ export async function getAllUsers(): Promise<User[]> {
     }
 }
 
-export async function deleteUser(userId: string): Promise<void> {
+export async function deleteUser(userId: string, transferToUserId?: string): Promise<void> {
     const currentUser = await requireAuth('admin');
     try {
         if (currentUser.id === userId) {
@@ -61,12 +75,38 @@ export async function deleteUser(userId: string): Promise<void> {
             }
         }
 
-        await prisma.user.delete({
-            where: {
-                id: userId,
-            },
+        if (transferToUserId) {
+            if (transferToUserId === userId) {
+                throw new Error('Nie można przekazać kodów usuwanemu użytkownikowi.');
+            }
+            const targetUser = await prisma.user.findUnique({ where: { id: transferToUserId } });
+            if (!targetUser) {
+                throw new Error('Wybrany użytkownik docelowy nie istnieje.');
+            }
+        }
+
+        await prisma.$transaction(async (tx) => {
+            if (transferToUserId) {
+                await tx.accessCode.updateMany({
+                    where: { therapistId: userId },
+                    data: { therapistId: transferToUserId }
+                });
+                await tx.testResult.updateMany({
+                    where: { therapistId: userId },
+                    data: { therapistId: transferToUserId }
+                });
+            } else {
+                await tx.accessCode.deleteMany({ where: { therapistId: userId } });
+                await tx.testResult.deleteMany({ where: { therapistId: userId } });
+            }
+
+            await tx.notification.deleteMany({ where: { userId } });
+            await tx.user.delete({ where: { id: userId } });
         });
+
         revalidatePath('/admin/users');
+        revalidatePath('/admin/codes');
+        revalidatePath('/therapist/dashboard');
     } catch (error: any) {
         console.error('Failed to delete user:', error);
         throw new Error(error.message || 'Failed to delete user');

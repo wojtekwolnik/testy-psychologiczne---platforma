@@ -109,7 +109,7 @@ const TestEditor: React.FC = () => {
         loadInitialData();
     }, [testId]);
 
-    const handleSave = useCallback(async (isPublishing: boolean) => {
+    const handleSave = useCallback(async (isPublishing: boolean, asNewVersion: boolean = false) => {
         if (!test) return;
 
         // If publishing, validate. If draft, skip validation.
@@ -138,11 +138,11 @@ const TestEditor: React.FC = () => {
             if (testId === 'new') {
                 saved = await createNewTest(testToSave);
             } else {
-                saved = await saveTest(testToSave, false);
+                saved = await saveTest(testToSave, asNewVersion);
             }
 
             setTest(saved);
-            toast.success(isPublishing ? "Test opublikowany pomyślnie!" : "Szkic zapisany pomyślnie!");
+            toast.success(asNewVersion ? `Utworzono nową wersję testu (v${saved.version})!` : (isPublishing ? "Test opublikowany pomyślnie!" : "Szkic zapisany pomyślnie!"));
             setTimeout(() => {
                 router.push('/admin/dashboard');
             }, 1000);
@@ -1060,7 +1060,7 @@ const TestEditor: React.FC = () => {
 
 
             <div className="flex justify-end gap-4 mt-8">
-                <button onClick={() => router.push('/admin/dashboard')} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg">Anuluj</button>
+                <button onClick={() => router.push('/admin/dashboard')} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg">Anuluj</button>{testId !== 'new' && (<button onClick={() => handleSave(test?.status === 'PUBLISHED', true)} disabled={isSaving} className="px-6 py-2 border border-primary/50 bg-primary/15 text-primary font-bold rounded-lg hover:bg-primary/25 transition-colors disabled:opacity-50" title="Tworzy nową wersję (v+1) z tym samym identyfikatorem kanonicznym">{isSaving ? 'Zapisywanie...' : `Zapisz jako nową wersję (v${(test?.version || 1) + 1})`}</button>)}
                 <button
                     onClick={() => handleSave(false)}
                     disabled={isSaving}

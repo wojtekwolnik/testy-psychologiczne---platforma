@@ -24,7 +24,7 @@ model User {
 
 model Test {
   id               String    @id @default(uuid())
-  canonicalId      String    @unique
+  canonicalId      String
   version          Int       @default(1)
   title            String
   description      String
@@ -39,6 +39,8 @@ model Test {
   pdfTemplates     PdfTemplate[]
   defaultTemplateId String?
   accessCodes      AccessCode[]
+
+  @@index([canonicalId])
 }
 
 model Scale {
