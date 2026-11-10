@@ -7,9 +7,15 @@ import crypto from 'crypto';
 import { checkAuth, requireAuth } from './authActions';
 import { checkRateLimit } from '@/lib/rateLimit';
 
-export async function generateAccessCode(testId: string, expiresAt: Date, therapistId: string): Promise<AccessCode> {
+export async function generateAccessCodesBatch(
+    testId: string,
+    expiresAt: Date,
+    therapistId: string,
+    count: number = 1
+): Promise<AccessCode[]> {
     const user = await requireAuth();
     const effectiveTherapistId = user.role === 'admin' && therapistId ? therapistId : user.id;
+    const safeCount = Math.max(1, Math.min(20, Math.floor(count || 1)));
 
     if (!expiresAt || new Date(expiresAt) <= new Date()) {
         throw new Error('Data ważności kodu musi być w przyszłości.');
@@ -28,26 +34,36 @@ export async function generateAccessCode(testId: string, expiresAt: Date, therap
         throw new Error('Kody dostępu można generować wyłącznie dla opublikowanych testów (PUBLISHED).');
     }
 
-    // Cryptographically secure 8-char alphanumeric code
-    const randomPart = crypto.randomBytes(4).toString('hex').toUpperCase();
-    const code = `AC-${randomPart}`;
-
-    const accessCode = await prisma.accessCode.create({
-        data: {
-            code,
-            testId,
-            therapistId: effectiveTherapistId,
-            expiresAt,
-            isUsed: false
+    const createdCodes = await prisma.$transaction(async (tx) => {
+        const results = [];
+        for (let i = 0; i < safeCount; i++) {
+            const randomPart = crypto.randomBytes(4).toString('hex').toUpperCase();
+            const code = `AC-${randomPart}`;
+            const accessCode = await tx.accessCode.create({
+                data: {
+                    code,
+                    testId,
+                    therapistId: effectiveTherapistId,
+                    expiresAt,
+                    isUsed: false
+                }
+            });
+            results.push(accessCode);
         }
+        return results;
     });
 
     revalidatePath('/therapist/dashboard');
     revalidatePath('/admin/codes');
-    return {
-        ...accessCode,
-        expiresAt: accessCode.expiresAt.toISOString()
-    };
+    return createdCodes.map(ac => ({
+        ...ac,
+        expiresAt: ac.expiresAt.toISOString()
+    }));
+}
+
+export async function generateAccessCode(testId: string, expiresAt: Date, therapistId: string): Promise<AccessCode> {
+    const created = await generateAccessCodesBatch(testId, expiresAt, therapistId, 1);
+    return created[0];
 }
 
 export async function fetchActiveCodes(): Promise<(AccessCode & { therapistName?: string, therapistEmail?: string })[]> {

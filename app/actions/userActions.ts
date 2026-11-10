@@ -167,6 +167,56 @@ export async function createUser(data: { email: string; username: string; passwo
     }, hashedPassword);
 }
 
+export async function changeOwnPassword(
+    currentPassword: string,
+    newPassword: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const currentUser = await checkAuth();
+        if (!currentUser) {
+            return { success: false, error: 'Brak autoryzacji. Zaloguj się ponownie.' };
+        }
+
+        if (!currentPassword) {
+            return { success: false, error: 'Podaj aktualne hasło.' };
+        }
+
+        if (!newPassword || newPassword.length < 6) {
+            return { success: false, error: 'Nowe hasło musi mieć co najmniej 6 znaków.' };
+        }
+
+        const dbUser = await prisma.user.findUnique({
+            where: { id: currentUser.id },
+            select: { id: true, password: true }
+        });
+
+        if (!dbUser || !dbUser.password) {
+            return { success: false, error: 'Nie znaleziono konta użytkownika.' };
+        }
+
+        const isCurrentValid = await bcrypt.compare(currentPassword, dbUser.password);
+        if (!isCurrentValid) {
+            return { success: false, error: 'Aktualne hasło jest nieprawidłowe.' };
+        }
+
+        const isSamePassword = await bcrypt.compare(newPassword, dbUser.password);
+        if (isSamePassword) {
+            return { success: false, error: 'Nowe hasło musi różnić się od dotychczasowego.' };
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await prisma.user.update({
+            where: { id: currentUser.id },
+            data: { password: hashedPassword },
+        });
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('Failed to change own password:', error);
+        return { success: false, error: 'Wystąpił błąd podczas zmiany hasła.' };
+    }
+}
+
 export async function updateUserPassword(userId: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
     try {
         const currentUser = await checkAuth();

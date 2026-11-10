@@ -5,7 +5,7 @@ import { UserRole, User, Notification } from '../types';
 import { ClipboardListIcon, UserGroupIcon, CogIcon, UserManagementIcon, BrandingIcon, ChartPieIcon, LogoutIcon, DocumentationIcon, SparklesIcon, HeartIcon, BellIcon, EnvelopeIcon, ChartBarIcon } from './Icons';
 import { BrandingContext } from '../../contexts/BrandingContext';
 import { markNotificationsAsRead } from '@/app/actions/notificationActions';
-import { updateUserPassword } from '@/app/actions/userActions';
+import { changeOwnPassword } from '@/app/actions/userActions';
 
 interface SideNavProps {
     user: User;
@@ -128,6 +128,7 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
     const router = useRouter();
     const pathname = usePathname();
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+    const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [pwSaving, setPwSaving] = useState(false);
@@ -136,21 +137,26 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
     const handlePasswordChange = async (e: React.FormEvent) => {
         e.preventDefault();
         setPwMessage(null);
+        if (!currentPassword) {
+            setPwMessage({ type: 'error', text: 'Wpisz swoje aktualne hasło.' });
+            return;
+        }
         if (newPassword !== confirmPassword) {
-            setPwMessage({ type: 'error', text: 'Podane hasła nie są identyczne.' });
+            setPwMessage({ type: 'error', text: 'Podane nowe hasła nie są identyczne.' });
             return;
         }
         if (newPassword.length < 6) {
-            setPwMessage({ type: 'error', text: 'Hasło musi mieć co najmniej 6 znaków.' });
+            setPwMessage({ type: 'error', text: 'Nowe hasło musi mieć co najmniej 6 znaków.' });
             return;
         }
         setPwSaving(true);
-        const res = await updateUserPassword(user.id, newPassword);
+        const res = await changeOwnPassword(currentPassword, newPassword);
         setPwSaving(false);
         if (!res.success) {
             setPwMessage({ type: 'error', text: res.error || 'Błąd podczas zmiany hasła.' });
         } else {
-            setPwMessage({ type: 'success', text: 'Hasło zostało zmienione!' });
+            setPwMessage({ type: 'success', text: 'Hasło zostało bezpiecznie zmienione!' });
+            setCurrentPassword('');
             setNewPassword('');
             setConfirmPassword('');
             setTimeout(() => {
@@ -265,12 +271,24 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
             </div>
 
             {isPasswordModalOpen && (
-                <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-                    <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl max-w-sm w-full p-6 text-slate-100">
-                        <h3 className="text-lg font-bold mb-4">Zmień swoje hasło</h3>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+                    <div className="bg-surface border border-border rounded-xl shadow-2xl max-w-sm w-full p-6 text-text">
+                        <h3 className="text-lg font-bold mb-1">Zmień swoje hasło</h3>
+                        <p className="text-xs text-text-muted mb-4">Potwierdź tożsamość aktualnym hasłem i wprowadź nowe.</p>
                         <form onSubmit={handlePasswordChange} className="space-y-4">
                             <div>
-                                <label className="block text-xs font-medium text-slate-300 mb-1">Nowe hasło</label>
+                                <label className="block text-xs font-medium text-text-muted mb-1">Aktualne hasło</label>
+                                <input
+                                    type="password"
+                                    required
+                                    value={currentPassword}
+                                    onChange={e => setCurrentPassword(e.target.value)}
+                                    placeholder="Twoje obecne hasło"
+                                    className="w-full p-2.5 rounded-lg bg-input-bg border border-border text-input-text text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-medium text-text-muted mb-1">Nowe hasło</label>
                                 <input
                                     type="password"
                                     required
@@ -278,38 +296,44 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
                                     value={newPassword}
                                     onChange={e => setNewPassword(e.target.value)}
                                     placeholder="Min. 6 znaków"
-                                    className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm"
+                                    className="w-full p-2.5 rounded-lg bg-input-bg border border-border text-input-text text-sm focus:ring-2 focus:ring-primary/50 outline-none"
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-slate-300 mb-1">Powtórz nowe hasło</label>
+                                <label className="block text-xs font-medium text-text-muted mb-1">Powtórz nowe hasło</label>
                                 <input
                                     type="password"
                                     required
                                     minLength={6}
                                     value={confirmPassword}
                                     onChange={e => setConfirmPassword(e.target.value)}
-                                    placeholder="Powtórz hasło"
-                                    className="w-full p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm"
+                                    placeholder="Powtórz nowe hasło"
+                                    className="w-full p-2.5 rounded-lg bg-input-bg border border-border text-input-text text-sm focus:ring-2 focus:ring-primary/50 outline-none"
                                 />
                             </div>
                             {pwMessage && (
-                                <div className={`p-2.5 rounded-lg text-xs ${pwMessage.type === 'error' ? 'bg-red-500/20 text-red-300 border border-red-500/40' : 'bg-green-500/20 text-green-300 border border-green-500/40'}`}>
+                                <div className={`p-2.5 rounded-lg text-xs ${pwMessage.type === 'error' ? 'bg-red-500/20 text-red-300 border border-red-500/40' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'}`}>
                                     {pwMessage.text}
                                 </div>
                             )}
                             <div className="flex justify-end gap-2 pt-2">
                                 <button
                                     type="button"
-                                    onClick={() => setIsPasswordModalOpen(false)}
-                                    className="px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 rounded-lg"
+                                    onClick={() => {
+                                        setIsPasswordModalOpen(false);
+                                        setCurrentPassword('');
+                                        setNewPassword('');
+                                        setConfirmPassword('');
+                                        setPwMessage(null);
+                                    }}
+                                    className="px-3 py-2 text-xs text-text-muted hover:text-text hover:bg-white/5 rounded-lg transition-colors"
                                 >
                                     Anuluj
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={pwSaving}
-                                    className="px-4 py-2 text-xs font-semibold bg-teal-600 hover:bg-teal-500 text-white rounded-lg disabled:opacity-50"
+                                    className="px-4 py-2 text-xs font-semibold bg-primary hover:bg-primary/90 text-background rounded-lg disabled:opacity-50 transition-colors"
                                 >
                                     {pwSaving ? 'Zapisywanie...' : 'Zapisz hasło'}
                                 </button>

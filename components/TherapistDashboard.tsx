@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchResults, deleteResult } from '@/app/actions/resultActions';
-import { generateAccessCode, fetchActiveCodes, deleteAccessCode } from '@/app/actions/accessCodeActions';
+import { generateAccessCodesBatch, fetchActiveCodes, deleteAccessCode } from '@/app/actions/accessCodeActions';
 import { fetchTests } from '@/app/actions/testActions';
 import { getUsers, UserData } from '@/app/actions/userActions';
 import { TestResult, Test, AccessCode } from './types';
@@ -44,6 +44,9 @@ const TherapistDashboard = () => {
   const [activeCodes, setActiveCodes] = useState<AccessCode[]>([]);
   const [selectedTest, setSelectedTest] = useState<string>('');
   const [expiryDate, setExpiryDate] = useState<string>('');
+  const [codeCount, setCodeCount] = useState<number>(1);
+  const [lastBatchCodes, setLastBatchCodes] = useState<AccessCode[]>([]);
+  const [batchCopyMessage, setBatchCopyMessage] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState<string>('');
@@ -140,14 +143,29 @@ const TherapistDashboard = () => {
 
     try {
       setError(null);
-      const newCode = await generateAccessCode(selectedTest, expiry, targetTherapistId);
-      if (newCode) {
-        setActiveCodes(prev => [newCode, ...prev]);
+      const newCodes = await generateAccessCodesBatch(selectedTest, expiry, targetTherapistId, codeCount);
+      if (newCodes && newCodes.length > 0) {
+        setActiveCodes(prev => [...newCodes, ...prev]);
+        setLastBatchCodes(newCodes);
       }
     } catch (err: any) {
       console.error("Error generating code:", err);
       setError(err?.message || "Nie udało się wygenerować kodu dostępu.");
     }
+  };
+
+  const handleCopyBatch = (mode: 'codes' | 'links') => {
+    if (lastBatchCodes.length === 0) return;
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const text = lastBatchCodes
+      .map(c => mode === 'codes'
+        ? c.code
+        : `${c.code}: ${origin}/test-confirmation?testId=${encodeURIComponent(c.testId)}&clientCode=${encodeURIComponent(c.code)}`)
+      .join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      setBatchCopyMessage(mode === 'codes' ? 'Skopiowano wszystkie kody!' : 'Skopiowano wszystkie linki!');
+      setTimeout(() => setBatchCopyMessage(''), 2500);
+    });
   };
 
   const handleCopyCode = (code: string) => {
@@ -275,10 +293,68 @@ const TherapistDashboard = () => {
                 className="w-full h-[48px] px-4 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner"
               />
             </div>
+
+            <div className="w-full sm:w-32">
+              <label htmlFor="code-count" className="block text-xs font-medium text-text-muted mb-1">
+                Liczba kodów
+                <InfoTooltip id="genCount" label="Liczba kodów (seria)" text="Możesz wygenerować od 1 do 20 jednorazowych kodów jednocześnie (np. dla grupy lub kilku klientów naraz)." activeId={activeTooltip} setActiveId={setActiveTooltip} />
+              </label>
+              <select
+                id="code-count"
+                value={codeCount}
+                onChange={e => setCodeCount(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
+                className="w-full h-[48px] px-3 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner font-semibold"
+              >
+                {[1, 2, 3, 5, 10, 15, 20].map(n => (
+                  <option key={n} value={n}>{n} {n === 1 ? 'kod' : n < 5 ? 'kody' : 'kodów'}</option>
+                ))}
+              </select>
+            </div>
+
             <button onClick={handleGenerateCode} className="flex items-center justify-center gap-2 px-8 bg-primary text-primary-contrast font-bold rounded-xl shadow-lg hover:shadow-primary/30 hover:-translate-y-1 transition-all h-[48px] w-full sm:w-auto flex-shrink-0">
-              <PlusIcon /> Generuj kod
+              <PlusIcon /> {codeCount > 1 ? `Generuj (${codeCount})` : 'Generuj kod'}
             </button>
           </div>
+
+          {lastBatchCodes.length > 1 && (
+            <div className="mt-4 p-4 rounded-xl bg-primary/10 border border-primary/30 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-primary">
+                  Wygenerowano serię {lastBatchCodes.length} kodów dostępu:
+                </p>
+                <p className="text-xs font-mono text-text-muted mt-1">
+                  {lastBatchCodes.map(c => c.code).join(', ')}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {batchCopyMessage && (
+                  <span className="text-xs font-semibold text-primary mr-2">{batchCopyMessage}</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleCopyBatch('codes')}
+                  className="px-3 py-1.5 bg-surface border border-border hover:bg-white/5 text-text text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"
+                >
+                  <ClipboardCopyIcon className="w-4 h-4" /> Kopiuj wszystkie kody
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleCopyBatch('links')}
+                  className="px-3 py-1.5 bg-primary text-background hover:bg-primary/90 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors"
+                >
+                  <LinkIcon className="w-4 h-4" /> Kopiuj wszystkie linki ({lastBatchCodes.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLastBatchCodes([])}
+                  className="px-2 py-1 text-xs text-text-muted hover:text-text"
+                  title="Ukryj pasek serii"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
           {activeCodes.length > 0 && (
             <div className="mt-8 pt-6 border-t border-[var(--border-color)]">
               <h3 className="text-md font-semibold opacity-80 mb-4">Aktywne kody (ważne i nieużyte)</h3>

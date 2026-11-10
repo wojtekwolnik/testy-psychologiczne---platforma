@@ -533,8 +533,9 @@ async function drawAnswersList(ctx: PdfContext, component: ReportComponent, resu
     }
 }
 
-async function drawAiInterpretation(ctx: PdfContext, component: ReportComponent, result: TestResult, branding: BrandingSettings) {
-    if (!result.analysis) return; // Skip if no AI analysis exists
+async function drawAiInterpretation(ctx: PdfContext, component: ReportComponent, result: TestResult, branding: BrandingSettings, customInterpretation?: string) {
+    const rawAnalysis = (customInterpretation && customInterpretation.trim()) ? customInterpretation : result.analysis;
+    if (!rawAnalysis) return; // Skip if no analysis exists
 
     ctx.checkNewPage(50);
     const headerFont = ctx.boldFont;
@@ -545,7 +546,7 @@ async function drawAiInterpretation(ctx: PdfContext, component: ReportComponent,
     ctx.moveDown(25);
 
     // Format analysis to basic HTML if it uses markdown (simple replacement)
-    let content = result.analysis
+    let content = rawAnalysis
         .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
         .replace(/\*(.*?)\*/g, '<i>$1</i>')
         .replace(/\n\n/g, '<p></p>')
@@ -592,12 +593,19 @@ export async function generatePdf(
 
     const font = regularFont;
 
-    const componentsToRender: ReportComponent[] = template && template.components && template.components.length > 0 ? template.components : [
+    const hasCustomTemplate = Boolean(template && template.components && template.components.length > 0);
+    const hasCustomText = Boolean(customInterpretation && customInterpretation.replace(/<[^>]+>/g, '').trim().length > 0);
+
+    const componentsToRender: ReportComponent[] = hasCustomTemplate ? template!.components : [
         { id: 'def-h1', type: 'Header', options: { text: `Raport: ${test.title}` } },
         { id: 'def-st', type: 'ScoresTable', title: 'Wyniki surowe', options: {} },
         { id: 'def-barchart', type: 'BarChart', title: 'Profil podstawowy', options: { scaleIds: test.scales.filter(s => s.type === 'standard').map(s => s.id) } },
-        { id: 'def-interp', type: 'Interpretations', title: 'Szczegółowa interpretacja', options: {} },
+        hasCustomText
+            ? { id: 'def-ai', type: 'AiInterpretation', title: 'Interpretacja wyników i zalecenia', options: {} }
+            : { id: 'def-interp', type: 'Interpretations', title: 'Szczegółowa interpretacja', options: {} },
     ];
+
+    let customInterpretationRendered = false;
 
     for (const component of componentsToRender) {
         switch (component.type) {
@@ -626,13 +634,14 @@ export async function generatePdf(
                 await drawAnswersList(ctx, component, result, test, branding);
                 break;
             case 'AiInterpretation':
-                await drawAiInterpretation(ctx, component, result, branding);
+                await drawAiInterpretation(ctx, component, result, branding, customInterpretation);
+                customInterpretationRendered = true;
                 break;
         }
     }
 
-    // Add Custom Interpretation if provided and not handled by RichText
-    if (customInterpretation) {
+    // Add Custom Interpretation only if a custom template did not already render it via AiInterpretation
+    if (hasCustomText && !customInterpretationRendered) {
         ctx.checkNewPage(40);
         const headerFont = ctx.boldFont;
         const pColor = hexToRgb(branding.reportPrimaryColor || branding.primaryColor || '#314293');

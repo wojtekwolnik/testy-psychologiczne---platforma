@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -9,33 +8,35 @@ import { PlusIcon, EditIcon, TrashIcon, StarIcon, ChevronDownIcon, ChevronRightI
 import ActionConfirmModal from './common/ActionConfirmModal';
 import { toast } from 'react-toastify';
 
-// Helper to map component types to human-readable names
 const componentTypeNames: { [key: string]: string } = {
     Header: 'Nagłówek',
     ScoresTable: 'Tabela wyników',
     BarChart: 'Wykres słupkowy',
     RadarChart: 'Wykres radarowy',
     RichText: 'Blok tekstowy',
+    Interpretations: 'Szczegółowa interpretacja',
+    AnswersList: 'Udzielone odpowiedzi',
+    TestDescription: 'Opis i instrukcja testu',
+    AiInterpretation: 'Opis zindywidualizowany (AI)',
 };
 
-// Tooltip helper
 const InfoTooltip = ({ text }: { text: string }) => {
     const [isVisible, setIsVisible] = useState(false);
 
     return (
         <div className="relative inline-block ml-2">
             <button
+                type="button"
                 onClick={() => setIsVisible(!isVisible)}
                 onMouseEnter={() => setIsVisible(true)}
                 onMouseLeave={() => setIsVisible(false)}
-                className="text-slate-400 hover:text-[var(--primary-color)] transition-colors"
+                className="text-text-muted hover:text-primary transition-colors"
             >
                 <QuestionMarkCircleIcon className="w-5 h-5" />
             </button>
             {isVisible && (
-                <div className="absolute z-50 w-64 p-3 bg-slate-800 text-white text-xs rounded-lg shadow-xl -left-28 bottom-full mb-2">
+                <div className="absolute z-50 w-64 p-3 bg-surface border border-border text-text text-xs rounded-lg shadow-xl -left-28 bottom-full mb-2">
                     {text}
-                    <div className="absolute left-1/2 -bottom-1 w-2 h-2 bg-slate-800 transform -translate-x-1/2 rotate-45"></div>
                 </div>
             )}
         </div>
@@ -49,8 +50,6 @@ const TemplateManager: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [templateToDelete, setTemplateToDelete] = useState<string | null>(null);
-
-    // Grouping state: Record<testId, isOpen>
     const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
@@ -100,13 +99,13 @@ const TemplateManager: React.FC = () => {
 
     const renderTemplateTable = (testTemplates: PdfTemplate[], test: Test) => {
         if (testTemplates.length === 0) {
-            return <div className="p-4 text-center text-sm opacity-60 bg-[var(--background-color)] border-t border-[var(--border-color)]">Brak zdefiniowanych szablonów dla tego testu.</div>;
+            return <div className="p-4 text-center text-sm text-text-muted bg-background/60 border-t border-border">Brak zdefiniowanych szablonów dla tego testu.</div>;
         }
 
         return (
-            <div className="overflow-x-auto bg-[var(--background-color)] border-t border-[var(--border-color)]">
+            <div className="overflow-x-auto bg-background/50 border-t border-border">
                 <table className="w-full text-left">
-                    <thead className="bg-slate-50 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <thead className="bg-surface/80 text-xs font-semibold text-text-muted uppercase tracking-wider border-b border-border">
                         <tr>
                             <th className="px-6 py-3">Nazwa szablonu</th>
                             <th className="px-6 py-3 flex items-center">
@@ -120,16 +119,16 @@ const TemplateManager: React.FC = () => {
                             <th className="px-6 py-3 text-right">Akcje</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-border/60">
                         {testTemplates.map(template => {
                             const isDefault = test.defaultTemplateId === template.id;
                             return (
-                                <tr key={template.id} className="hover:bg-slate-50 transition-colors">
-                                    <td className="px-6 py-4 font-medium text-slate-800">{template.name}</td>
+                                <tr key={template.id} className="hover:bg-surface/60 transition-colors">
+                                    <td className="px-6 py-4 font-medium text-text">{template.name}</td>
                                     <td className="px-6 py-4 text-sm">
-                                        <div className="flex flex-wrap gap-1">
+                                        <div className="flex flex-wrap gap-1.5">
                                             {template.components.map(comp => (
-                                                <span key={comp.id} className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded textxs border border-slate-200">
+                                                <span key={comp.id} className="bg-surface text-text-muted px-2.5 py-0.5 rounded text-xs border border-border">
                                                     {componentTypeNames[comp.type] || comp.type}
                                                 </span>
                                             ))}
@@ -137,13 +136,13 @@ const TemplateManager: React.FC = () => {
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         {isDefault ? (
-                                            <span className="inline-flex items-center gap-1 text-amber-600 font-bold text-xs bg-amber-50 px-2 py-1 rounded border border-amber-100">
+                                            <span className="inline-flex items-center gap-1 text-amber-400 font-bold text-xs bg-amber-500/15 px-2.5 py-1 rounded border border-amber-500/30">
                                                 <StarIcon className="w-3 h-3" /> DOMYŚLNY
                                             </span>
                                         ) : (
                                             <button
                                                 onClick={() => handleSetDefault(template, test.id)}
-                                                className="text-xs text-slate-400 hover:text-[var(--primary-color)] transition-colors underline decoration-dotted underline-offset-2"
+                                                className="text-xs text-text-muted hover:text-primary transition-colors underline decoration-dotted underline-offset-2"
                                             >
                                                 Ustaw jako domyślny
                                             </button>
@@ -152,14 +151,14 @@ const TemplateManager: React.FC = () => {
                                     <td className="px-6 py-4 flex justify-end gap-2">
                                         <button
                                             onClick={() => router.push(`/admin/templates/edit/${template.id}`)}
-                                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                            className="p-1.5 text-text-muted hover:text-primary hover:bg-primary/15 rounded transition-colors"
                                             title="Edytuj"
                                         >
                                             <EditIcon className="w-4 h-4" />
                                         </button>
                                         <button
                                             onClick={() => setTemplateToDelete(template.id)}
-                                            className={`p-1.5 rounded transition-colors ${isDefault ? 'text-slate-300 cursor-not-allowed' : 'text-slate-500 hover:text-red-600 hover:bg-red-50'}`}
+                                            className={`p-1.5 rounded transition-colors ${isDefault ? 'text-text-muted/30 cursor-not-allowed' : 'text-text-muted hover:text-error hover:bg-error/15'}`}
                                             disabled={isDefault}
                                             title={isDefault ? "Nie można usunąć domyślnego szablonu" : "Usuń"}
                                         >
@@ -177,18 +176,18 @@ const TemplateManager: React.FC = () => {
 
     return (
         <>
-            <div className="p-8 max-w-6xl mx-auto">
-                <div className="flex justify-between items-center mb-8">
+            <div className="p-8 max-w-6xl mx-auto text-text">
+                <div className="flex flex-wrap justify-between items-center gap-4 mb-8">
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-800 flex items-center">
-                            Konfiguracja Raportów
-                            <InfoTooltip text="Zarządzaj wyglądem raportów PDF generowanych dla pacientów. Możesz tworzyć różne warianty dla każdego testu." />
+                        <h1 className="text-3xl font-bold text-text flex items-center">
+                            Konfiguracja Raportów PDF
+                            <InfoTooltip text="Zarządzaj wyglądem raportów PDF generowanych dla klientów. Możesz tworzyć różne warianty dla każdego testu." />
                         </h1>
-                        <p className="text-slate-500 mt-2 text-lg">Twórz szablony i decyduj, jak prezentowane są wyniki.</p>
+                        <p className="text-text-muted mt-2 text-lg">Twórz szablony i decyduj, jak prezentowane są wyniki.</p>
                     </div>
                     <button
                         onClick={() => router.push('/admin/templates/new')}
-                        className="flex items-center gap-2 px-6 py-3 bg-[var(--primary-color)] text-white font-bold rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all"
+                        className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-contrast font-bold rounded-xl shadow-lg hover:opacity-90 transition-all"
                     >
                         <PlusIcon />
                         Utwórz szablon
@@ -196,9 +195,9 @@ const TemplateManager: React.FC = () => {
                 </div>
 
                 {isLoading ? (
-                    <div className="text-center py-12"><div className="animate-pulse">Ładowanie szablonów...</div></div>
+                    <div className="text-center py-12 text-text-muted"><div className="animate-pulse">Ładowanie szablonów...</div></div>
                 ) : error ? (
-                    <div className="bg-red-50 text-red-600 p-4 rounded-lg">{error}</div>
+                    <div className="bg-error/15 text-error border border-error/30 p-4 rounded-lg">{error}</div>
                 ) : (
                     <div className="space-y-4">
                         {tests.map(test => {
@@ -206,26 +205,25 @@ const TemplateManager: React.FC = () => {
                             const isExpanded = !!expandedGroups[test.id];
 
                             return (
-                                <div key={test.id} className="bg-[var(--background-color)] border border-[var(--border-color)] rounded-xl shadow-sm overflow-hidden">
+                                <div key={test.id} className="bg-surface/90 border border-border rounded-xl shadow-sm overflow-hidden">
                                     <button
                                         onClick={() => toggleGroup(test.id)}
-                                        className="w-full flex items-center justify-between p-5 hover:bg-slate-50 transition-colors"
+                                        className="w-full flex items-center justify-between p-5 hover:bg-background/40 transition-colors"
                                     >
                                         <div className="flex items-center gap-3">
-                                            <span className={`p-1 rounded-md ${isExpanded ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-400'}`}>
+                                            <span className={`p-1 rounded-md ${isExpanded ? 'bg-primary/20 text-primary' : 'bg-background text-text-muted'}`}>
                                                 {isExpanded ? <ChevronDownIcon className="w-5 h-5" /> : <ChevronRightIcon className="w-5 h-5" />}
                                             </span>
-                                            <span className="font-bold text-lg text-slate-700">{test.title}</span>
-                                            <span className="bg-slate-100 text-slate-500 text-xs px-2 py-1 rounded-full font-medium">
+                                            <span className="font-bold text-lg text-text">{test.title}</span>
+                                            <span className="bg-background text-text-muted border border-border text-xs px-2.5 py-1 rounded-full font-medium">
                                                 {testTemplates.length} {testTemplates.length === 1 ? 'szablon' : (testTemplates.length > 1 && testTemplates.length < 5) ? 'szablony' : 'szablonów'}
                                             </span>
                                         </div>
 
-                                        {/* Status preview if collapsed */}
                                         {!isExpanded && testTemplates.length > 0 && (
                                             <div className="flex gap-2 mr-4">
                                                 {test.defaultTemplateId && (
-                                                    <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-100 flex items-center gap-1">
+                                                    <span className="text-xs text-amber-400 bg-amber-500/15 px-2.5 py-1 rounded border border-amber-500/30 flex items-center gap-1">
                                                         <StarIcon className="w-3 h-3" /> Ustawiono domyślny
                                                     </span>
                                                 )}
@@ -239,14 +237,14 @@ const TemplateManager: React.FC = () => {
                         })}
 
                         {tests.length === 0 && (
-                            <div className="text-center py-12 text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+                            <div className="text-center py-12 text-text-muted bg-surface/50 rounded-xl border border-dashed border-border">
                                 Brak zdefiniowanych testów w systemie.
                             </div>
                         )}
                     </div>
                 )}
 
-                <button onClick={() => router.push('/admin/dashboard')} className="mt-8 px-5 py-2 text-slate-500 hover:text-slate-800 font-medium transition-colors">
+                <button onClick={() => router.push('/admin/dashboard')} className="mt-8 px-5 py-2 text-text-muted hover:text-text font-medium transition-colors">
                     &larr; Powrót do panelu
                 </button>
             </div>

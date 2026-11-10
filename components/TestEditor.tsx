@@ -506,51 +506,51 @@ const TestEditor: React.FC = () => {
             <h1 className="text-4xl font-bold mb-6">Edytor Testu</h1>
 
             {/* Metadata Section */}
-            <div className="bg-[var(--background-color)] border border-[var(--border-color)] p-6 rounded-xl shadow-lg mb-8">
-                <h2 className="text-2xl font-semibold mb-4">Informacje Podstawowe</h2>
+            <div className="bg-surface border border-border p-6 rounded-xl shadow-lg mb-8">
+                <h2 className="text-2xl font-semibold text-text mb-4">Informacje Podstawowe</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="col-span-2">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Tytuł Testu</label>
+                        <label className="block text-sm font-medium text-text-muted mb-1">Tytuł Testu</label>
                         <input
                             type="text"
                             value={test.title}
                             onChange={e => handleTestChange('title', e.target.value)}
-                            className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] outline-none text-lg font-semibold"
+                            className="w-full p-2 border border-border bg-input-bg text-input-text rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] outline-none text-lg font-semibold"
                             placeholder="Wprowadź tytuł testu..."
                         />
                     </div>
                     <div className="col-span-2">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Opis (widoczny dla klienta)</label>
+                        <label className="block text-sm font-medium text-text-muted mb-1">Opis (widoczny dla klienta)</label>
                         <textarea
                             value={test.description}
                             onChange={e => handleTestChange('description', e.target.value)}
-                            className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] outline-none min-h-[80px]"
+                            className="w-full p-2 border border-border bg-input-bg text-input-text rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] outline-none min-h-[80px]"
                             placeholder="Wprowadź opis testu..."
                         />
                     </div>
                     <div className="col-span-2">
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Instrukcje (widoczne przed rozpoczęciem)</label>
+                        <label className="block text-sm font-medium text-text-muted mb-1">Instrukcje (widoczne przed rozpoczęciem)</label>
                         <textarea
                             value={test.instructions}
                             onChange={e => handleTestChange('instructions', e.target.value)}
-                            className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] outline-none min-h-[80px]"
+                            className="w-full p-2 border border-border bg-input-bg text-input-text rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] outline-none min-h-[80px]"
                             placeholder="Wprowadź instrukcje..."
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Wersja</label>
+                        <label className="block text-sm font-medium text-text-muted mb-1">Wersja</label>
                         <input
                             type="number"
                             value={test.version}
                             readOnly
-                            className="w-full p-2 border border-slate-200 rounded-lg bg-slate-100 text-slate-500 cursor-not-allowed"
+                            className="w-full p-2 border border-border rounded-lg bg-background/50 text-text-muted cursor-not-allowed"
                         />
-                        <p className="text-xs text-slate-400 mt-1">Wersja jest aktualizowana automatycznie przy zapisie.</p>
+                        <p className="text-xs text-text-muted mt-1">Wersja jest aktualizowana automatycznie przy zapisie.</p>
                     </div>
                     <div>
                         <div className="flex items-center gap-2 mb-1">
-                            <label className="block text-sm font-medium text-slate-700">Maksymalna liczba pytań w sekcji</label>
-                            <button onClick={() => setHelpTopic('sections')} className="text-slate-400 hover:text-[var(--primary-color)]">
+                            <label className="block text-sm font-medium text-text-muted">Maksymalna liczba pytań w sekcji</label>
+                            <button onClick={() => setHelpTopic('sections')} className="text-text-muted hover:text-[var(--primary-color)]">
                                 <QuestionMarkCircleIcon className="h-4 w-4" />
                             </button>
                         </div>
@@ -559,30 +559,30 @@ const TestEditor: React.FC = () => {
                             min={1}
                             value={test.questionsPerPage || 10}
                             onChange={e => handleTestChange('questionsPerPage', parseInt(e.target.value) || 10)}
-                            className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] outline-none"
+                            className="w-full p-2 border border-border bg-input-bg text-input-text rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] outline-none"
                         />
-                        <p className="text-xs text-slate-400 mt-1">
+                        <p className="text-xs text-text-muted mt-1">
                             To ustawienie pomaga kontrolować długość sekcji. W widoku klienta, każda sekcja to osobna strona.
                         </p>
                     </div>
                 </div>
             </div>
 
-            <div className="bg-[var(--secondary-color)] p-6 rounded-xl shadow-lg mb-8">
+            <div className="bg-surface border border-border p-6 rounded-xl shadow-lg mb-8">
                 <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-semibold">Skale Oceny</h2>
+                    <h2 className="text-2xl font-semibold text-text">Skale Oceny</h2>
                     <div className="flex gap-2">
                         <button onClick={() => addScale('standard')} className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-color)]/20 text-[var(--accent-color)] font-semibold rounded-lg hover:bg-[var(--accent-color)]/30 transition-colors">
                             <PlusIcon /> Dodaj Skalę Standardową
                         </button>
-                        <button onClick={() => addScale('calculated')} className="flex items-center gap-2 px-4 py-2 bg-orange-400/20 text-orange-500 font-semibold rounded-lg hover:bg-orange-400/30 transition-colors">
+                        <button onClick={() => addScale('calculated')} className="flex items-center gap-2 px-4 py-2 bg-orange-400/20 text-orange-400 font-semibold rounded-lg hover:bg-orange-400/30 transition-colors">
                             <CalculatorIcon /> Dodaj Skalę Obliczeniową
                         </button>
                     </div>
                 </div>
                 <div className="space-y-4">
                     {test.scales.map((scale, i) => (
-                        <div key={scale.id} className={`p-4 rounded-lg bg-[var(--background-color)] border-l-4 ${scale.type === 'calculated' ? 'border-orange-500' : 'border-blue-500'}`}>
+                        <div key={scale.id} className={`p-4 rounded-lg bg-background/60 border border-border border-l-4 ${scale.type === 'calculated' ? 'border-l-orange-500' : 'border-l-blue-500'}`}>
                             <div className="flex items-start gap-4">
                                 <div className="flex-grow space-y-2">
                                     <div className="flex gap-2">
@@ -591,21 +591,21 @@ const TestEditor: React.FC = () => {
                                     </div>
                                     <input type="text" placeholder="Opis skali" value={scale.description} onChange={e => updateScale(i, { description: e.target.value })} className="w-full p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
                                 </div>
-                                <button onClick={() => removeScale(scale.id)} className="p-2 text-[var(--error-color)] hover:bg-red-100 rounded-full"><TrashIcon /></button>
+                                <button onClick={() => removeScale(scale.id)} className="p-2 text-[var(--error-color)] hover:bg-red-500/20 rounded-full"><TrashIcon /></button>
                             </div>
                             {scale.type === 'standard' ? (
                                 <div className="mt-2 flex flex-wrap items-center gap-3">
                                     <div>
-                                        <label className="text-sm font-medium">Maksymalna liczba punktów:</label>
+                                        <label className="text-sm font-medium text-text">Maksymalna liczba punktów:</label>
                                         <input type="number" min="1" value={scale.maxScore || 0} onChange={e => updateScale(i, { maxScore: Math.max(1, parseInt(e.target.value) || 0) })} className="w-32 p-2 ml-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
                                     </div>
                                     {(() => {
                                         const bounds = calculateScaleScoreBounds(test.sections, scale.id);
                                         if (bounds.questionCount === 0) return null;
                                         return (
-                                            <div className="flex items-center gap-2 text-xs text-slate-600 bg-slate-100 px-3 py-1.5 rounded-md">
+                                            <div className="flex items-center gap-2 text-xs text-text-muted bg-surface border border-border px-3 py-1.5 rounded-md">
                                                 <span>
-                                                    Wyliczono z {bounds.questionCount} pytań: zakres <strong>{bounds.minPossible}–{bounds.maxPossible} pkt</strong>
+                                                    Wyliczono z {bounds.questionCount} pytań: zakres <strong className="text-text">{bounds.minPossible}–{bounds.maxPossible} pkt</strong>
                                                 </span>
                                                 {bounds.maxPossible > 0 && scale.maxScore !== bounds.maxPossible && (
                                                     <button
@@ -623,21 +623,21 @@ const TestEditor: React.FC = () => {
                             ) : (
                                 <div className="mt-3 p-3 bg-orange-400/10 rounded-md">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <label className="text-sm font-medium text-orange-700">Formuła obliczeniowa:</label>
+                                        <label className="text-sm font-medium text-orange-400">Formuła obliczeniowa:</label>
                                         <button
                                             onClick={() => setHelpTopic('formula')}
-                                            className="text-orange-600 hover:text-orange-800 transition-colors"
+                                            className="text-orange-400 hover:text-orange-300 transition-colors"
                                             title="Jak tworzyć formuły?"
                                         >
                                             <QuestionMarkCircleIcon className="h-5 w-5" />
                                         </button>
                                     </div>
-                                    <input type="text" placeholder="np. ({scale-id1} + {scale-id2}) / 2" value={scale.formula || ''} onChange={e => updateScale(i, { formula: e.target.value })} className="w-full p-2 mt-1 border border-orange-300 rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
+                                    <input type="text" placeholder="np. ({scale-id1} + {scale-id2}) / 2" value={scale.formula || ''} onChange={e => updateScale(i, { formula: e.target.value })} className="w-full p-2 mt-1 border border-orange-500/40 rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
                                     <div className="mt-2 text-xs">
-                                        <span className="font-semibold">Wstaw ID skali:</span>
+                                        <span className="font-semibold text-text">Wstaw ID skali:</span>
                                         <div className="flex flex-wrap gap-1 mt-1">
                                             {test.scales.filter(s => s.id !== scale.id).map(s => (
-                                                <button key={s.id} onClick={() => insertScaleIdIntoFormula(i, s.id)} className="text-xs bg-slate-200 hover:bg-slate-300 px-2 py-1 rounded-md">{s.name} {s.abbreviation ? `(${s.abbreviation})` : ''} [{s.id}]</button>
+                                                <button key={s.id} onClick={() => insertScaleIdIntoFormula(i, s.id)} className="text-xs bg-surface border border-border text-text hover:bg-white/10 px-2 py-1 rounded-md">{s.name} {s.abbreviation ? `(${s.abbreviation})` : ''} [{s.id}]</button>
                                             ))}
                                         </div>
                                     </div>
@@ -645,15 +645,15 @@ const TestEditor: React.FC = () => {
                             )}
 
                             {/* Custom Levels Configuration */}
-                            <div className="mt-4 pt-4 border-t border-gray-200">
+                            <div className="mt-4 pt-4 border-t border-border">
                                 <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
                                     <div>
-                                        <label className="text-sm font-semibold text-gray-700">Poziomy wyników / progi interpretacyjne (dowolna liczba progów):</label>
-                                        <p className="text-xs text-gray-500">Każdy próg może mieć własną nazwę, zakres punktowy i opis, który automatycznie zbuduje interpretację z klucza.</p>
+                                        <label className="text-sm font-semibold text-text">Poziomy wyników / progi interpretacyjne (dowolna liczba progów):</label>
+                                        <p className="text-xs text-text-muted">Każdy próg może mieć własną nazwę, zakres punktowy i opis, który automatycznie zbuduje interpretację z klucza.</p>
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2">
-                                        <div className="flex items-center gap-1.5 bg-slate-100 border border-slate-300 rounded-md px-2 py-1 text-xs">
-                                            <span className="text-slate-700 font-medium">Liczba progów:</span>
+                                        <div className="flex items-center gap-1.5 bg-surface border border-border rounded-md px-2 py-1 text-xs">
+                                            <span className="text-text font-medium">Liczba progów:</span>
                                             <input
                                                 type="number"
                                                 min={2}
@@ -663,7 +663,7 @@ const TestEditor: React.FC = () => {
                                                     const val = Math.max(2, Math.min(20, parseInt(e.target.value) || 2));
                                                     setThresholdCounts(prev => ({ ...prev, [scale.id]: val }));
                                                 }}
-                                                className="w-14 p-1 border border-slate-300 rounded text-center font-bold bg-white text-slate-900"
+                                                className="w-14 p-1 border border-border rounded text-center font-bold bg-input-bg text-input-text"
                                                 title="Wybierz na ile progów podzielić skalę (np. 2, 3, 4, 5, 10)"
                                             />
                                             <button
@@ -711,7 +711,7 @@ const TestEditor: React.FC = () => {
                                                 const newLevel = { id: generateUniqueId('lvl'), name: `Poziom ${currentLevels.length + 1}`, minScore: lastMax, maxScore: maxVal, color: '#3b82f6', description: '' };
                                                 updateScale(i, { levels: [...currentLevels, newLevel] });
                                             }}
-                                            className="text-xs px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-md font-semibold flex items-center gap-1 transition-colors"
+                                            className="text-xs px-3 py-1.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-500/30 rounded-md font-semibold flex items-center gap-1 transition-colors"
                                         >
                                             + Dodaj próg ręcznie
                                         </button>
@@ -719,7 +719,7 @@ const TestEditor: React.FC = () => {
                                 </div>
                                 <div className="space-y-2">
                                     {(scale.levels || []).map((level, lIndex) => (
-                                        <div key={level.id} className="bg-white p-2.5 rounded-lg border border-gray-200 shadow-sm text-xs mb-2">
+                                        <div key={level.id} className="bg-surface p-2.5 rounded-lg border border-border shadow-sm text-xs mb-2">
                                             <div className="flex flex-wrap items-center gap-2 mb-2">
                                                 <input
                                                     type="text"
@@ -729,9 +729,9 @@ const TestEditor: React.FC = () => {
                                                         updateScale(i, { levels: updatedLevels });
                                                     }}
                                                     placeholder="Nazwa (np. Bardzo wysoki)"
-                                                    className="flex-grow p-1.5 border border-gray-300 rounded font-semibold min-w-[120px]"
+                                                    className="flex-grow p-1.5 border border-border bg-input-bg text-input-text rounded font-semibold min-w-[120px]"
                                                 />
-                                                <span className="text-gray-500">od</span>
+                                                <span className="text-text-muted">od</span>
                                                 <input
                                                     type="number"
                                                     value={level.minScore}
@@ -739,10 +739,10 @@ const TestEditor: React.FC = () => {
                                                         const updatedLevels = (scale.levels || []).map((l, idx) => idx === lIndex ? { ...l, minScore: parseInt(e.target.value) || 0 } : l);
                                                         updateScale(i, { levels: updatedLevels });
                                                     }}
-                                                    className="w-16 p-1.5 border border-gray-300 rounded text-center"
+                                                    className="w-16 p-1.5 border border-border bg-input-bg text-input-text rounded text-center"
                                                     placeholder="Min"
                                                 />
-                                                <span className="text-gray-500">do</span>
+                                                <span className="text-text-muted">do</span>
                                                 <input
                                                     type="number"
                                                     value={level.maxScore}
@@ -750,10 +750,10 @@ const TestEditor: React.FC = () => {
                                                         const updatedLevels = (scale.levels || []).map((l, idx) => idx === lIndex ? { ...l, maxScore: parseInt(e.target.value) || 0 } : l);
                                                         updateScale(i, { levels: updatedLevels });
                                                     }}
-                                                    className="w-16 p-1.5 border border-gray-300 rounded text-center"
+                                                    className="w-16 p-1.5 border border-border bg-input-bg text-input-text rounded text-center"
                                                     placeholder="Max"
                                                 />
-                                                <div className="flex items-center gap-1 border border-gray-300 rounded p-1 bg-white">
+                                                <div className="flex items-center gap-1 border border-border rounded p-1 bg-input-bg">
                                                     <input
                                                         type="color"
                                                         value={level.color && level.color.startsWith('#') ? level.color : '#3b82f6'}
@@ -771,7 +771,7 @@ const TestEditor: React.FC = () => {
                                                         const updatedLevels = (scale.levels || []).filter((_, idx) => idx !== lIndex);
                                                         updateScale(i, { levels: updatedLevels });
                                                     }}
-                                                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded ml-auto"
+                                                    className="p-1.5 text-text-muted hover:text-red-400 hover:bg-red-500/20 rounded ml-auto"
                                                 >
                                                     <TrashIcon className="h-4 w-4" />
                                                 </button>
@@ -783,12 +783,12 @@ const TestEditor: React.FC = () => {
                                                     updateScale(i, { levels: updatedLevels });
                                                 }}
                                                 placeholder="Specyficzny opis dla tego poziomu wyników (opcjonalny, pojawi się w raporcie)..."
-                                                className="w-full p-1.5 border border-gray-300 rounded font-normal min-h-[50px] resize-y"
+                                                className="w-full p-1.5 border border-border bg-input-bg text-input-text rounded font-normal min-h-[50px] resize-y"
                                             />
                                         </div>
                                     ))}
                                     {(scale.levels || []).length === 0 && (
-                                        <p className="text-xs text-gray-400 italic">Brak zdefiniowanych poziomów. Zostaną użyte domyślne 3 progi wyliczane z maksymalnej liczby punktów.</p>
+                                        <p className="text-xs text-text-muted italic">Brak zdefiniowanych poziomów. Zostaną użyte domyślne 3 progi wyliczane z maksymalnej liczby punktów.</p>
                                     )}
                                 </div>
                             </div>
@@ -799,16 +799,16 @@ const TestEditor: React.FC = () => {
 
             <div className="space-y-8">
                 {test.sections.map((section, sIndex) => (
-                    <div key={section.id} className="bg-[var(--background-color)] border border-[var(--border-color)] p-6 rounded-xl shadow-lg">
+                    <div key={section.id} className="bg-surface border border-border p-6 rounded-xl shadow-lg">
                         <div className="flex justify-between items-center mb-6">
                             <input
                                 type="text"
                                 value={section.title}
                                 onChange={e => updateSection(section.id, { title: e.target.value })}
-                                className="text-2xl font-bold bg-transparent border-b-2 border-transparent hover:border-slate-300 focus:border-[var(--primary-color)] outline-none px-2 py-1 flex-grow mr-4"
+                                className="text-2xl font-bold text-text bg-transparent border-b-2 border-transparent hover:border-border focus:border-[var(--primary-color)] outline-none px-2 py-1 flex-grow mr-4"
                             />
                             <div className="flex gap-2">
-                                <button onClick={() => removeSection(section.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors" title="Usuń sekcję">
+                                <button onClick={() => removeSection(section.id)} className="p-2 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors" title="Usuń sekcję">
                                     <TrashIcon />
                                 </button>
                             </div>
@@ -818,25 +818,25 @@ const TestEditor: React.FC = () => {
                             {section.questions.map((question, qIndex) => {
                                 const isExpanded = expandedQuestionId === question.id;
                                 return (
-                                    <div key={question.id} className="bg-slate-50 border border-slate-200 shadow-sm rounded-lg overflow-hidden transition-all">
+                                    <div key={question.id} className="bg-background/50 border border-border shadow-sm rounded-lg overflow-hidden transition-all">
                                         {/* Question Header / Toggle Bar */}
                                         <div
-                                            className="bg-slate-100 p-4 flex items-center justify-between cursor-pointer hover:bg-slate-200 transition-colors"
+                                            className="bg-background/80 p-4 flex items-center justify-between cursor-pointer hover:bg-white/5 transition-colors"
                                             onClick={() => toggleQuestionCollapse(question.id)}
                                         >
                                             <div className="flex items-center gap-4 overflow-hidden">
                                                 <div className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : '-rotate-0'}`}>
-                                                    <ChevronLeftIcon className="h-5 w-5 text-slate-500" />
+                                                    <ChevronLeftIcon className="h-5 w-5 text-text-muted" />
                                                 </div>
                                                 <div className="flex flex-col overflow-hidden">
-                                                    <span className="text-xs font-bold text-slate-500 uppercase">Pytanie {qIndex + 1}</span>
-                                                    <span className="text-sm font-medium text-slate-800 truncate max-w-[500px]">
-                                                        {question.text || <span className="italic text-slate-400">Bez treści...</span>}
+                                                    <span className="text-xs font-bold text-text-muted uppercase">Pytanie {qIndex + 1}</span>
+                                                    <span className="text-sm font-medium text-text truncate max-w-[500px]">
+                                                        {question.text || <span className="italic text-text-muted">Bez treści...</span>}
                                                     </span>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <span className="text-xs px-2 py-1 bg-white border rounded text-slate-500 hidden sm:inline-block">
+                                                <span className="text-xs px-2 py-1 bg-surface border border-border rounded text-text-muted hidden sm:inline-block">
                                                     {question.type === 'yes-no' ? 'Tak/Nie' :
                                                         question.type === 'likert-5' ? 'Likert (1-5)' :
                                                             question.type === 'scale-1-10' ? 'Skala (1-10)' :
@@ -847,7 +847,7 @@ const TestEditor: React.FC = () => {
                                                         e.stopPropagation();
                                                         removeQuestion(section.id, question.id);
                                                     }}
-                                                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                    className="p-2 text-text-muted hover:text-red-400 hover:bg-red-500/20 rounded-lg transition-colors"
                                                     title="Usuń pytanie"
                                                 >
                                                     <TrashIcon className="h-4 w-4" />
@@ -858,23 +858,23 @@ const TestEditor: React.FC = () => {
                                         {/* Collapsible Body */}
                                         <div className={`transition-all duration-300 ease-in-out ${!isExpanded ? 'max-h-0 opacity-0 overflow-hidden' : 'opacity-100 p-6'}`}>
                                             <div className="mb-4 pr-10">
-                                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Treść Pytania</label>
+                                                <label className="block text-xs font-bold text-text-muted uppercase mb-1">Treść Pytania</label>
                                                 <input
                                                     type="text"
                                                     value={question.text}
                                                     onChange={e => updateQuestion(section.id, question.id, { text: e.target.value })}
-                                                    className="w-full text-lg p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] focus:border-transparent"
+                                                    className="w-full text-lg p-3 border border-border bg-input-bg text-input-text rounded-lg focus:ring-2 focus:ring-[var(--primary-color)] focus:border-transparent"
                                                     placeholder="Treść pytania..."
                                                 />
                                             </div>
 
                                             <div className="mb-6">
-                                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Typ Pytania</label>
+                                                <label className="block text-xs font-bold text-text-muted uppercase mb-1">Typ Pytania</label>
                                                 <div className="flex flex-wrap gap-4 items-end">
                                                     <select
                                                         value={question.type}
                                                         onChange={e => updateQuestion(section.id, question.id, { type: e.target.value as any })}
-                                                        className="w-full md:w-auto p-2 border border-slate-300 rounded-lg bg-white"
+                                                        className="w-full md:w-auto p-2 border border-border rounded-lg bg-input-bg text-input-text"
                                                     >
                                                         <option value="multiple-choice">Jednokrotny wybór</option>
                                                         <option value="multiple-select">Wielokrotny wybór</option>
@@ -883,17 +883,17 @@ const TestEditor: React.FC = () => {
                                                         <option value="scale-1-10">Skala Numeryczna (1-10)</option>
                                                     </select>
 
-                                                    <div className="flex items-center gap-2 border-l pl-4 border-slate-300">
+                                                    <div className="flex items-center gap-2 border-l pl-4 border-border">
                                                         <div className="flex items-center gap-2">
                                                             <input
                                                                 type="checkbox"
                                                                 id={`reversed-${question.id}`}
                                                                 checked={question.isReversed || false}
                                                                 onChange={(e) => updateQuestion(section.id, question.id, { isReversed: e.target.checked })}
-                                                                className="h-4 w-4 text-[var(--primary-color)] rounded border-gray-300 focus:ring-[var(--primary-color)]"
+                                                                className="h-4 w-4 text-[var(--primary-color)] rounded border-border focus:ring-[var(--primary-color)]"
                                                             />
-                                                            <label htmlFor={`reversed-${question.id}`} className="text-sm text-slate-700 cursor-pointer select-none">Odwrócona punktacja</label>
-                                                            <button onClick={() => setHelpTopic('reversed')} className="text-slate-400 hover:text-[var(--primary-color)] ml-1">
+                                                            <label htmlFor={`reversed-${question.id}`} className="text-sm text-text cursor-pointer select-none">Odwrócona punktacja</label>
+                                                            <button onClick={() => setHelpTopic('reversed')} className="text-text-muted hover:text-[var(--primary-color)] ml-1">
                                                                 <QuestionMarkCircleIcon className="h-4 w-4" />
                                                             </button>
                                                         </div>
@@ -902,7 +902,7 @@ const TestEditor: React.FC = () => {
                                                     {['likert-5', 'scale-1-10', 'yes-no'].includes(question.type) && (
                                                         <div className="flex items-center gap-2 ml-auto">
                                                             <select
-                                                                className="text-sm p-2 border border-slate-300 rounded-lg bg-white w-auto min-w-[220px]"
+                                                                className="text-sm p-2 border border-border rounded-lg bg-input-bg text-input-text w-auto min-w-[220px]"
                                                                 onChange={(e) => {
                                                                     if (e.target.value) {
                                                                         applyAutoScoring(section.id, question.id, e.target.value, question.isReversed || false);
@@ -915,7 +915,7 @@ const TestEditor: React.FC = () => {
                                                                     <option key={s.id} value={s.id}>{s.name}</option>
                                                                 ))}
                                                             </select>
-                                                            <button onClick={() => setHelpTopic('auto-score')} className="text-slate-400 hover:text-[var(--primary-color)] ml-1">
+                                                            <button onClick={() => setHelpTopic('auto-score')} className="text-text-muted hover:text-[var(--primary-color)] ml-1">
                                                                 <QuestionMarkCircleIcon className="h-4 w-4" />
                                                             </button>
                                                         </div>
@@ -923,36 +923,36 @@ const TestEditor: React.FC = () => {
                                                 </div>
                                             </div>
 
-                                            <div className="space-y-3 pl-4 border-l-2 border-slate-200">
-                                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Odpowiedzi</label>
+                                            <div className="space-y-3 pl-4 border-l-2 border-border">
+                                                <label className="block text-xs font-bold text-text-muted uppercase mb-1">Odpowiedzi</label>
                                                 {question.options.map((option) => (
-                                                    <div key={option.id} className="bg-[var(--background-color)] border border-[var(--border-color)] p-4 rounded-lg">
+                                                    <div key={option.id} className="bg-surface border border-border p-4 rounded-lg">
                                                         <div className="flex items-center gap-3 mb-3">
-                                                            <div className="h-4 w-4 rounded-full border-2 border-slate-300"></div>
+                                                            <div className="h-4 w-4 rounded-full border-2 border-border"></div>
                                                             <input
                                                                 type="text"
                                                                 value={option.text}
                                                                 onChange={e => updateOption(section.id, question.id, option.id, e.target.value)}
-                                                                className="flex-grow p-2 border border-slate-200 rounded focus:border-[var(--primary-color)] outline-none bg-slate-50 focus:bg-white transition-colors"
+                                                                className="flex-grow p-2 border border-border rounded focus:border-[var(--primary-color)] outline-none bg-input-bg text-input-text transition-colors"
                                                                 placeholder="Treść odpowiedzi..."
                                                             />
                                                             {!['likert-5', 'likert-7', 'scale-1-10'].includes(question.type) && (
-                                                                <button onClick={() => removeOption(section.id, question.id, option.id)} className="text-slate-400 hover:text-red-500">
+                                                                <button onClick={() => removeOption(section.id, question.id, option.id)} className="text-text-muted hover:text-red-400">
                                                                     <TrashIcon className="h-4 w-4" />
                                                                 </button>
                                                             )}
                                                         </div>
 
                                                         {/* Scoring Rules Interface */}
-                                                        <div className="bg-slate-50 p-3 rounded text-sm">
-                                                            <div className="text-xs font-semibold text-slate-500 mb-2">PUNKTACJA (opcjonalne):</div>
+                                                        <div className="bg-background/60 p-3 rounded text-sm border border-border/50">
+                                                            <div className="text-xs font-semibold text-text-muted mb-2">PUNKTACJA (opcjonalne):</div>
                                                             {question.scoring[option.id]?.map((rule, rIndex) => (
                                                                 <div key={rIndex} className="flex gap-2 mb-2 items-center">
-                                                                    <div className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-mono">
+                                                                    <div className="px-2 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded text-xs font-mono">
                                                                         {test.scales.find(s => s.id === rule.scaleId)?.name || rule.scaleId}
                                                                     </div>
-                                                                    <div className="font-bold text-slate-700">+{rule.points} pkt</div>
-                                                                    <button onClick={() => removeScoringRule(section.id, question.id, option.id, rIndex)} className="text-red-400 hover:text-red-600 ml-auto">
+                                                                    <div className="font-bold text-text">+{rule.points} pkt</div>
+                                                                    <button onClick={() => removeScoringRule(section.id, question.id, option.id, rIndex)} className="text-red-400 hover:text-red-300 ml-auto">
                                                                         &times;
                                                                     </button>
                                                                 </div>
@@ -960,7 +960,7 @@ const TestEditor: React.FC = () => {
 
                                                             <div className="flex gap-2 mt-2 items-center">
                                                                 <select
-                                                                    className="text-xs p-1 border rounded max-w-[150px]"
+                                                                    className="text-xs p-1 border border-border bg-input-bg text-input-text rounded max-w-[150px]"
                                                                     id={`scale-select-${option.id}`}
                                                                 >
                                                                     <option value="">Wybierz skalę...</option>
@@ -970,7 +970,7 @@ const TestEditor: React.FC = () => {
                                                                 </select>
                                                                 <input
                                                                     type="number"
-                                                                    className="text-xs p-1 border rounded w-16"
+                                                                    className="text-xs p-1 border border-border bg-input-bg text-input-text rounded w-16"
                                                                     placeholder="Pkt"
                                                                     id={`points-input-${option.id}`}
                                                                     defaultValue={1}
@@ -985,7 +985,7 @@ const TestEditor: React.FC = () => {
                                                                             pointsInput.value = '1';
                                                                         }
                                                                     }}
-                                                                    className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded hover:bg-green-200 transition-colors"
+                                                                    className="px-2 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs rounded hover:bg-emerald-500/30 transition-colors"
                                                                 >
                                                                     + Dodaj
                                                                 </button>
@@ -996,7 +996,7 @@ const TestEditor: React.FC = () => {
                                                 <button
                                                     onClick={() => addOption(section.id, question.id)}
                                                     disabled={['likert-5', 'likert-7', 'scale-1-10'].includes(question.type)}
-                                                    className={`text-sm font-semibold text-[var(--primary-color)] hover:underline flex items-center gap-1 mt-2 disabled:text-slate-400 disabled:no-underline disabled:cursor-not-allowed`}
+                                                    className={`text-sm font-semibold text-[var(--primary-color)] hover:underline flex items-center gap-1 mt-2 disabled:text-text-muted disabled:no-underline disabled:cursor-not-allowed`}
                                                 >
                                                     <PlusIcon className="h-4 w-4" /> Dodaj opcję odpowiedzi
                                                 </button>
@@ -1007,7 +1007,7 @@ const TestEditor: React.FC = () => {
                             })}
                             <button
                                 onClick={() => addQuestion(section.id)}
-                                className="w-full py-4 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 font-bold hover:border-[var(--primary-color)] hover:text-[var(--primary-color)] hover:bg-blue-50 transition-all flex justify-center items-center gap-2"
+                                className="w-full py-4 border-2 border-dashed border-border rounded-lg text-text-muted font-bold hover:border-[var(--primary-color)] hover:text-[var(--primary-color)] hover:bg-[var(--primary-color)]/10 transition-all flex justify-center items-center gap-2"
                             >
                                 <PlusIcon /> Dodaj Pytanie
                             </button>
@@ -1017,7 +1017,7 @@ const TestEditor: React.FC = () => {
 
                 <button
                     onClick={addSection}
-                    className="w-full py-6 bg-white shadow-lg border border-slate-200 rounded-xl text-xl font-bold text-slate-600 hover:text-[var(--primary-color)] hover:shadow-xl transition-all flex justify-center items-center gap-3"
+                    className="w-full py-6 bg-surface shadow-lg border border-border rounded-xl text-xl font-bold text-text hover:text-[var(--primary-color)] hover:border-[var(--primary-color)]/50 hover:shadow-xl transition-all flex justify-center items-center gap-3"
                 >
                     <PlusIcon className="h-8 w-8" /> Dodaj Nową Sekcję
                 </button>
@@ -1027,31 +1027,31 @@ const TestEditor: React.FC = () => {
             {
     /* Generic Help Modal */}
             {helpTopic && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-[var(--background-color)] border border-[var(--border-color)] rounded-xl shadow-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-surface border border-border rounded-xl shadow-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold text-gray-800">
+                            <h3 className="text-xl font-bold text-text">
                                 {helpTopic === 'formula' && "Jak tworzyć formuły obliczeniowe?"}
                                 {helpTopic === 'sections' && "Sekcje i Paginacja"}
                                 {helpTopic === 'reversed' && "Odwrócona Punktacja"}
                                 {helpTopic === 'auto-score' && "Automatyczne Przypisywanie Punktów"}
                             </h3>
-                            <button onClick={() => setHelpTopic(null)} className="text-gray-500 hover:text-gray-700">
+                            <button onClick={() => setHelpTopic(null)} className="text-text-muted hover:text-text">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             </button>
                         </div>
 
-                        <div className="space-y-4 text-sm text-gray-600">
+                        <div className="space-y-4 text-sm text-text-muted">
                             {helpTopic === 'formula' && (
                                 <>
                                     <p>
                                         Formuły pozwalają na automatyczne obliczanie wyników na podstawie innych skal.
                                         Możesz używać standardowych operatorów matematycznych oraz funkcji.
                                     </p>
-                                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                        <h4 className="font-semibold text-gray-800 mb-2">Dostępne Operatory:</h4>
+                                    <div className="bg-background/60 p-4 rounded-lg border border-border">
+                                        <h4 className="font-semibold text-text mb-2">Dostępne Operatory:</h4>
                                         <ul className="list-disc pl-5 space-y-1">
                                             <li><code>+</code> (Dodawanie)</li>
                                             <li><code>-</code> (Odejmowanie)</li>
@@ -1060,18 +1060,18 @@ const TestEditor: React.FC = () => {
                                             <li><code>( )</code> (Nawiasy do grupowania)</li>
                                         </ul>
                                     </div>
-                                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                        <h4 className="font-semibold text-gray-800 mb-2">Zmienne (Skale):</h4>
+                                    <div className="bg-background/60 p-4 rounded-lg border border-border">
+                                        <h4 className="font-semibold text-text mb-2">Zmienne (Skale):</h4>
                                         <p className="mb-2">Aby użyć wyniku z innej skali, wstaw jej ID w nawiasach klamrowych, np. <code>{`{scale-123}`}</code>.</p>
-                                        <p className="text-xs text-gray-500">
+                                        <p className="text-xs text-text-muted">
                                             Użyj przycisków "Wstaw ID skali" pod polem formuły, aby szybko dodać odpowiedni identyfikator.
                                         </p>
                                     </div>
-                                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                        <h4 className="font-semibold text-gray-800 mb-2">Przykłady:</h4>
+                                    <div className="bg-background/60 p-4 rounded-lg border border-border">
+                                        <h4 className="font-semibold text-text mb-2">Przykłady:</h4>
                                         <ul className="space-y-2 font-mono text-xs">
-                                            <li className="bg-white p-2 border rounded">
-                                                <div className="text-gray-500">// Suma dwóch skal</div>
+                                            <li className="bg-surface p-2 border border-border rounded text-text">
+                                                <div className="text-text-muted">// Suma dwóch skal</div>
                                                 {`{s-1234} + {s-5678}`}
                                             </li>
                                         </ul>
@@ -1082,12 +1082,12 @@ const TestEditor: React.FC = () => {
                             {helpTopic === 'sections' && (
                                 <>
                                     <p>
-                                        W edytorze testu <strong>każda sekcja odpowiada jednej stronie</strong> w widoku dla klienta.
+                                        W edytorze testu <strong className="text-text">każda sekcja odpowiada jednej stronie</strong> w widoku dla klienta.
                                     </p>
                                     <p>
                                         Ustawienie "Maksymalna liczba pytań w sekcji" służy jako wskazówka i pomaga kontrolować długość testu, ale ostateczny podział na strony zależy od liczby utworzonych sekcji.
                                     </p>
-                                    <p className="mt-2 text-indigo-600 font-semibold">
+                                    <p className="mt-2 text-primary font-semibold">
                                         Dobra praktyka: Twórz nowe sekcje tematycznie lub co 5-10 pytań, aby nie przytłoczyć użytkownika zbyt długą stroną.
                                     </p>
                                 </>
@@ -1096,17 +1096,17 @@ const TestEditor: React.FC = () => {
                             {helpTopic === 'reversed' && (
                                 <>
                                     <p>
-                                        <strong>Odwrócona punktacja</strong> jest używana w pytaniach, gdzie treść jest sformułowana negatywnie względem mierzonej cechy.
+                                        <strong className="text-text">Odwrócona punktacja</strong> jest używana w pytaniach, gdzie treść jest sformułowana negatywnie względem mierzonej cechy.
                                     </p>
                                     <p>
                                         Gdy opcja jest zaznaczona:
                                     </p>
                                     <ul className="list-disc pl-5 space-y-2 mt-2">
-                                        <li>Dla pytań <strong>Tak/Nie</strong>: "Tak" = 0 pkt, "Nie" = 1 pkt.</li>
-                                        <li>Dla <strong>Skali Likerta (1-5)</strong>: Najniższa ocena dostaje 5 pkt, a najwyższa 1 pkt.</li>
-                                        <li>Dla <strong>Skali Numerycznej</strong>: Punkty są przydzielane odwrotnie do wartości liczbowej.</li>
+                                        <li>Dla pytań <strong className="text-text">Tak/Nie</strong>: "Tak" = 0 pkt, "Nie" = 1 pkt.</li>
+                                        <li>Dla <strong className="text-text">Skali Likerta (1-5)</strong>: Najniższa ocena dostaje 5 pkt, a najwyższa 1 pkt.</li>
+                                        <li>Dla <strong className="text-text">Skali Numerycznej</strong>: Punkty są przydzielane odwrotnie do wartości liczbowej.</li>
                                     </ul>
-                                    <p className="mt-4 text-xs text-gray-500">
+                                    <p className="mt-4 text-xs text-text-muted">
                                         Pamiętaj, aby po zmianie tego ustawienia ponownie kliknąć przycisk przypisywania punktów do skali, aby zaktualizować wartości.
                                     </p>
                                 </>
@@ -1115,12 +1115,12 @@ const TestEditor: React.FC = () => {
                             {helpTopic === 'auto-score' && (
                                 <>
                                     <p>
-                                        To narzędzie pozwala na <strong>szybkie przypisanie punktów</strong> do wszystkich opcji w pytaniu jednocześnie.
+                                        To narzędzie pozwala na <strong className="text-text">szybkie przypisanie punktów</strong> do wszystkich opcji w pytaniu jednocześnie.
                                     </p>
                                     <p>
                                         Wybierz skalę z listy, a system automatycznie przydzieli punkty w zależności od typu pytania i ustawienia "Odwrócona punktacja".
                                     </p>
-                                    <div className="bg-blue-50 p-3 rounded border border-blue-100 text-blue-800 mt-2">
+                                    <div className="bg-blue-500/15 p-3 rounded border border-blue-500/30 text-blue-200 mt-2">
                                         <strong>Wskazówka:</strong> Jest to opcja opcjonalna. Jeśli potrzebujesz niestandardowej punktacji, możesz ręcznie edytować punkty przy każdej odpowiedzi poniżej.
                                     </div>
                                 </>
@@ -1130,7 +1130,7 @@ const TestEditor: React.FC = () => {
                         <div className="mt-6 flex justify-end">
                             <button
                                 onClick={() => setHelpTopic(null)}
-                                className="px-4 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700"
+                                className="px-4 py-2 bg-primary text-background font-semibold rounded hover:bg-primary/90"
                             >
                                 Rozumiem
                             </button>
@@ -1141,7 +1141,7 @@ const TestEditor: React.FC = () => {
 
 
             <div className="flex justify-end gap-4 mt-8">
-                <button onClick={() => router.push('/admin/dashboard')} className="px-6 py-2 bg-slate-200 text-slate-800 font-semibold rounded-lg">Anuluj</button>{testId !== 'new' && (<button onClick={() => handleSave(test?.status === 'PUBLISHED', true)} disabled={isSaving} className="px-6 py-2 border border-primary/50 bg-primary/15 text-primary font-bold rounded-lg hover:bg-primary/25 transition-colors disabled:opacity-50" title="Tworzy nową wersję (v+1) z tym samym identyfikatorem kanonicznym">{isSaving ? 'Zapisywanie...' : `Zapisz jako nową wersję (v${(test?.version || 1) + 1})`}</button>)}
+                <button onClick={() => router.push('/admin/dashboard')} className="px-6 py-2 bg-surface border border-border text-text hover:bg-white/5 font-semibold rounded-lg transition-colors">Anuluj</button>{testId !== 'new' && (<button onClick={() => handleSave(test?.status === 'PUBLISHED', true)} disabled={isSaving} className="px-6 py-2 border border-primary/50 bg-primary/15 text-primary font-bold rounded-lg hover:bg-primary/25 transition-colors disabled:opacity-50" title="Tworzy nową wersję (v+1) z tym samym identyfikatorem kanonicznym">{isSaving ? 'Zapisywanie...' : `Zapisz jako nową wersję (v${(test?.version || 1) + 1})`}</button>)}
                 <button
                     onClick={() => handleSave(false)}
                     disabled={isSaving}
