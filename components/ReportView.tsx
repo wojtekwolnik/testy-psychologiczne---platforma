@@ -14,6 +14,7 @@ import {
     resolveScaleLevel,
     isBigFiveFacetScale,
     getBigFiveFacetParentDomain,
+    getBigFiveDomainCode,
 } from '@/lib/interpretationBuilder';
 
 interface ReportViewProps {
@@ -474,10 +475,12 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                                     const maxScore = scale.maxScore;
                                     const percentage = maxScore ? Math.min(100, Math.max(0, (value / maxScore) * 100)) : 0;
                                     const levelInfo = getScoreLevel(value, scale);
-                                    const domainAbbr = (scale.abbreviation || scale.id || '').trim().toUpperCase();
-                                    const childFacets = test.scales.filter(
-                                        s => getBigFiveFacetParentDomain(s) === domainAbbr && result.scores[s.id] !== undefined
-                                    );
+                                    const domainAbbr = getBigFiveDomainCode(scale);
+                                    const childFacets = domainAbbr
+                                        ? test.scales.filter(
+                                              s => getBigFiveFacetParentDomain(s) === domainAbbr && result.scores[s.id] !== undefined
+                                          )
+                                        : [];
 
                                     return (
                                         <div key={scaleId} className="bg-background/60 p-5 rounded-xl border border-border">

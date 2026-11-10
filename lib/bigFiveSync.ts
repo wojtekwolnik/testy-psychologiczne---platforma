@@ -213,7 +213,9 @@ export async function ensureBigFiveTestUpgraded<T extends Record<string, any>>(
         for (let idx = 0; idx < allDbQuestions.length; idx++) {
             const dbQ = allDbQuestions[idx];
             const normText = (dbQ.text || '').trim().toLowerCase();
-            const refQ = byText.get(normText) || (bigFiveQuestions as any[])[idx];
+            const refQ =
+                byText.get(normText) ||
+                (allDbQuestions.length === 120 ? (bigFiveQuestions as any[])[idx] : undefined);
             if (!refQ) continue;
 
             const domainScaleId = codeToScaleId.get(refQ.domain) || refQ.domain;

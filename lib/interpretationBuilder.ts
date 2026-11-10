@@ -661,18 +661,33 @@ const BIG_FIVE_NAME_MAP: Record<string, string> = {
 };
 
 export function isBigFiveFacetScale(scale: { id?: string; name?: string }): boolean {
-    if (scale.id && /^[OCEAN][1-6]$/.test(scale.id)) return true;
+    if (scale.id && /(?:^|-)([OCEAN][1-6])$/.test(scale.id)) return true;
     if (scale.name && /^[OCEAN][1-6]:/.test(scale.name.trim())) return true;
     return false;
 }
 
 export function getBigFiveFacetParentDomain(scale: { id?: string; name?: string }): string | null {
-    if (scale.id && /^[OCEAN][1-6]$/.test(scale.id)) {
-        return scale.id.charAt(0);
+    const idMatch = (scale.id || '').match(/(?:^|-)([OCEAN])[1-6]$/);
+    if (idMatch) {
+        return idMatch[1];
     }
     if (scale.name && /^[OCEAN][1-6]:/.test(scale.name.trim())) {
         return scale.name.trim().charAt(0);
     }
+    return null;
+}
+
+export function getBigFiveDomainCode(scale: {
+    id?: string;
+    name?: string;
+    abbreviation?: string;
+}): string | null {
+    const idMatch = (scale.id || '').trim().match(/(?:^|-)([OCEAN])$/);
+    if (idMatch) return idMatch[1];
+    const abbrUpper = (scale.abbreviation || '').trim().toUpperCase();
+    if (['O', 'C', 'E', 'A', 'N'].includes(abbrUpper)) return abbrUpper;
+    const lowerName = (scale.name || '').trim().toLowerCase();
+    if (BIG_FIVE_NAME_MAP[lowerName]) return BIG_FIVE_NAME_MAP[lowerName];
     return null;
 }
 
@@ -990,10 +1005,7 @@ export function buildKeyInterpretation(
         }
 
         // Render child facets if this primary scale has facets (e.g. O -> O1..O6)
-        const domainCode =
-            BIG_FIVE_SCALE_DEFINITIONS[item.scale.id]?.id ||
-            BIG_FIVE_NAME_MAP[(item.scale.name || '').trim().toLowerCase()] ||
-            item.scale.abbreviation;
+        const domainCode = getBigFiveDomainCode(item.scale);
         const childFacets = domainCode
             ? facetScales.filter(f => f.parentDomain === domainCode)
             : [];

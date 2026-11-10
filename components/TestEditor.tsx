@@ -257,22 +257,58 @@ const TestEditor: React.FC = () => {
         }) : null);
     };
 
+    const computeAutoPointsForOption = (qType: Question['type'], index: number, totalOptions: number, isReversed: boolean): number => {
+        if (qType === 'yes-no') {
+            return index === 0 ? (isReversed ? 0 : 1) : (isReversed ? 1 : 0);
+        }
+        if (qType === 'likert-5') {
+            return isReversed ? (5 - index) : (index + 1);
+        }
+        if (qType === 'scale-1-10') {
+            return isReversed ? (10 - index) : (index + 1);
+        }
+        return isReversed ? (totalOptions - index) : (index + 1);
+    };
+
     // --- Question Management ---
     const addQuestion = (sectionId: string) => {
-        const newQuestion: Question = {
-            id: generateUniqueId('q'),
-            text: 'Nowe Pytanie',
-            type: 'multiple-choice', // default
-            options: [],
-            scoring: {}
-        };
+        let newQuestionId = generateUniqueId('q');
+        setTest(prev => {
+            if (!prev) return null;
+            const targetSection = prev.sections.find(s => s.id === sectionId);
+            const templateQuestion =
+                targetSection?.questions[targetSection.questions.length - 1] ||
+                prev.sections.flatMap(s => s.questions)[0];
 
-        setTest(prev => prev ? ({
-            ...prev,
-            sections: prev.sections.map(s => s.id === sectionId ? { ...s, questions: [...s.questions, newQuestion] } : s)
-        }) : null);
+            let defaultType: Question['type'] = 'multiple-choice';
+            let defaultOptions: AnswerOption[] = [];
+
+            if (templateQuestion && ['likert-5', 'likert-7', 'scale-1-10', 'yes-no'].includes(templateQuestion.type)) {
+                defaultType = templateQuestion.type;
+                defaultOptions = templateQuestion.options.map((opt, idx) => ({
+                    id: String(idx + 1),
+                    text: opt.text,
+                }));
+            }
+
+            const newQuestion: Question = {
+                id: newQuestionId,
+                text: 'Nowe Pytanie',
+                type: defaultType,
+                isReversed: false,
+                options: defaultOptions,
+                scoring: {},
+            };
+
+            return {
+                ...prev,
+                sections: prev.sections.map(s =>
+                    s.id === sectionId ? { ...s, questions: [...s.questions, newQuestion] } : s
+                ),
+            };
+        });
         // Ensure new question is expanded
-        setExpandedQuestionId(newQuestion.id);
+        setExpandedQuestionId(newQuestionId);
     };
 
     const updateQuestion = (sectionId: string, questionId: string, updates: Partial<Question>) => {
@@ -293,25 +329,41 @@ const TestEditor: React.FC = () => {
                             // Auto-generate options if type changes to a fixed scale
                             if (updates.type) {
                                 if (updates.type === 'likert-5') {
-                                    newOptions = LIKERT_5_LABELS.map(text => ({ id: generateUniqueId('opt'), text }));
+                                    newOptions = LIKERT_5_LABELS.map((text, i) => ({ id: String(i + 1), text }));
                                     newScoring = {};
                                 } else if (updates.type === 'likert-7') {
-                                    newOptions = Array.from({ length: 7 }, (_, i) => ({ id: generateUniqueId('opt'), text: (i + 1).toString() }));
+                                    newOptions = Array.from({ length: 7 }, (_, i) => ({ id: String(i + 1), text: (i + 1).toString() }));
                                     newScoring = {};
                                 } else if (updates.type === 'scale-1-10') {
-                                    newOptions = Array.from({ length: 10 }, (_, i) => ({ id: generateUniqueId('opt'), text: (i + 1).toString() }));
+                                    newOptions = Array.from({ length: 10 }, (_, i) => ({ id: String(i + 1), text: (i + 1).toString() }));
                                     newScoring = {};
                                 } else if (updates.type === 'yes-no') {
-                                    newOptions = YES_NO_LABELS.map(text => ({ id: generateUniqueId('opt'), text }));
+                                    newOptions = YES_NO_LABELS.map((text, i) => ({ id: String(i + 1), text }));
                                     newScoring = {};
                                 }
+                            } else if (
+                                updates.isReversed !== undefined &&
+                                updates.isReversed !== Boolean(q.isReversed) &&
+                                ['likert-5', 'likert-7', 'scale-1-10', 'yes-no'].includes(q.type)
+                            ) {
+                                // Recalculate points across all assigned scales when toggling isReversed
+                                const updatedScoring: Record<string, ScoringRule[]> = {};
+                                q.options.forEach((opt, idx) => {
+                                    const currentRules = q.scoring?.[opt.id] || [];
+                                    const pts = computeAutoPointsForOption(q.type, idx, q.options.length, updates.isReversed!);
+                                    updatedScoring[opt.id] = currentRules.map(r => ({
+                                        ...r,
+                                        points: pts,
+                                    }));
+                                });
+                                newScoring = updatedScoring;
                             }
 
                             return {
                                 ...q,
                                 ...updates,
                                 options: updates.type ? newOptions : (updates.options || q.options),
-                                scoring: updates.type ? newScoring : (updates.scoring || q.scoring)
+                                scoring: updates.type ? newScoring : (updates.scoring || newScoring)
                             };
                         })
                     };
@@ -332,38 +384,49 @@ const TestEditor: React.FC = () => {
                         questions: s.questions.map(q => {
                             if (q.id !== questionId) return q;
 
-                            // Generate scoring based on type
-                            const newScoring: Record<string, ScoringRule[]> = {};
+                            // Upsert scoring for `scaleId` across all options while preserving any other scales already assigned to this question
+                            const newScoring: Record<string, ScoringRule[]> = { ...(q.scoring || {}) };
 
                             q.options.forEach((opt, index) => {
-                                let points = 0;
-
-                                if (q.type === 'yes-no') {
-                                    // Index 0 = Tak, Index 1 = Nie
-                                    if (index === 0) points = isReversed ? 0 : 1;
-                                    else points = isReversed ? 1 : 0;
-                                } else if (q.type === 'likert-5') {
-                                    // 1..5
-                                    points = isReversed ? (5 - index) : (index + 1);
-                                } else if (q.type === 'scale-1-10') {
-                                    // 1..10
-                                    points = isReversed ? (10 - index) : (index + 1);
-                                } else {
-                                    // Default fallback logic for others (e.g. likert-7)
-                                    points = isReversed ? (q.options.length - index) : (index + 1);
-                                }
-
-                                newScoring[opt.id] = [{ scaleId, points }];
+                                const points = computeAutoPointsForOption(q.type, index, q.options.length, isReversed);
+                                const existingRules = (q.scoring?.[opt.id] || []).filter(r => r.scaleId !== scaleId);
+                                newScoring[opt.id] = [...existingRules, { scaleId, points }];
                             });
 
                             return {
                                 ...q,
-                                isReversed, // Ensure the reversed flag is set
+                                isReversed,
                                 scoring: newScoring
                             };
                         })
                     };
                 })
+            };
+        });
+    };
+
+    const removeScaleFromQuestion = (sectionId: string, questionId: string, scaleId: string) => {
+        setTest(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                sections: prev.sections.map(s => {
+                    if (s.id !== sectionId) return s;
+                    return {
+                        ...s,
+                        questions: s.questions.map(q => {
+                            if (q.id !== questionId) return q;
+                            const newScoring: Record<string, ScoringRule[]> = {};
+                            for (const [optId, rules] of Object.entries(q.scoring || {})) {
+                                newScoring[optId] = (rules || []).filter(r => r.scaleId !== scaleId);
+                            }
+                            return {
+                                ...q,
+                                scoring: newScoring,
+                            };
+                        }),
+                    };
+                }),
             };
         });
     };
@@ -458,7 +521,7 @@ const TestEditor: React.FC = () => {
                         ...s,
                         questions: s.questions.map(q => {
                             if (q.id !== questionId) return q;
-                            const currentRules = q.scoring[optionId] || [];
+                            const currentRules = (q.scoring[optionId] || []).filter(r => r.scaleId !== scaleId);
                             const newRules = [...currentRules, { scaleId, points }];
                             return {
                                 ...q,
@@ -817,6 +880,14 @@ const TestEditor: React.FC = () => {
                         <div className="space-y-6">
                             {section.questions.map((question, qIndex) => {
                                 const isExpanded = expandedQuestionId === question.id;
+                                const assignedScaleIds = Array.from(
+                                    new Set(
+                                        Object.values(question.scoring || {})
+                                            .flat()
+                                            .map(r => r?.scaleId)
+                                            .filter((id): id is string => Boolean(id))
+                                    )
+                                );
                                 return (
                                     <div key={question.id} className="bg-background/50 border border-border shadow-sm rounded-lg overflow-hidden transition-all">
                                         {/* Question Header / Toggle Bar */}
@@ -829,13 +900,32 @@ const TestEditor: React.FC = () => {
                                                     <ChevronLeftIcon className="h-5 w-5 text-text-muted" />
                                                 </div>
                                                 <div className="flex flex-col overflow-hidden">
-                                                    <span className="text-xs font-bold text-text-muted uppercase">Pytanie {qIndex + 1}</span>
-                                                    <span className="text-sm font-medium text-text truncate max-w-[500px]">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="text-xs font-bold text-text-muted uppercase">Pytanie {qIndex + 1}</span>
+                                                        {question.isReversed && (
+                                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-semibold">
+                                                                Odwrócone
+                                                            </span>
+                                                        )}
+                                                        {assignedScaleIds.map(sid => {
+                                                            const scName = test.scales.find(s => s.id === sid)?.name || sid;
+                                                            return (
+                                                                <span
+                                                                    key={sid}
+                                                                    className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-300 border border-blue-500/30 font-mono truncate max-w-[180px]"
+                                                                    title={`Punktowana skala: ${scName}`}
+                                                                >
+                                                                    {scName}
+                                                                </span>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                    <span className="text-sm font-medium text-text truncate max-w-[500px] mt-0.5">
                                                         {question.text || <span className="italic text-text-muted">Bez treści...</span>}
                                                     </span>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 shrink-0">
                                                 <span className="text-xs px-2 py-1 bg-surface border border-border rounded text-text-muted hidden sm:inline-block">
                                                     {question.type === 'yes-no' ? 'Tak/Nie' :
                                                         question.type === 'likert-5' ? 'Likert (1-5)' :
@@ -869,8 +959,8 @@ const TestEditor: React.FC = () => {
                                             </div>
 
                                             <div className="mb-6">
-                                                <label className="block text-xs font-bold text-text-muted uppercase mb-1">Typ Pytania</label>
-                                                <div className="flex flex-wrap gap-4 items-end">
+                                                <label className="block text-xs font-bold text-text-muted uppercase mb-1">Typ Pytania i Przypisanie do Skal</label>
+                                                <div className="flex flex-wrap gap-4 items-center">
                                                     <select
                                                         value={question.type}
                                                         onChange={e => updateQuestion(section.id, question.id, { type: e.target.value as any })}
@@ -899,10 +989,10 @@ const TestEditor: React.FC = () => {
                                                         </div>
                                                     </div>
 
-                                                    {['likert-5', 'scale-1-10', 'yes-no'].includes(question.type) && (
+                                                    {['likert-5', 'likert-7', 'scale-1-10', 'yes-no'].includes(question.type) && (
                                                         <div className="flex items-center gap-2 ml-auto">
                                                             <select
-                                                                className="text-sm p-2 border border-border rounded-lg bg-input-bg text-input-text w-auto min-w-[220px]"
+                                                                className="text-sm p-2 border border-border rounded-lg bg-input-bg text-input-text w-auto min-w-[240px]"
                                                                 onChange={(e) => {
                                                                     if (e.target.value) {
                                                                         applyAutoScoring(section.id, question.id, e.target.value, question.isReversed || false);
@@ -910,15 +1000,49 @@ const TestEditor: React.FC = () => {
                                                                     }
                                                                 }}
                                                             >
-                                                                <option value="">+ Przypisz punkty do skali...</option>
+                                                                <option value="">+ Dodaj skalę do pytania (możesz wybrać wiele)...</option>
                                                                 {test.scales.filter(s => s.type === 'standard').map(s => (
-                                                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                                                    <option key={s.id} value={s.id}>
+                                                                        {assignedScaleIds.includes(s.id) ? `✓ ${s.name} (zaktualizuj)` : s.name}
+                                                                    </option>
                                                                 ))}
                                                             </select>
                                                             <button onClick={() => setHelpTopic('auto-score')} className="text-text-muted hover:text-[var(--primary-color)] ml-1">
                                                                 <QuestionMarkCircleIcon className="h-4 w-4" />
                                                             </button>
                                                         </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Multi-Scale Assigned Pills Bar */}
+                                                <div className="mt-3 p-3 bg-surface/70 border border-border rounded-lg flex flex-wrap items-center gap-2">
+                                                    <span className="text-xs font-semibold text-text-muted mr-1">
+                                                        Przypisane skale ({assignedScaleIds.length}):
+                                                    </span>
+                                                    {assignedScaleIds.length === 0 ? (
+                                                        <span className="text-xs text-text-muted italic">
+                                                            Brak przypisanych skal — wybierz jedną lub więcej skal z listy powyżej (lub przypisz punkty ręcznie przy odpowiedziach).
+                                                        </span>
+                                                    ) : (
+                                                        assignedScaleIds.map(sid => {
+                                                            const scName = test.scales.find(s => s.id === sid)?.name || sid;
+                                                            return (
+                                                                <span
+                                                                    key={sid}
+                                                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                                                                >
+                                                                    <span>{scName}</span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => removeScaleFromQuestion(section.id, question.id, sid)}
+                                                                        className="text-blue-200 hover:text-red-400 font-bold ml-0.5"
+                                                                        title={`Usuń skalę "${scName}" z tego pytania`}
+                                                                    >
+                                                                        &times;
+                                                                    </button>
+                                                                </span>
+                                                            );
+                                                        })
                                                     )}
                                                 </div>
                                             </div>
@@ -960,8 +1084,8 @@ const TestEditor: React.FC = () => {
 
                                                             <div className="flex gap-2 mt-2 items-center">
                                                                 <select
-                                                                    className="text-xs p-1 border border-border bg-input-bg text-input-text rounded max-w-[150px]"
-                                                                    id={`scale-select-${option.id}`}
+                                                                    className="text-xs p-1 border border-border bg-input-bg text-input-text rounded max-w-[200px]"
+                                                                    id={`scale-select-${question.id}-${option.id}`}
                                                                 >
                                                                     <option value="">Wybierz skalę...</option>
                                                                     {test.scales.filter(s => s.type === 'standard').map(s => (
@@ -972,14 +1096,14 @@ const TestEditor: React.FC = () => {
                                                                     type="number"
                                                                     className="text-xs p-1 border border-border bg-input-bg text-input-text rounded w-16"
                                                                     placeholder="Pkt"
-                                                                    id={`points-input-${option.id}`}
+                                                                    id={`points-input-${question.id}-${option.id}`}
                                                                     defaultValue={1}
                                                                 />
                                                                 <button
-                                                                    onClick={(e) => {
-                                                                        const scaleSelect = document.getElementById(`scale-select-${option.id}`) as HTMLSelectElement;
-                                                                        const pointsInput = document.getElementById(`points-input-${option.id}`) as HTMLInputElement;
-                                                                        if (scaleSelect.value && pointsInput.value) {
+                                                                    onClick={() => {
+                                                                        const scaleSelect = document.getElementById(`scale-select-${question.id}-${option.id}`) as HTMLSelectElement;
+                                                                        const pointsInput = document.getElementById(`points-input-${question.id}-${option.id}`) as HTMLInputElement;
+                                                                        if (scaleSelect?.value && pointsInput?.value) {
                                                                             addScoringRule(section.id, question.id, option.id, scaleSelect.value, parseInt(pointsInput.value));
                                                                             scaleSelect.value = '';
                                                                             pointsInput.value = '1';
@@ -1107,7 +1231,7 @@ const TestEditor: React.FC = () => {
                                         <li>Dla <strong className="text-text">Skali Numerycznej</strong>: Punkty są przydzielane odwrotnie do wartości liczbowej.</li>
                                     </ul>
                                     <p className="mt-4 text-xs text-text-muted">
-                                        Pamiętaj, aby po zmianie tego ustawienia ponownie kliknąć przycisk przypisywania punktów do skali, aby zaktualizować wartości.
+                                        Przełączenie tej opcji automatycznie przelicza punkty (np. 1→5 na 5→1) dla wszystkich skal przypisanych do danego pytania.
                                     </p>
                                 </>
                             )}
@@ -1115,13 +1239,13 @@ const TestEditor: React.FC = () => {
                             {helpTopic === 'auto-score' && (
                                 <>
                                     <p>
-                                        To narzędzie pozwala na <strong className="text-text">szybkie przypisanie punktów</strong> do wszystkich opcji w pytaniu jednocześnie.
+                                        To narzędzie pozwala na <strong className="text-text">szybkie przypisanie pytania do jednej lub wielu skal</strong> jednocześnie.
                                     </p>
                                     <p>
-                                        Wybierz skalę z listy, a system automatycznie przydzieli punkty w zależności od typu pytania i ustawienia "Odwrócona punktacja".
+                                        Każde wybranie skali z listy <em>„+ Dodaj skalę do pytania...”</em> dopisuje ją do wszystkich opcji odpowiedzi w pytaniu (z uwzględnieniem przełącznika „Odwrócona punktacja”), nie kasując wcześniej przypisanych skal.
                                     </p>
                                     <div className="bg-blue-500/15 p-3 rounded border border-blue-500/30 text-blue-200 mt-2">
-                                        <strong>Wskazówka:</strong> Jest to opcja opcjonalna. Jeśli potrzebujesz niestandardowej punktacji, możesz ręcznie edytować punkty przy każdej odpowiedzi poniżej.
+                                        <strong>Wskazówka:</strong> Przypisane skale widoczne są jako niebieskie znaczniki pod wyborem typu pytania (oraz na pasku zwiniętego pytania) — kliknięcie <strong>&times;</strong> na znaczniku usuwa daną skalę ze wszystkich odpowiedzi pytania naraz.
                                     </div>
                                 </>
                             )}
