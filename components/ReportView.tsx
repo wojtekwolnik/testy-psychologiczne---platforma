@@ -9,6 +9,7 @@ import { BrandingContext } from '@/contexts/BrandingContext';
 import RichTextInput from './common/RichTextInput';
 import { toast } from 'react-toastify';
 import DOMPurify from 'isomorphic-dompurify';
+import { buildKeyInterpretation, resolveScaleLevel } from '@/lib/interpretationBuilder';
 
 interface ReportViewProps {
     resultId: string;
@@ -259,34 +260,77 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
     };
 
     const getScoreLevel = (val: number, scale: any) => {
-        if (!scale) return { label: 'Brak danych', color: '#313647', textColor: '#fbfaf7', description: null };
-        if (scale.levels && scale.levels.length > 0) {
-            const matched = scale.levels.find((l: any) => val >= l.minScore && val <= l.maxScore) || scale.levels[scale.levels.length - 1];
-            
-            let hexColor = matched.color;
-            let textColor = '#ffffff';
-            
-            if (hexColor === 'red') hexColor = '#ef4444';
-            else if (hexColor === 'yellow') { hexColor = '#fef08a'; textColor = '#854d0e'; }
-            else if (hexColor === 'green') hexColor = '#4e9054';
-            else if (hexColor === 'purple') hexColor = '#a855f7';
-            else if (hexColor === 'blue') hexColor = '#314293';
-            else if (hexColor && hexColor.startsWith('#')) {
-                const r = parseInt(hexColor.slice(1, 3), 16) || 0;
-                const g = parseInt(hexColor.slice(3, 5), 16) || 0;
-                const b = parseInt(hexColor.slice(5, 7), 16) || 0;
-                const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-                if (luminance > 0.5) textColor = '#14161d';
-            }
-            
-            return { label: matched.name, color: hexColor || '#314293', textColor, description: matched.description };
-        }
-        if (!scale.maxScore) return { label: 'Brak danych', color: '#313647', textColor: '#fbfaf7', description: null };
-        const ratio = val / scale.maxScore;
-        if (ratio > 0.73) return { label: 'Wysoki', color: '#e89183', textColor: '#14161d', description: null };
-        if (ratio >= 0.45) return { label: 'Przeciętny', color: '#314293', textColor: '#ffffff', description: null };
-        return { label: 'Niski', color: '#4e9054', textColor: '#ffffff', description: null };
+        return resolveScaleLevel(val, scale);
     };
+
+    const handleInsertKeyInterpretation = async () => {
+        const generated = buildKeyInterpretation(test, result.scores);
+        if (!generated) {
+            toast.info('Brak zdefiniowanych skal lub opisów w kluczu tego testu.');
+            return;
+        }
+        setCustomInterpretation(generated);
+        await handleSaveNotes(generated);
+    };
+
+    const formatAiTextToHtml = (rawText: string) => {
+        const cleaned = rawText
+            .replace(/^```html\s*/i, '')
+            .replace(/^```\s*/i, '')
+            .replace(/```\s*$/i, '')
+            .trim();
+        if (cleaned.includes('<p>') || cleaned.includes('<ul>') || cleaned.includes('<strong>')) {
+            return cleaned;
+        }
+        return cleaned
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .split(/\n{2,}/)
+            .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+            .join('');
+    };
+
+    // Group scales dynamically by matched threshold (supports 2, 3, 4, 5, 10... thresholds)
+    const profileLevelGroups = useMemo(() => {
+        const map = new Map<
+            string,
+            {
+                label: string;
+                color: string;
+                textColor: string;
+                maxRelativeRank: number;
+                items: { name: string; value: number; maxScore?: number }[];
+            }
+        >();
+
+        for (const [scaleId, value] of Object.entries(result.scores)) {
+            const scale = test.scales.find(s => s.id === scaleId);
+            if (!scale) continue;
+            const lvl = resolveScaleLevel(value, scale);
+            const relRank =
+                lvl.totalLevels > 1
+                    ? lvl.rankIndex / (lvl.totalLevels - 1)
+                    : scale.maxScore
+                      ? value / scale.maxScore
+                      : 0.5;
+            const key = lvl.label.trim();
+            const existing = map.get(key);
+            if (existing) {
+                existing.items.push({ name: scale.name, value, maxScore: scale.maxScore });
+                if (relRank > existing.maxRelativeRank) existing.maxRelativeRank = relRank;
+            } else {
+                map.set(key, {
+                    label: lvl.label,
+                    color: lvl.color,
+                    textColor: lvl.textColor,
+                    maxRelativeRank: relRank,
+                    items: [{ name: scale.name, value, maxScore: scale.maxScore }],
+                });
+            }
+        }
+
+        return Array.from(map.values()).sort((a, b) => b.maxRelativeRank - a.maxRelativeRank);
+    }, [result.scores, test.scales]);
 
     const chartItems = Object.entries(result.scores)
         .map(([scaleId, value]) => {
@@ -376,6 +420,40 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                             </div>
                         )}
 
+                        {/* Dynamic N-level Profile Summary */}
+                        {profileLevelGroups.length > 0 && (
+                            <div className="mb-8 bg-background/60 border border-border rounded-xl p-5">
+                                <h3 className="text-lg font-semibold text-text mb-3">Podsumowanie profilu wg progów klucza</h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                    {profileLevelGroups.map(group => (
+                                        <div key={group.label} className="bg-surface/80 border border-border rounded-lg p-3.5">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span
+                                                    className="px-2.5 py-0.5 rounded-full text-xs font-bold border shadow-sm"
+                                                    style={{ backgroundColor: group.color, borderColor: group.color, color: group.textColor }}
+                                                >
+                                                    {group.label}
+                                                </span>
+                                                <span className="text-xs text-text-muted font-mono">
+                                                    {group.items.length} {group.items.length === 1 ? 'skala' : 'skale'}
+                                                </span>
+                                            </div>
+                                            <ul className="space-y-1 text-xs text-text">
+                                                {group.items.map(it => (
+                                                    <li key={it.name} className="flex justify-between gap-2">
+                                                        <span className="font-medium truncate">{it.name}</span>
+                                                        <span className="font-mono text-text-muted shrink-0">
+                                                            {it.value}{it.maxScore ? `/${it.maxScore}` : ''}
+                                                        </span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         <div className="mb-8">
                             <h3 className="text-2xl font-semibold text-text mb-4">Szczegółowe wyniki skal</h3>
                             <div className="space-y-4">
@@ -421,17 +499,31 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                             <h3 className="text-2xl font-semibold text-text mb-4">Interpretacja i notatki terapeuty</h3>
                             <div className="bg-background/60 p-5 rounded-xl border border-border">
                                 <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
-                                    <h4 className="font-semibold text-text">Treść interpretacji do raportu</h4>
-                                    <div className="flex items-center gap-2">
+                                    <div>
+                                        <h4 className="font-semibold text-text">Treść interpretacji do raportu</h4>
+                                        <p className="text-xs text-text-muted">Bazowa interpretacja budowana jest automatycznie z klucza testu. Możesz ją edytować lub wzbogacić syntezą AI.</p>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
                                         <button
+                                            type="button"
+                                            onClick={handleInsertKeyInterpretation}
+                                            disabled={isSavingNotes}
+                                            className="px-3.5 py-2 bg-surface text-text border border-border font-semibold rounded-lg hover:bg-surface/80 transition-colors text-xs disabled:opacity-50"
+                                            title="Odtwórz bazową interpretację bezpośrednio z progów punktowych klucza testu"
+                                        >
+                                            Wstaw z klucza testu
+                                        </button>
+                                        <button
+                                            type="button"
                                             onClick={handleGetAiInterpretation}
                                             disabled={isInterpretationLoading}
                                             className="flex items-center gap-2 px-3.5 py-2 bg-accent/15 text-accent border border-accent/30 font-semibold rounded-lg hover:bg-accent/25 transition-colors text-xs disabled:opacity-50"
                                         >
                                             <SparklesIcon className="w-4 h-4" />
-                                            {isInterpretationLoading ? 'Generowanie...' : 'Generuj z AI'}
+                                            {isInterpretationLoading ? 'Syntetyzowanie...' : 'Synteza profilu z AI'}
                                         </button>
                                         <button
+                                            type="button"
                                             onClick={() => handleSaveNotes()}
                                             disabled={isSavingNotes}
                                             className="px-4 py-2 bg-primary text-primary-contrast font-semibold rounded-lg hover:opacity-90 transition-opacity text-xs shadow-sm disabled:opacity-50"
@@ -440,21 +532,52 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                                         </button>
                                     </div>
                                 </div>
-                                {isInterpretationLoading && <div className="text-center p-4 text-text-muted">Analizowanie wyników przez model AI...</div>}
+                                {isInterpretationLoading && <div className="text-center p-4 text-text-muted">Analizowanie interakcji między skalami i hipotez przez model AI...</div>}
                                 {aiInterpretation && (
                                     <div className="prose prose-sm prose-invert max-w-none p-4 mb-4 bg-surface rounded-xl border border-accent/40">
-                                        <h5 className="font-semibold text-accent">Sugestia wygenerowana przez AI:</h5>
-                                        <p className="text-text whitespace-pre-wrap">{aiInterpretation}</p>
-                                        <button
-                                            onClick={() => {
-                                                setCustomInterpretation(aiInterpretation);
-                                                setAiInterpretation(null);
-                                                handleSaveNotes(aiInterpretation);
+                                        <h5 className="font-semibold text-accent mb-2">Synteza profilu i hipotezy na sesję (AI):</h5>
+                                        <div
+                                            className="text-text text-sm space-y-2"
+                                            dangerouslySetInnerHTML={{
+                                                __html: DOMPurify.sanitize(formatAiTextToHtml(aiInterpretation)),
                                             }}
-                                            className="text-xs font-semibold text-primary hover:underline mt-2"
-                                        >
-                                            Zastosuj i zapisz tę sugestię
-                                        </button>
+                                        />
+                                        <div className="flex flex-wrap items-center gap-3 mt-4 pt-3 border-t border-border/60">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const formattedAi = `<p><br></p><p><strong>SYNTEZA PROFILU I HIPOTEZY KLINICZNE (AI)</strong></p>${formatAiTextToHtml(aiInterpretation)}`;
+                                                    const combined = customInterpretation
+                                                        ? `${customInterpretation}${formattedAi}`
+                                                        : formattedAi;
+                                                    setCustomInterpretation(combined);
+                                                    setAiInterpretation(null);
+                                                    handleSaveNotes(combined);
+                                                }}
+                                                className="px-3 py-1.5 bg-primary text-primary-contrast text-xs font-semibold rounded-lg hover:opacity-90 transition-opacity"
+                                            >
+                                                Dołącz pod obecną interpretacją i zapisz
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const formattedAi = formatAiTextToHtml(aiInterpretation);
+                                                    setCustomInterpretation(formattedAi);
+                                                    setAiInterpretation(null);
+                                                    handleSaveNotes(formattedAi);
+                                                }}
+                                                className="px-3 py-1.5 bg-surface border border-border text-text text-xs font-semibold rounded-lg hover:bg-background transition-colors"
+                                            >
+                                                Zastąp całość i zapisz
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setAiInterpretation(null)}
+                                                className="text-xs text-text-muted hover:text-text ml-auto"
+                                            >
+                                                Odrzuć
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                                 <RichTextInput value={customInterpretation} onChange={setCustomInterpretation} />

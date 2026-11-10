@@ -5,6 +5,7 @@ import type { TestResult, Test, Scale, Question, ClientAnswer, ScoringRule, PdfT
 import { revalidatePath } from 'next/cache';
 import { evaluate } from 'mathjs';
 import { checkAuth, requireAuth } from './authActions';
+import { buildKeyInterpretation, getNormalizedBigFiveScaleData } from '@/lib/interpretationBuilder';
 
 // Helper for formula evaluation (supports any alphanumeric scale ID, with or without hyphens)
 const evaluateFormula = (formula: string, availableScores: Record<string, number>): number => {
@@ -78,9 +79,33 @@ export async function submitTest(testId: string, answers: Record<string, string[
         throw new Error("Ten test nie jest obecnie opublikowany.");
     }
 
+    const isBigFive = test.canonicalId === 'big-five-johnson-120';
     const processedTest = {
         ...test,
-        scales: test.scales.map(s => ({ ...s, maxScore: s.maxScore ?? undefined, formula: s.formula ?? undefined })),
+        scales: test.scales.map(s => {
+            let parsedLevels = s.levels ? JSON.parse(s.levels) : undefined;
+            let description = s.description || '';
+            if (isBigFive) {
+                const normalized = getNormalizedBigFiveScaleData({
+                    id: s.id,
+                    name: s.name,
+                    description,
+                    levels: parsedLevels,
+                });
+                if (normalized) {
+                    description = normalized.description;
+                    parsedLevels = normalized.levels;
+                }
+            }
+            return {
+                ...s,
+                type: s.type as Scale['type'],
+                description,
+                maxScore: s.maxScore ?? undefined,
+                formula: s.formula ?? undefined,
+                levels: parsedLevels,
+            };
+        }),
         sections: test.sections.map(sec => ({
             ...sec,
             questions: sec.questions.map(q => ({
@@ -151,6 +176,10 @@ export async function submitTest(testId: string, answers: Record<string, string[
     const finalScores = { ...standardScores, ...calculatedScores };
     const dbAnswers = JSON.stringify(answers);
     const dbScores = JSON.stringify(finalScores);
+    const initialKeyAnalysis = buildKeyInterpretation(
+        { title: test.title, scales: processedTest.scales },
+        finalScores
+    );
 
     // 3. Atomic verification of access code + creation of TestResult + in-app Notification
     const { result, therapistId } = await prisma.$transaction(async (tx) => {
@@ -193,6 +222,7 @@ export async function submitTest(testId: string, answers: Record<string, string[
                 clientIdentifier: trimmedCode,
                 scores: dbScores,
                 answers: dbAnswers,
+                analysis: initialKeyAnalysis || null,
                 completedAt: new Date()
             }
         });
@@ -267,9 +297,6 @@ export async function triggerAnalysis(resultId: string): Promise<string | null> 
 
     const { generateAnalysis } = await import('../services/aiService');
     const analysis = await generateAnalysis(resultId);
-    if (analysis) {
-        await saveAnalysis(resultId, analysis);
-    }
     return analysis;
 }
 
@@ -370,18 +397,49 @@ export async function fetchReportBundle(resultId: string): Promise<{
     });
 
     const t = resultRecord.test;
+    const isBigFive = t.canonicalId === 'big-five-johnson-120';
+
     const serializedTest: Test = {
         ...t,
         status: (t.status as 'DRAFT' | 'PUBLISHED') || 'DRAFT',
         createdAt: t.createdAt.toISOString(),
-        scales: t.scales.map(s => ({
-            ...s,
-            type: s.type as Scale['type'],
-            description: s.description || '',
-            maxScore: s.maxScore ?? undefined,
-            formula: s.formula ?? undefined,
-            levels: s.levels ? JSON.parse(s.levels) : undefined,
-        })),
+        scales: t.scales.map(s => {
+            let parsedLevels = s.levels ? JSON.parse(s.levels) : undefined;
+            let description = s.description || '';
+
+            if (isBigFive) {
+                const normalized = getNormalizedBigFiveScaleData({
+                    id: s.id,
+                    name: s.name,
+                    description,
+                    levels: parsedLevels,
+                });
+                if (normalized) {
+                    description = normalized.description;
+                    parsedLevels = normalized.levels;
+                    if (normalized.needsUpdate) {
+                        prisma.scale
+                            .update({
+                                where: { id: s.id },
+                                data: {
+                                    description: normalized.description,
+                                    levels: JSON.stringify(normalized.levels),
+                                },
+                            })
+                            .catch(err => console.error('Non-fatal Big Five scale auto-migration error:', err));
+                    }
+                }
+            }
+
+            return {
+                ...s,
+                type: s.type as Scale['type'],
+                description,
+                maxScore: s.maxScore ?? undefined,
+                formula: s.formula ?? undefined,
+                levels: parsedLevels,
+            };
+        }),
         sections: t.sections.map(sec => ({
             ...sec,
             questions: sec.questions.map(q => ({
@@ -393,13 +451,19 @@ export async function fetchReportBundle(resultId: string): Promise<{
         })),
     };
 
+    const parsedScores = JSON.parse(resultRecord.scores as string) as Record<string, number>;
+    const resolvedAnalysis =
+        resultRecord.analysis && resultRecord.analysis.trim()
+            ? resultRecord.analysis
+            : buildKeyInterpretation(serializedTest, parsedScores);
+
     const serializedResult: TestResult = {
         ...resultRecord,
-        analysis: resultRecord.analysis ?? undefined,
+        analysis: resolvedAnalysis || undefined,
         testTitle: t.title,
         testVersion: t.version,
         completedAt: resultRecord.completedAt.toISOString(),
-        scores: JSON.parse(resultRecord.scores as string),
+        scores: parsedScores,
         answers: JSON.parse(resultRecord.answers as string),
     };
 

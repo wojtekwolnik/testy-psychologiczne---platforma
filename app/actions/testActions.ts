@@ -5,19 +5,52 @@ import type { Test, Question, Scale, Section, PdfTemplate } from '@/components/t
 import { revalidatePath } from 'next/cache';
 import crypto from 'crypto';
 import { requireAuth } from './authActions';
+import { getNormalizedBigFiveScaleData } from '@/lib/interpretationBuilder';
 
 // Helper to parse JSON fields from Prisma to Frontend Types
 const serializeTest = (prismaTest: any): Test => {
+    const isBigFive = prismaTest.canonicalId === 'big-five-johnson-120';
+
     return {
         ...prismaTest,
         status: prismaTest.status || 'DRAFT',
         createdAt: prismaTest.createdAt.toISOString(),
-        scales: (prismaTest.scales || []).map((s: any) => ({
-            ...s,
-            maxScore: s.maxScore ?? undefined,
-            formula: s.formula ?? undefined,
-            levels: s.levels ? JSON.parse(s.levels) : undefined
-        })),
+        scales: (prismaTest.scales || []).map((s: any) => {
+            let parsedLevels = s.levels ? JSON.parse(s.levels) : undefined;
+            let description = s.description || '';
+
+            if (isBigFive) {
+                const normalized = getNormalizedBigFiveScaleData({
+                    id: s.id,
+                    name: s.name,
+                    description,
+                    levels: parsedLevels,
+                });
+                if (normalized) {
+                    description = normalized.description;
+                    parsedLevels = normalized.levels;
+                    if (normalized.needsUpdate) {
+                        prisma.scale
+                            .update({
+                                where: { id: s.id },
+                                data: {
+                                    description: normalized.description,
+                                    levels: JSON.stringify(normalized.levels),
+                                },
+                            })
+                            .catch(err => console.error('Non-fatal Big Five scale auto-migration error:', err));
+                    }
+                }
+            }
+
+            return {
+                ...s,
+                description,
+                maxScore: s.maxScore ?? undefined,
+                formula: s.formula ?? undefined,
+                levels: parsedLevels,
+            };
+        }),
         sections: (prismaTest.sections || []).map((sec: any) => ({
             ...sec,
             questions: (sec.questions || []).map((q: any) => ({

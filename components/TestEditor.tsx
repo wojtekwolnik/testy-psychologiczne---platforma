@@ -10,6 +10,7 @@ import type { Test, Scale, Question, AnswerOption, ScoringRule, Section, PdfTemp
 import { PlusIcon, TrashIcon, CalculatorIcon, QuestionMarkCircleIcon, ChevronLeftIcon } from './common/Icons';
 // import RichTextInput from './common/RichTextInput';
 import { generateUniqueId } from '../utils/idUtils';
+import { generateEqualThresholds, calculateScaleScoreBounds } from '@/lib/interpretationBuilder';
 
 const LIKERT_5_LABELS = [
     'Zdecydowanie nie zgadzam się',
@@ -56,6 +57,7 @@ const TestEditor: React.FC = () => {
     const [helpTopic, setHelpTopic] = useState<'formula' | 'sections' | 'reversed' | 'auto-score' | null>(null);
     // Stores the ID of the currently expanded question. If null, all are collapsed.
     const [expandedQuestionId, setExpandedQuestionId] = useState<string | null>(null);
+    const [thresholdCounts, setThresholdCounts] = useState<Record<string, number>>({});
 
     useEffect(() => {
         const loadInitialData = async () => {
@@ -592,9 +594,31 @@ const TestEditor: React.FC = () => {
                                 <button onClick={() => removeScale(scale.id)} className="p-2 text-[var(--error-color)] hover:bg-red-100 rounded-full"><TrashIcon /></button>
                             </div>
                             {scale.type === 'standard' ? (
-                                <div className="mt-2">
-                                    <label className="text-sm font-medium">Maksymalna liczba punktów:</label>
-                                    <input type="number" min="1" value={scale.maxScore || 0} onChange={e => updateScale(i, { maxScore: Math.max(1, parseInt(e.target.value) || 0) })} className="w-32 p-2 ml-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
+                                <div className="mt-2 flex flex-wrap items-center gap-3">
+                                    <div>
+                                        <label className="text-sm font-medium">Maksymalna liczba punktów:</label>
+                                        <input type="number" min="1" value={scale.maxScore || 0} onChange={e => updateScale(i, { maxScore: Math.max(1, parseInt(e.target.value) || 0) })} className="w-32 p-2 ml-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
+                                    </div>
+                                    {(() => {
+                                        const bounds = calculateScaleScoreBounds(test.sections, scale.id);
+                                        if (bounds.questionCount === 0) return null;
+                                        return (
+                                            <div className="flex items-center gap-2 text-xs text-slate-600 bg-slate-100 px-3 py-1.5 rounded-md">
+                                                <span>
+                                                    Wyliczono z {bounds.questionCount} pytań: zakres <strong>{bounds.minPossible}–{bounds.maxPossible} pkt</strong>
+                                                </span>
+                                                {bounds.maxPossible > 0 && scale.maxScore !== bounds.maxPossible && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => updateScale(i, { maxScore: bounds.maxPossible })}
+                                                        className="px-2 py-0.5 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition-colors"
+                                                    >
+                                                        Ustaw max = {bounds.maxPossible}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             ) : (
                                 <div className="mt-3 p-3 bg-orange-400/10 rounded-md">
@@ -622,19 +646,76 @@ const TestEditor: React.FC = () => {
 
                             {/* Custom Levels Configuration */}
                             <div className="mt-4 pt-4 border-t border-gray-200">
-                                <div className="flex justify-between items-center mb-2">
-                                    <label className="text-sm font-semibold text-gray-700">Poziomy wyników / przedziały (opcjonalne):</label>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const currentLevels = scale.levels || [];
-                                            const newLevel = { id: generateUniqueId('lvl'), name: 'Nowy Poziom', minScore: 0, maxScore: scale.maxScore || 100, color: '#3b82f6', description: '' };
-                                            updateScale(i, { levels: [...currentLevels, newLevel] });
-                                        }}
-                                        className="text-xs px-3 py-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-md font-semibold flex items-center gap-1 transition-colors"
-                                    >
-                                        + Dodaj poziom
-                                    </button>
+                                <div className="flex flex-wrap justify-between items-center gap-2 mb-3">
+                                    <div>
+                                        <label className="text-sm font-semibold text-gray-700">Poziomy wyników / progi interpretacyjne (dowolna liczba progów):</label>
+                                        <p className="text-xs text-gray-500">Każdy próg może mieć własną nazwę, zakres punktowy i opis, który automatycznie zbuduje interpretację z klucza.</p>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <div className="flex items-center gap-1.5 bg-slate-100 border border-slate-300 rounded-md px-2 py-1 text-xs">
+                                            <span className="text-slate-700 font-medium">Liczba progów:</span>
+                                            <input
+                                                type="number"
+                                                min={2}
+                                                max={20}
+                                                value={thresholdCounts[scale.id] ?? (scale.levels && scale.levels.length >= 2 ? scale.levels.length : 3)}
+                                                onChange={e => {
+                                                    const val = Math.max(2, Math.min(20, parseInt(e.target.value) || 2));
+                                                    setThresholdCounts(prev => ({ ...prev, [scale.id]: val }));
+                                                }}
+                                                className="w-14 p-1 border border-slate-300 rounded text-center font-bold bg-white text-slate-900"
+                                                title="Wybierz na ile progów podzielić skalę (np. 2, 3, 4, 5, 10)"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const n = thresholdCounts[scale.id] ?? (scale.levels && scale.levels.length >= 2 ? scale.levels.length : 3);
+                                                    const bounds = calculateScaleScoreBounds(test.sections, scale.id);
+                                                    const maxVal = scale.maxScore || bounds.maxPossible || 100;
+                                                    const generated = generateEqualThresholds(n, maxVal, 0);
+                                                    updateScale(i, { levels: generated });
+                                                    toast.info(`Wygenerowano ${n} równych progów (0–${maxVal} pkt) dla skali "${scale.name || 'Skala'}".`);
+                                                }}
+                                                className="px-2.5 py-1 bg-emerald-600 text-white hover:bg-emerald-700 rounded font-semibold transition-colors"
+                                                title="Automatycznie podziel zakres 0..Max na wybraną liczbę równych przedziałów"
+                                            >
+                                                Wygeneruj równe progi
+                                            </button>
+                                            {(() => {
+                                                const bounds = calculateScaleScoreBounds(test.sections, scale.id);
+                                                if (bounds.minPossible <= 0 || bounds.maxPossible <= bounds.minPossible) return null;
+                                                return (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const n = thresholdCounts[scale.id] ?? (scale.levels && scale.levels.length >= 2 ? scale.levels.length : 3);
+                                                            const maxVal = scale.maxScore || bounds.maxPossible;
+                                                            const generated = generateEqualThresholds(n, maxVal, bounds.minPossible);
+                                                            updateScale(i, { levels: generated });
+                                                            toast.info(`Wygenerowano ${n} równych progów (${bounds.minPossible}–${maxVal} pkt) dla skali "${scale.name || 'Skala'}".`);
+                                                        }}
+                                                        className="px-2 py-1 bg-teal-600 text-white hover:bg-teal-700 rounded font-semibold transition-colors"
+                                                        title={`Podziel realny zakres punktów z pytań (${bounds.minPossible}..${scale.maxScore || bounds.maxPossible}) na N progów`}
+                                                    >
+                                                        Od {bounds.minPossible} do {scale.maxScore || bounds.maxPossible}
+                                                    </button>
+                                                );
+                                            })()}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const currentLevels = scale.levels || [];
+                                                const lastMax = currentLevels.length > 0 ? currentLevels[currentLevels.length - 1].maxScore + 1 : 0;
+                                                const maxVal = Math.max(lastMax, scale.maxScore || 100);
+                                                const newLevel = { id: generateUniqueId('lvl'), name: `Poziom ${currentLevels.length + 1}`, minScore: lastMax, maxScore: maxVal, color: '#3b82f6', description: '' };
+                                                updateScale(i, { levels: [...currentLevels, newLevel] });
+                                            }}
+                                            className="text-xs px-3 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-md font-semibold flex items-center gap-1 transition-colors"
+                                        >
+                                            + Dodaj próg ręcznie
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     {(scale.levels || []).map((level, lIndex) => (

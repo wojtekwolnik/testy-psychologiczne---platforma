@@ -2,6 +2,7 @@
 import { PDFDocument, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import type { TestResult, Test, PdfTemplate, ReportComponent, BrandingSettings } from './types';
+import { resolveScaleLevel } from '@/lib/interpretationBuilder';
 
 function safeText(str: string | undefined | null): string {
     if (!str) return '';
@@ -141,16 +142,7 @@ async function drawScoresTable(ctx: PdfContext, component: ReportComponent, resu
     const scaleIds = component.options.scaleIds || Object.keys(result.scores);
 
     const getScoreLevel = (val: number, scale: any) => {
-        if (!scale) return 'Brak danych';
-        if (scale.levels && scale.levels.length > 0) {
-            const matched = scale.levels.find((l: any) => val >= l.minScore && val <= l.maxScore) || scale.levels[scale.levels.length - 1];
-            return matched.name;
-        }
-        if (!scale.maxScore) return 'Brak danych';
-        const ratio = val / scale.maxScore;
-        if (ratio > 0.73) return 'Wysoki';
-        if (ratio >= 0.45) return 'Przeciętny';
-        return 'Niski';
+        return resolveScaleLevel(val, scale).label;
     };
 
     // Header
@@ -343,11 +335,7 @@ async function drawRichText(ctx: PdfContext, component: ReportComponent, result?
             const score = result.scores[scaleId];
             const scale = test.scales.find(s => s.id === scaleId);
             if (score === undefined || !scale) return '?';
-            if (scale.levels && scale.levels.length > 0) {
-                const matched = scale.levels.find(l => score >= l.minScore && score <= l.maxScore) || scale.levels[scale.levels.length - 1];
-                return matched.name;
-            }
-            return String(score);
+            return resolveScaleLevel(score, scale).label;
         });
     }
 
@@ -395,8 +383,14 @@ async function drawRichText(ctx: PdfContext, component: ReportComponent, result?
     for (const token of tokens) {
         if (token.startsWith('<')) {
             const tag = token.toLowerCase();
-            if (tag === '<b>' || tag === '<strong>') isBold = true;
+            if (tag === '<b>' || tag === '<strong>' || /^<h[1-6]/.test(tag)) isBold = true;
             else if (tag === '</b>' || tag === '</strong>') isBold = false;
+            else if (/^<\/h[1-6]>/.test(tag)) {
+                isBold = false;
+                ctx.moveDown(lineHeight);
+                ctx.checkNewPage(lineHeight);
+                currentX = marginX;
+            }
             else if (tag === '<i>' || tag === '<em>') isItalic = true;
             else if (tag === '</i>' || tag === '</em>') isItalic = false;
             else if (tag === '<br>' || tag === '<br/>' || tag === '<br />' || tag === '</p>') {
@@ -453,10 +447,7 @@ async function drawInterpretations(ctx: PdfContext, component: ReportComponent, 
 
     const getScoreLevel = (val: number, scale: any) => {
         if (!scale) return null;
-        if (scale.levels && scale.levels.length > 0) {
-            return scale.levels.find((l: any) => val >= l.minScore && val <= l.maxScore) || scale.levels[scale.levels.length - 1];
-        }
-        return null;
+        return resolveScaleLevel(val, scale);
     };
 
     for (const scaleId of scaleIds) {
@@ -464,14 +455,14 @@ async function drawInterpretations(ctx: PdfContext, component: ReportComponent, 
         const scaleInfo = test.scales.find(s => s.id === scaleId);
         if (score === undefined || !scaleInfo) continue;
 
-        let content = `<b>${scaleInfo.name}</b><br>`;
+        const levelInfo = getScoreLevel(score, scaleInfo);
+        let content = `<b>${scaleInfo.name}${levelInfo ? ` — Poziom: ${levelInfo.label}` : ''}</b><br>`;
         if (scaleInfo.description) {
             content += `${scaleInfo.description}<br>`;
         }
 
-        const levelInfo = getScoreLevel(score, scaleInfo);
         if (levelInfo && levelInfo.description) {
-            content += `<b>Interpretacja wyniku (${levelInfo.name}):</b><br>${levelInfo.description}<br>`;
+            content += `<b>Interpretacja wyniku (${levelInfo.label}):</b><br>${levelInfo.description}<br>`;
         }
         
         content += `<br>`;
