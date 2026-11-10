@@ -2,7 +2,7 @@
 import { PDFDocument, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import type { TestResult, Test, PdfTemplate, ReportComponent, BrandingSettings } from './types';
-import { resolveScaleLevel } from '@/lib/interpretationBuilder';
+import { resolveScaleLevel, isBigFiveFacetScale } from '@/lib/interpretationBuilder';
 
 function safeText(str: string | undefined | null): string {
     if (!str) return '';
@@ -178,7 +178,13 @@ async function drawBarChart(ctx: PdfContext, component: ReportComponent, result:
         ctx.moveDown(25);
     }
 
-    const scaleIds = component.options.scaleIds || Object.keys(result.scores);
+    const hasExplicitScaleIds = Array.isArray(component.options.scaleIds) && component.options.scaleIds.length > 0;
+    const scaleIds = hasExplicitScaleIds
+        ? component.options.scaleIds
+        : Object.keys(result.scores).filter(id => {
+              const s = test.scales.find(sc => sc.id === id);
+              return s && !isBigFiveFacetScale(s);
+          });
     const barWidth = 30;
     const barSpacing = 20;
     let currentX = 60;
@@ -223,7 +229,13 @@ async function drawRadarChart(ctx: PdfContext, component: ReportComponent, resul
         ctx.moveDown(25);
     }
 
-    const scaleIds = component.options.scaleIds || Object.keys(result.scores);
+    const hasExplicitScaleIds = Array.isArray(component.options.scaleIds) && component.options.scaleIds.length > 0;
+    const scaleIds = hasExplicitScaleIds
+        ? component.options.scaleIds
+        : Object.keys(result.scores).filter(id => {
+              const s = test.scales.find(sc => sc.id === id);
+              return s && !isBigFiveFacetScale(s);
+          });
     const scalesToDraw = scaleIds.map((id: string) => test.scales.find((s: any) => s.id === id)).filter((s: any) => !!s) as typeof test.scales;
 
     if (scalesToDraw.length < 3) {

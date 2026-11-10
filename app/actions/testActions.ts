@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import crypto from 'crypto';
 import { requireAuth } from './authActions';
 import { getNormalizedBigFiveScaleData } from '@/lib/interpretationBuilder';
+import { ensureBigFiveTestUpgraded } from '@/lib/bigFiveSync';
 
 // Helper to parse JSON fields from Prisma to Frontend Types
 const serializeTest = (prismaTest: any): Test => {
@@ -129,7 +130,13 @@ export async function fetchTests(): Promise<Test[]> {
         orderBy: { createdAt: 'desc' }
     });
 
-    return tests.map(serializeTest);
+    const upgradedTests = [];
+    for (const t of tests) {
+        const upgraded = await ensureBigFiveTestUpgraded(prisma, t);
+        upgradedTests.push(upgraded);
+    }
+
+    return upgradedTests.map(serializeTest);
 }
 
 export async function fetchTestById(testId: string): Promise<Test | null> {
@@ -147,7 +154,8 @@ export async function fetchTestById(testId: string): Promise<Test | null> {
     });
 
     if (!test) return null;
-    return serializeTest(test);
+    const upgraded = await ensureBigFiveTestUpgraded(prisma, test);
+    return serializeTest(upgraded);
 }
 
 /**

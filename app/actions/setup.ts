@@ -2,8 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import bigFiveQuestions from '@/prisma/bigFiveQuestions.json';
-import { BIG_FIVE_SCALE_DEFINITIONS } from '@/lib/interpretationBuilder';
+import { getBigFiveSeedScales, getBigFiveSeedSections } from '@/lib/bigFiveSync';
 
 async function seedDefaultTestsIfNeeded() {
     try {
@@ -52,96 +51,21 @@ async function seedDefaultTestsIfNeeded() {
 
         const existingBigFive = await prisma.test.findFirst({ where: { canonicalId: 'big-five-johnson-120' } });
         if (!existingBigFive) {
-            const likertOptions = JSON.stringify([
-                { text: 'Bardzo nietrafne', value: 1, id: '1' },
-                { text: 'Raczej nietrafne', value: 2, id: '2' },
-                { text: 'Ani trafne, ani nietrafne', value: 3, id: '3' },
-                { text: 'Raczej trafne', value: 4, id: '4' },
-                { text: 'Bardzo trafne', value: 5, id: '5' }
-            ]);
-
-            const scoringPlus = (domain: string) => JSON.stringify({
-                '1': [{ scaleId: domain, points: 1 }],
-                '2': [{ scaleId: domain, points: 2 }],
-                '3': [{ scaleId: domain, points: 3 }],
-                '4': [{ scaleId: domain, points: 4 }],
-                '5': [{ scaleId: domain, points: 5 }]
-            });
-
-            const scoringMinus = (domain: string) => JSON.stringify({
-                '1': [{ scaleId: domain, points: 5 }],
-                '2': [{ scaleId: domain, points: 4 }],
-                '3': [{ scaleId: domain, points: 3 }],
-                '4': [{ scaleId: domain, points: 2 }],
-                '5': [{ scaleId: domain, points: 1 }]
-            });
-
             await prisma.test.create({
                 data: {
                     title: 'Wielka Piątka (IPIP-NEO-PI-R 120)',
                     canonicalId: 'big-five-johnson-120',
-                    description: 'Wielka Piątka (Big Five) to wszechstronny, zweryfikowany naukowo inwentarz osobowości mierzący pięć głównych wymiarów: Otwartość na doświadczenia, Sumienność, Ekstrawersję, Ugodowość oraz Neurotyczność. Wersja 120-pytaniowa.',
+                    description: 'Wielka Piątka (Big Five) to wszechstronny, zweryfikowany naukowo inwentarz osobowości mierzący pięć głównych wymiarów: Otwartość na doświadczenia, Sumienność, Ekstrawersję, Ugodowość oraz Neurotyczność, wraz z 30 szczegółowymi podskalami (aspektami). Wersja 120-pytaniowa.',
                     instructions: 'Oceń, na ile poniższe stwierdzenia trafnie opisują Twoje zachowania i odczucia. Zaznacz odpowiedź, która najbardziej odpowiada prawdzie.',
                     questionsPerPage: 24,
                     status: 'PUBLISHED',
                     scales: {
-                        create: [
-                            {
-                                id: 'O',
-                                name: 'Otwartość na doświadczenia',
-                                type: 'standard',
-                                maxScore: 120,
-                                levels: JSON.stringify(BIG_FIVE_SCALE_DEFINITIONS.O.levels),
-                                description: BIG_FIVE_SCALE_DEFINITIONS.O.description
-                            },
-                            {
-                                id: 'C',
-                                name: 'Sumienność',
-                                type: 'standard',
-                                maxScore: 120,
-                                levels: JSON.stringify(BIG_FIVE_SCALE_DEFINITIONS.C.levels),
-                                description: BIG_FIVE_SCALE_DEFINITIONS.C.description
-                            },
-                            {
-                                id: 'E',
-                                name: 'Ekstrawersja',
-                                type: 'standard',
-                                maxScore: 120,
-                                levels: JSON.stringify(BIG_FIVE_SCALE_DEFINITIONS.E.levels),
-                                description: BIG_FIVE_SCALE_DEFINITIONS.E.description
-                            },
-                            {
-                                id: 'A',
-                                name: 'Ugodowość',
-                                type: 'standard',
-                                maxScore: 120,
-                                levels: JSON.stringify(BIG_FIVE_SCALE_DEFINITIONS.A.levels),
-                                description: BIG_FIVE_SCALE_DEFINITIONS.A.description
-                            },
-                            {
-                                id: 'N',
-                                name: 'Neurotyczność',
-                                type: 'standard',
-                                maxScore: 120,
-                                levels: JSON.stringify(BIG_FIVE_SCALE_DEFINITIONS.N.levels),
-                                description: BIG_FIVE_SCALE_DEFINITIONS.N.description
-                            }
-                        ]
+                        create: getBigFiveSeedScales(),
                     },
                     sections: {
-                        create: [0, 1, 2, 3, 4].map((idx) => ({
-                            title: `Część ${idx + 1} (Pytania ${idx * 24 + 1} - ${(idx + 1) * 24})`,
-                            questions: {
-                                create: bigFiveQuestions.slice(idx * 24, (idx + 1) * 24).map((q: any) => ({
-                                    text: q.text,
-                                    type: 'likert-5',
-                                    options: likertOptions,
-                                    scoring: q.keyed === 'plus' ? scoringPlus(q.domain) : scoringMinus(q.domain)
-                                }))
-                            }
-                        }))
-                    }
-                }
+                        create: getBigFiveSeedSections(),
+                    },
+                },
             });
         }
     } catch (e) {

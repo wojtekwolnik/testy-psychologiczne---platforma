@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { evaluate } from 'mathjs';
 import { checkAuth, requireAuth } from './authActions';
 import { buildKeyInterpretation, getNormalizedBigFiveScaleData } from '@/lib/interpretationBuilder';
+import { ensureBigFiveTestUpgraded } from '@/lib/bigFiveSync';
 
 // Helper for formula evaluation (supports any alphanumeric scale ID, with or without hyphens)
 const evaluateFormula = (formula: string, availableScores: Record<string, number>): number => {
@@ -62,7 +63,7 @@ export async function submitTest(testId: string, answers: Record<string, string[
     }
 
     // 1. Fetch Test Data
-    const test = await prisma.test.findUnique({
+    const rawTest = await prisma.test.findUnique({
         where: { id: testId },
         include: {
             scales: true,
@@ -74,11 +75,12 @@ export async function submitTest(testId: string, answers: Record<string, string[
         }
     });
 
-    if (!test) throw new Error("Test not found");
-    if (test.status !== 'PUBLISHED') {
+    if (!rawTest) throw new Error("Test not found");
+    if (rawTest.status !== 'PUBLISHED') {
         throw new Error("Ten test nie jest obecnie opublikowany.");
     }
 
+    const test = await ensureBigFiveTestUpgraded(prisma, rawTest);
     const isBigFive = test.canonicalId === 'big-five-johnson-120';
     const processedTest = {
         ...test,
@@ -396,14 +398,14 @@ export async function fetchReportBundle(resultId: string): Promise<{
         include: { test: { select: { canonicalId: true } } }
     });
 
-    const t = resultRecord.test;
+    const t = await ensureBigFiveTestUpgraded(prisma, resultRecord.test);
     const isBigFive = t.canonicalId === 'big-five-johnson-120';
 
     const serializedTest: Test = {
         ...t,
         status: (t.status as 'DRAFT' | 'PUBLISHED') || 'DRAFT',
         createdAt: t.createdAt.toISOString(),
-        scales: t.scales.map(s => {
+        scales: t.scales.map((s: any) => {
             let parsedLevels = s.levels ? JSON.parse(s.levels) : undefined;
             let description = s.description || '';
 
@@ -440,10 +442,11 @@ export async function fetchReportBundle(resultId: string): Promise<{
                 levels: parsedLevels,
             };
         }),
-        sections: t.sections.map(sec => ({
+        sections: t.sections.map((sec: any) => ({
             ...sec,
-            questions: sec.questions.map(q => ({
+            questions: sec.questions.map((q: any) => ({
                 ...q,
+                isReversed: Boolean(q.isReversed),
                 type: q.type as Question['type'],
                 options: JSON.parse(q.options),
                 scoring: JSON.parse(q.scoring),
@@ -452,6 +455,42 @@ export async function fetchReportBundle(resultId: string): Promise<{
     };
 
     const parsedScores = JSON.parse(resultRecord.scores as string) as Record<string, number>;
+    const parsedAnswers = JSON.parse(resultRecord.answers as string) as Record<string, any>;
+
+    // If a Big Five result was saved before facet subscales were added, compute the missing facet scores from answers
+    if (isBigFive && Object.keys(parsedScores).length < serializedTest.scales.length && parsedAnswers) {
+        const recomputed: Record<string, number> = {};
+        for (const sc of serializedTest.scales) {
+            if (sc.type === 'standard') recomputed[sc.id] = 0;
+        }
+        for (const sec of serializedTest.sections) {
+            for (const q of sec.questions) {
+                const given = parsedAnswers[q.id];
+                const answerIds = Array.isArray(given) ? given : given ? [String(given)] : [];
+                for (const ansId of answerIds) {
+                    const rules = q.scoring?.[ansId];
+                    if (Array.isArray(rules)) {
+                        for (const rule of rules) {
+                            if (recomputed[rule.scaleId] !== undefined) {
+                                recomputed[rule.scaleId] += Number(rule.points) || 0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        const nonZeroCount = Object.values(recomputed).filter(v => v > 0).length;
+        if (nonZeroCount >= 5) {
+            Object.assign(parsedScores, recomputed);
+            prisma.testResult
+                .update({
+                    where: { id: resultRecord.id },
+                    data: { scores: JSON.stringify(parsedScores) },
+                })
+                .catch(err => console.error('Non-fatal error saving recomputed Big Five facet scores:', err));
+        }
+    }
+
     const resolvedAnalysis =
         resultRecord.analysis && resultRecord.analysis.trim()
             ? resultRecord.analysis
@@ -464,7 +503,7 @@ export async function fetchReportBundle(resultId: string): Promise<{
         testVersion: t.version,
         completedAt: resultRecord.completedAt.toISOString(),
         scores: parsedScores,
-        answers: JSON.parse(resultRecord.answers as string),
+        answers: parsedAnswers,
     };
 
     const serializedTemplates: PdfTemplate[] = rawTemplates.map(tpl => ({

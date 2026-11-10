@@ -9,7 +9,12 @@ import { BrandingContext } from '@/contexts/BrandingContext';
 import RichTextInput from './common/RichTextInput';
 import { toast } from 'react-toastify';
 import DOMPurify from 'isomorphic-dompurify';
-import { buildKeyInterpretation, resolveScaleLevel } from '@/lib/interpretationBuilder';
+import {
+    buildKeyInterpretation,
+    resolveScaleLevel,
+    isBigFiveFacetScale,
+    getBigFiveFacetParentDomain,
+} from '@/lib/interpretationBuilder';
 
 interface ReportViewProps {
     resultId: string;
@@ -290,8 +295,11 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
             .join('');
     };
 
+    const nonFacetScales = test.scales.filter(s => !isBigFiveFacetScale(s));
+    const primaryScales = nonFacetScales.length > 0 ? nonFacetScales : test.scales;
+
     // Group scales dynamically by matched threshold (supports 2, 3, 4, 5, 10... thresholds)
-    const profileLevelGroups = useMemo(() => {
+    const profileLevelGroups = (() => {
         const map = new Map<
             string,
             {
@@ -303,9 +311,9 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
             }
         >();
 
-        for (const [scaleId, value] of Object.entries(result.scores)) {
-            const scale = test.scales.find(s => s.id === scaleId);
-            if (!scale) continue;
+        for (const scale of primaryScales) {
+            const value = result.scores[scale.id];
+            if (value === undefined) continue;
             const lvl = resolveScaleLevel(value, scale);
             const relRank =
                 lvl.totalLevels > 1
@@ -330,22 +338,23 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
         }
 
         return Array.from(map.values()).sort((a, b) => b.maxRelativeRank - a.maxRelativeRank);
-    }, [result.scores, test.scales]);
+    })();
 
-    const chartItems = Object.entries(result.scores)
-        .map(([scaleId, value]) => {
-            const scale = test.scales.find(s => s.id === scaleId);
-            const maxScore = scale?.maxScore || 0;
+    const chartItems = primaryScales
+        .map(scale => {
+            const value = result.scores[scale.id];
+            if (value === undefined) return null;
+            const maxScore = scale.maxScore || 0;
             const percentage = maxScore ? Math.min(100, Math.max(0, (value / maxScore) * 100)) : 0;
             return {
-                scaleId,
-                name: scale?.name || scaleId,
+                scaleId: scale.id,
+                name: scale.name || scale.id,
                 value,
                 maxScore,
                 percentage,
             };
         })
-        .filter(item => item.maxScore > 0);
+        .filter((item): item is NonNullable<typeof item> => item !== null && item.maxScore > 0);
 
     return (
         <div className="min-h-screen text-[var(--text-color)]">
@@ -457,12 +466,19 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                         <div className="mb-8">
                             <h3 className="text-2xl font-semibold text-text mb-4">Szczegółowe wyniki skal</h3>
                             <div className="space-y-4">
-                                {Object.entries(result.scores).map(([scaleId, value]) => {
+                                {primaryScales.map(scale => {
+                                    const scaleId = scale.id;
+                                    const value = result.scores[scaleId];
+                                    if (value === undefined) return null;
                                     const { name, description } = getScaleDetails(scaleId);
-                                    const scale = test.scales.find(s => s.id === scaleId);
-                                    const maxScore = scale?.maxScore;
+                                    const maxScore = scale.maxScore;
                                     const percentage = maxScore ? Math.min(100, Math.max(0, (value / maxScore) * 100)) : 0;
                                     const levelInfo = getScoreLevel(value, scale);
+                                    const domainAbbr = (scale.abbreviation || scale.id || '').trim().toUpperCase();
+                                    const childFacets = test.scales.filter(
+                                        s => getBigFiveFacetParentDomain(s) === domainAbbr && result.scores[s.id] !== undefined
+                                    );
+
                                     return (
                                         <div key={scaleId} className="bg-background/60 p-5 rounded-xl border border-border">
                                             <div className="flex justify-between items-center mb-2">
@@ -487,6 +503,57 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                                                 <div className="mt-4 p-4 bg-surface border-l-4 border-primary rounded-r-lg">
                                                     <h5 className="font-bold text-primary mb-1">Interpretacja wyniku ({levelInfo.label}):</h5>
                                                     <div className="text-text text-sm prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(levelInfo.description) }} />
+                                                </div>
+                                            )}
+
+                                            {childFacets.length > 0 && (
+                                                <div className="mt-5 pt-4 border-t border-border/70">
+                                                    <h5 className="text-sm font-bold text-text uppercase tracking-wider mb-3">
+                                                        Podskale (aspekty wymiaru {name})
+                                                    </h5>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                        {childFacets.map(facet => {
+                                                            const facetVal = result.scores[facet.id];
+                                                            const facetMax = facet.maxScore || 20;
+                                                            const facetPct = facetMax ? Math.min(100, Math.max(0, (facetVal / facetMax) * 100)) : 0;
+                                                            const facetLvl = getScoreLevel(facetVal, facet);
+                                                            return (
+                                                                <div key={facet.id} className="bg-surface/80 p-3.5 rounded-lg border border-border/80 flex flex-col justify-between">
+                                                                    <div>
+                                                                        <div className="flex justify-between items-start gap-2 mb-1.5">
+                                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                                <span className="font-semibold text-sm text-text">{facet.name}</span>
+                                                                                <span
+                                                                                    className="px-2 py-0.5 rounded-full text-[11px] font-bold border"
+                                                                                    style={{
+                                                                                        backgroundColor: facetLvl.color,
+                                                                                        borderColor: facetLvl.color,
+                                                                                        color: facetLvl.textColor,
+                                                                                    }}
+                                                                                >
+                                                                                    {facetLvl.label}
+                                                                                </span>
+                                                                            </div>
+                                                                            <span className="font-mono font-bold text-sm text-text shrink-0">
+                                                                                {facetVal} / {facetMax}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="w-full bg-background rounded-full h-2 mb-2 border border-border/40 overflow-hidden">
+                                                                            <div className="bg-primary/85 h-full rounded-full" style={{ width: `${facetPct}%` }} />
+                                                                        </div>
+                                                                        {facet.description && (
+                                                                            <p className="text-xs text-text-muted mb-1.5">{facet.description}</p>
+                                                                        )}
+                                                                    </div>
+                                                                    {facetLvl.description && (
+                                                                        <p className="text-xs text-text bg-background/60 p-2.5 rounded border-l-2 border-primary/70 mt-1">
+                                                                            {facetLvl.description}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>

@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs';
-import { BIG_FIVE_SCALE_DEFINITIONS } from '../lib/interpretationBuilder';
+import { getBigFiveSeedScales, getBigFiveSeedSections } from '../lib/bigFiveSync';
 
 const prisma = new PrismaClient()
 
@@ -51,144 +51,22 @@ async function main() {
     // Check if Big Five Test already exists
     let bigFiveTest = await prisma.test.findFirst({ where: { canonicalId: 'big-five-johnson-120' } });
     if (!bigFiveTest) {
-        const bigFiveQuestions = require('./bigFiveQuestions.json');
-        const likertOptions = JSON.stringify([
-            { text: 'Bardzo nietrafne', value: 1, id: '1' },
-            { text: 'Raczej nietrafne', value: 2, id: '2' },
-            { text: 'Ani trafne, ani nietrafne', value: 3, id: '3' },
-            { text: 'Raczej trafne', value: 4, id: '4' },
-            { text: 'Bardzo trafne', value: 5, id: '5' }
-        ]);
-
-        const scoringPlus = (domain: string) => JSON.stringify({
-            '1': [{ scaleId: domain, points: 1 }],
-            '2': [{ scaleId: domain, points: 2 }],
-            '3': [{ scaleId: domain, points: 3 }],
-            '4': [{ scaleId: domain, points: 4 }],
-            '5': [{ scaleId: domain, points: 5 }]
-        });
-
-        const scoringMinus = (domain: string) => JSON.stringify({
-            '1': [{ scaleId: domain, points: 5 }],
-            '2': [{ scaleId: domain, points: 4 }],
-            '3': [{ scaleId: domain, points: 3 }],
-            '4': [{ scaleId: domain, points: 2 }],
-            '5': [{ scaleId: domain, points: 1 }]
-        });
-
-        // Create the test
+        // Create the test with all 5 main domains (O, C, E, A, N) + 30 facet subscales (O1..N6)
         bigFiveTest = await prisma.test.create({
             data: {
                 title: 'Wielka Piątka (IPIP-NEO-PI-R 120)',
                 canonicalId: 'big-five-johnson-120',
-                description: 'Wielka Piątka (Big Five) to wszechstronny, zweryfikowany naukowo inwentarz osobowości mierzący pięć głównych wymiarów: Otwartość na doświadczenia, Sumienność, Ekstrawersję, Ugodowość oraz Neurotyczność. Wersja 120-pytaniowa.',
+                description: 'Wielka Piątka (Big Five) to wszechstronny, zweryfikowany naukowo inwentarz osobowości mierzący pięć głównych wymiarów: Otwartość na doświadczenia, Sumienność, Ekstrawersję, Ugodowość oraz Neurotyczność, wraz z 30 szczegółowymi podskalami (aspektami). Wersja 120-pytaniowa.',
                 instructions: 'Oceń, na ile poniższe stwierdzenia trafnie opisują Twoje zachowania i odczucia. Zaznacz odpowiedź, która najbardziej odpowiada prawdzie.',
                 questionsPerPage: 24,
                 status: 'PUBLISHED',
                 scales: {
-                    create: [
-                        {
-                            id: 'O',
-                            name: 'Otwartość na doświadczenia',
-                            type: 'standard',
-                            maxScore: 120,
-                            levels: JSON.stringify(BIG_FIVE_SCALE_DEFINITIONS.O.levels),
-                            description: BIG_FIVE_SCALE_DEFINITIONS.O.description
-                        },
-                        {
-                            id: 'C',
-                            name: 'Sumienność',
-                            type: 'standard',
-                            maxScore: 120,
-                            levels: JSON.stringify(BIG_FIVE_SCALE_DEFINITIONS.C.levels),
-                            description: BIG_FIVE_SCALE_DEFINITIONS.C.description
-                        },
-                        {
-                            id: 'E',
-                            name: 'Ekstrawersja',
-                            type: 'standard',
-                            maxScore: 120,
-                            levels: JSON.stringify(BIG_FIVE_SCALE_DEFINITIONS.E.levels),
-                            description: BIG_FIVE_SCALE_DEFINITIONS.E.description
-                        },
-                        {
-                            id: 'A',
-                            name: 'Ugodowość',
-                            type: 'standard',
-                            maxScore: 120,
-                            levels: JSON.stringify(BIG_FIVE_SCALE_DEFINITIONS.A.levels),
-                            description: BIG_FIVE_SCALE_DEFINITIONS.A.description
-                        },
-                        {
-                            id: 'N',
-                            name: 'Neurotyczność',
-                            type: 'standard',
-                            maxScore: 120,
-                            levels: JSON.stringify(BIG_FIVE_SCALE_DEFINITIONS.N.levels),
-                            description: BIG_FIVE_SCALE_DEFINITIONS.N.description
-                        }
-                    ]
+                    create: getBigFiveSeedScales(),
                 },
                 sections: {
-                    create: [
-                        {
-                            title: 'Część 1 (Pytania 1 - 24)',
-                            questions: {
-                                create: bigFiveQuestions.slice(0, 24).map((q: any) => ({
-                                    text: q.text,
-                                    type: 'likert-5',
-                                    options: likertOptions,
-                                    scoring: q.keyed === 'plus' ? scoringPlus(q.domain) : scoringMinus(q.domain)
-                                }))
-                            }
-                        },
-                        {
-                            title: 'Część 2 (Pytania 25 - 48)',
-                            questions: {
-                                create: bigFiveQuestions.slice(24, 48).map((q: any) => ({
-                                    text: q.text,
-                                    type: 'likert-5',
-                                    options: likertOptions,
-                                    scoring: q.keyed === 'plus' ? scoringPlus(q.domain) : scoringMinus(q.domain)
-                                }))
-                            }
-                        },
-                        {
-                            title: 'Część 3 (Pytania 49 - 72)',
-                            questions: {
-                                create: bigFiveQuestions.slice(48, 72).map((q: any) => ({
-                                    text: q.text,
-                                    type: 'likert-5',
-                                    options: likertOptions,
-                                    scoring: q.keyed === 'plus' ? scoringPlus(q.domain) : scoringMinus(q.domain)
-                                }))
-                            }
-                        },
-                        {
-                            title: 'Część 4 (Pytania 73 - 96)',
-                            questions: {
-                                create: bigFiveQuestions.slice(72, 96).map((q: any) => ({
-                                    text: q.text,
-                                    type: 'likert-5',
-                                    options: likertOptions,
-                                    scoring: q.keyed === 'plus' ? scoringPlus(q.domain) : scoringMinus(q.domain)
-                                }))
-                            }
-                        },
-                        {
-                            title: 'Część 5 (Pytania 97 - 120)',
-                            questions: {
-                                create: bigFiveQuestions.slice(96, 120).map((q: any) => ({
-                                    text: q.text,
-                                    type: 'likert-5',
-                                    options: likertOptions,
-                                    scoring: q.keyed === 'plus' ? scoringPlus(q.domain) : scoringMinus(q.domain)
-                                }))
-                            }
-                        }
-                    ]
-                }
-            }
+                    create: getBigFiveSeedSections(),
+                },
+            },
         });
     }
 
