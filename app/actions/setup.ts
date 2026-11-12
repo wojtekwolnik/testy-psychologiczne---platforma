@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { getBigFiveSeedScales, getBigFiveSeedSections } from '@/lib/bigFiveSync';
+import { getDass42TestCreateData, DASS_42_CANONICAL_ID } from '@/lib/dass42Sync';
 
 async function seedDefaultTestsIfNeeded() {
     try {
@@ -66,6 +67,12 @@ async function seedDefaultTestsIfNeeded() {
                         create: getBigFiveSeedSections(),
                     },
                 },
+            });
+        }
+        const existingDass42 = await prisma.test.findFirst({ where: { canonicalId: DASS_42_CANONICAL_ID } });
+        if (!existingDass42) {
+            await prisma.test.create({
+                data: getDass42TestCreateData(),
             });
         }
     } catch (e) {

@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs';
-import { getBigFiveSeedScales, getBigFiveSeedSections } from '../lib/bigFiveSync';
+import { getBigFiveSeedScales, getBigFiveSeedSections } from '../lib/bigFiveSync'
+import { getDass42TestCreateData, DASS_42_CANONICAL_ID } from '../lib/dass42Sync';
 
 const prisma = new PrismaClient()
 
@@ -70,7 +71,15 @@ async function main() {
         });
     }
 
-    console.log({ sampleTest, bigFiveTest })
+    // Check if DASS-42 Test already exists
+    let dass42Test = await prisma.test.findFirst({ where: { canonicalId: DASS_42_CANONICAL_ID } });
+    if (!dass42Test) {
+        dass42Test = await prisma.test.create({
+            data: getDass42TestCreateData(),
+        });
+    }
+
+    console.log({ sampleTest, bigFiveTest, dass42Test })
 }
 
 main()

@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import { requireAuth } from './authActions';
 import { getNormalizedBigFiveScaleData } from '@/lib/interpretationBuilder';
 import { ensureBigFiveTestUpgraded } from '@/lib/bigFiveSync';
+import { ensureDass42TestExists, isDass42EnsuredInMemory } from '@/lib/dass42Sync';
 
 // Helper to parse JSON fields from Prisma to Frontend Types
 const serializeTest = (prismaTest: any): Test => {
@@ -118,6 +119,9 @@ function remapTestEntityIds(scales: Scale[], sections: Section[]): { remappedSca
 
 export async function fetchTests(): Promise<Test[]> {
     await requireAuth();
+    if (!isDass42EnsuredInMemory()) {
+        await ensureDass42TestExists(prisma);
+    }
     const tests = await prisma.test.findMany({
         include: {
             scales: true,
