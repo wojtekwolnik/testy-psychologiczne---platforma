@@ -26,6 +26,7 @@ export default function BrandingPage() {
     const [saved, setSaved] = useState(false);
     const [error, setError] = useState('');
     const [logoError, setLogoError] = useState('');
+    const [faviconError, setFaviconError] = useState('');
     const [testEmail, setTestEmail] = useState('wojciech.wolnik@gmail.com');
     const [testEmailStatus, setTestEmailStatus] = useState<{ loading: boolean, message: string, success: boolean }>({ loading: false, message: '', success: false });
 
@@ -47,6 +48,28 @@ export default function BrandingPage() {
         };
         reader.onerror = () => {
             setLogoError('Błąd podczas odczytu pliku.');
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleFaviconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        setFaviconError('');
+
+        if (!file) return;
+
+        if (file.size > 250 * 1024) {
+            setFaviconError('Plik ikony jest za duży! Maksymalny rozmiar to 250KB.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const result = reader.result as string;
+            updateSetting('faviconUrl', result);
+        };
+        reader.onerror = () => {
+            setFaviconError('Błąd podczas odczytu pliku ikony.');
         };
         reader.readAsDataURL(file);
     };
@@ -219,6 +242,58 @@ export default function BrandingPage() {
                                         </p>
                                         {logoError && <p className="text-xs text-red-600 mt-1 font-bold">{logoError}</p>}
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="pt-6 border-t border-border">
+                            <label className="block text-sm font-medium text-text mb-2">
+                                Ikona Strony w Karcie Przeglądarki (Favicon)
+                            </label>
+                            <div className="flex flex-wrap items-center gap-4">
+                                <div className="relative group flex items-center justify-center w-14 h-14 rounded-xl border border-border bg-background/80 p-2">
+                                    <img
+                                        src={localSettings.faviconUrl || '/favicon-realmoment.png'}
+                                        alt="Favicon Preview"
+                                        className="w-8 h-8 object-contain"
+                                    />
+                                    {localSettings.faviconUrl && localSettings.faviconUrl !== '/favicon-realmoment.png' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => updateSetting('faviconUrl', '/favicon-realmoment.png')}
+                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600"
+                                            title="Przywróć domyślną ikonę Real Moment"
+                                        >
+                                            <FaTrash size={10} />
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-[240px]">
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <label className="cursor-pointer inline-flex items-center px-4 py-2 bg-white border border-slate-300 rounded-md font-semibold text-text hover:bg-slate-50 shadow-sm transition-all text-sm">
+                                            <FaUpload className="mr-2" />
+                                            Wgraj nową ikonę (Favicon)
+                                            <input
+                                                type="file"
+                                                className="hidden"
+                                                accept="image/png, image/x-icon, image/vnd.microsoft.icon, image/svg+xml, image/webp, image/jpeg"
+                                                onChange={handleFaviconUpload}
+                                            />
+                                        </label>
+                                        {localSettings.faviconUrl && localSettings.faviconUrl !== '/favicon-realmoment.png' && (
+                                            <button
+                                                type="button"
+                                                onClick={() => updateSetting('faviconUrl', '/favicon-realmoment.png')}
+                                                className="px-3 py-2 text-xs font-semibold bg-background border border-border hover:border-primary text-text rounded-md transition-colors"
+                                            >
+                                                Przywróć sygnet Real Moment
+                                            </button>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-text-muted mt-1.5">
+                                        Maks. 250KB. Zalecany kwadratowy format PNG, ICO lub SVG (np. 64×64 px lub 128×128 px). Domyślnie ustawiony jest sygnet Real Moment.
+                                    </p>
+                                    {faviconError && <p className="text-xs text-red-600 mt-1 font-bold">{faviconError}</p>}
                                 </div>
                             </div>
                         </div>

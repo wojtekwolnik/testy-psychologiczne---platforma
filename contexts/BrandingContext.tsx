@@ -74,6 +74,7 @@ export const DEFAULT_REPORT_DISCLAIMER_TEXT =
 const baseSettings = {
   appName: 'Real Moment',
   logoUrl: '/logo-realmoment-light.png',
+  faviconUrl: '/favicon-realmoment.png',
   reportLogoUrl: '/logo-realmoment-main.png',
   reportPrimaryColor: '#314293',
   reportFooterText: 'Real Moment – Przestrzeń Rozwojowa i Diagnostyczna | www.realmoment.pl',

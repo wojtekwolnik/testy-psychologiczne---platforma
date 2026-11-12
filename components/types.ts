@@ -181,6 +181,7 @@ export interface ThemePalette {
 export interface BrandingSettings {
   appName: string;
   logoUrl: string;
+  faviconUrl?: string;
   fontFamily: string;
   borderRadius: number;
   boxShadow: string;

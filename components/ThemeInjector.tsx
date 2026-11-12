@@ -1,12 +1,29 @@
 'use client';
 
-import React, { useContext } from 'react';
+import React, { useContext, useEffect } from 'react';
 import { BrandingContext } from '@/contexts/BrandingContext';
-import { ThemePalette } from './types';
 import { getContrastingTextColor } from '@/utils/colorUtils';
 
 export const ThemeInjector: React.FC = () => {
     const { branding } = useContext(BrandingContext);
+
+    useEffect(() => {
+        if (typeof document === 'undefined') return;
+        const faviconHref = branding.faviconUrl || '/favicon-realmoment.png';
+
+        const rels = ['icon', 'shortcut icon', 'apple-touch-icon'];
+        rels.forEach((rel) => {
+            let link = document.querySelector(`link[rel="${rel}"]`) as HTMLLinkElement | null;
+            if (!link) {
+                link = document.createElement('link');
+                link.rel = rel;
+                document.head.appendChild(link);
+            }
+            if (link.href !== faviconHref) {
+                link.href = faviconHref;
+            }
+        });
+    }, [branding.faviconUrl]);
 
     // Filter out only ThemePalette keys
     const { fontFamily } = branding;

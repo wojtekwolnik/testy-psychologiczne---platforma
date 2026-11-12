@@ -3,8 +3,13 @@ import './globals.css'
 import { Providers } from './providers'
 
 export const metadata: Metadata = {
-  title: 'Platforma Testów Psychologicznych',
-  description: 'Profesjonalne narzędzie dla terapeutów',
+  title: 'Real Moment – Przestrzeń Diagnostyczna',
+  description: 'Przestrzeń Rozwojowa i Diagnostyczna Real Moment',
+  icons: {
+    icon: '/favicon-realmoment.png',
+    shortcut: '/favicon-realmoment.png',
+    apple: '/favicon-realmoment.png',
+  },
 }
 
 export default function RootLayout({
