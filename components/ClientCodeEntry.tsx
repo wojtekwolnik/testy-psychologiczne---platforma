@@ -3,14 +3,16 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { validateAccessCode } from '@/app/actions/accessCodeActions';
-import { BrandingContext } from '@/contexts/BrandingContext';
+import { BrandingContext, DEFAULT_TERMS_OF_TESTING_TITLE } from '@/contexts/BrandingContext';
 import { SpinnerIcon } from './common/Icons';
 import DOMPurify from 'isomorphic-dompurify';
+import TermsOfTestingModal from './TermsOfTestingModal';
 
 const ClientCodeEntry: React.FC = () => {
     const [clientCode, setClientCode] = useState('');
     const [isClientLoading, setIsClientLoading] = useState(false);
     const [clientError, setClientError] = useState('');
+    const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
 
     const router = useRouter();
     const { branding } = useContext(BrandingContext);
@@ -98,11 +100,25 @@ const ClientCodeEntry: React.FC = () => {
                 </div>
             </div>
 
-            <footer className="absolute bottom-4 left-0 right-0 text-center text-[var(--text-color)] opacity-60 text-xs">
-                <p>
+            <footer className="mt-8 sm:absolute sm:bottom-4 sm:left-0 sm:right-0 text-center text-[var(--text-color)] text-xs space-y-1.5 px-4">
+                <p className="opacity-65">
                     <span className="font-bold">Bezpieczeństwo i Zgodność:</span> Wszystkie dane są szyfrowane i przetwarzane zgodnie z RODO.
                 </p>
+                <div className="flex items-center justify-center gap-4">
+                    <button
+                        type="button"
+                        onClick={() => setIsTermsModalOpen(true)}
+                        className="text-primary hover:underline font-semibold opacity-90 hover:opacity-100 transition-opacity"
+                    >
+                        {branding.termsOfTestingTitle || DEFAULT_TERMS_OF_TESTING_TITLE}
+                    </button>
+                </div>
             </footer>
+
+            <TermsOfTestingModal
+                isOpen={isTermsModalOpen}
+                onClose={() => setIsTermsModalOpen(false)}
+            />
         </div>
     );
 };

@@ -1,11 +1,20 @@
 'use client';
 
 import React, { useContext, useState, useEffect } from 'react';
-import { BrandingContext } from '@/contexts/BrandingContext';
+import {
+    BrandingContext,
+    DEFAULT_CLIENT_THANK_YOU_SAFETY_NOTE,
+    DEFAULT_REPORT_DISCLAIMER_TEXT,
+    DEFAULT_TERMS_CONSENT_CHECKBOX_TEXT,
+    DEFAULT_TERMS_OF_TESTING_CONTENT,
+    DEFAULT_TERMS_OF_TESTING_SUMMARY,
+    DEFAULT_TERMS_OF_TESTING_TITLE,
+} from '@/contexts/BrandingContext';
 import { saveBrandingSettings, sendTestEmailAction } from '@/app/actions/brandingActions';
 import { Tab } from '@headlessui/react';
-import { FaPalette, FaGlobe, FaEnvelope, FaRobot, FaCog, FaSun, FaMoon, FaUpload, FaTrash, FaImage, FaAlignLeft } from 'react-icons/fa';
+import { FaPalette, FaGlobe, FaEnvelope, FaRobot, FaCog, FaUpload, FaTrash, FaImage, FaAlignLeft } from 'react-icons/fa';
 import { ThemePalette } from '@/components/types';
+import RichTextInput from '@/components/common/RichTextInput';
 
 function classNames(...classes: string[]) {
     return classes.filter(Boolean).join(' ');
@@ -143,12 +152,15 @@ export default function BrandingPage() {
             {error && <div className="bg-red-100 text-red-700 p-4 rounded mb-4">{error}</div>}
 
             <Tab.Group>
-                <Tab.List className="flex space-x-1 rounded-xl bg-surface border border-border p-1 mb-6">
+                <Tab.List className="flex flex-wrap sm:flex-nowrap space-x-1 rounded-xl bg-surface border border-border p-1 mb-6">
                     <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-colors', selected ? 'bg-primary shadow text-white' : 'text-text-muted hover:bg-background/60 hover:text-text')}>
                         <div className="flex items-center justify-center gap-2"><FaCog /> Ogólne</div>
                     </Tab>
                     <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-colors', selected ? 'bg-primary shadow text-white' : 'text-text-muted hover:bg-background/60 hover:text-text')}>
                         <div className="flex items-center justify-center gap-2"><FaGlobe /> Portal Klienta</div>
+                    </Tab>
+                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-colors', selected ? 'bg-primary shadow text-white' : 'text-text-muted hover:bg-background/60 hover:text-text')}>
+                        <div className="flex items-center justify-center gap-2"><FaAlignLeft /> Warunki Badań</div>
                     </Tab>
                     <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm font-medium leading-5 transition-colors', selected ? 'bg-primary shadow text-white' : 'text-text-muted hover:bg-background/60 hover:text-text')}>
                         <div className="flex items-center justify-center gap-2"><FaPalette /> Kolorystyka</div>
@@ -225,12 +237,163 @@ export default function BrandingPage() {
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
+                                    <label className="block text-sm font-medium text-text mb-1">Tytuł Ekranu Potwierdzenia (przed startem badania)</label>
+                                    <input type="text" className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text" value={localSettings.clientConfirmationTitle} onChange={e => updateSetting('clientConfirmationTitle', e.target.value)} />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-text mb-1">Przycisk Rozpoczęcia Badania</label>
+                                    <input type="text" className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text" value={localSettings.clientConfirmationButtonText} onChange={e => updateSetting('clientConfirmationButtonText', e.target.value)} />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-text mb-1">Wiadomość Powitalna przed Badaniem</label>
+                                <textarea className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text" rows={2} value={localSettings.clientConfirmationMessage} onChange={e => updateSetting('clientConfirmationMessage', e.target.value)} />
+                                <p className="text-xs text-text-muted mt-1">Dostępne znaczniki: <code>{`{testTitle}`}</code>, <code>{`{questionCount}`}</code></p>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
                                     <label className="block text-sm font-medium text-text mb-1">Tytuł Podziękowania</label>
                                     <input type="text" className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text" value={localSettings.clientThankYouTitle} onChange={e => updateSetting('clientThankYouTitle', e.target.value)} />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-text mb-1">Wiadomość Podziękowania</label>
                                     <textarea className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text" rows={2} value={localSettings.clientThankYouMessage} onChange={e => updateSetting('clientThankYouMessage', e.target.value)} />
+                                </div>
+                            </div>
+                        </div>
+                    </Tab.Panel>
+
+                    {/* Terms of Testing (Warunki Badań) */}
+                    <Tab.Panel className="bg-surface border border-border p-6 rounded-2xl shadow-lg space-y-6">
+                        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+                            <div>
+                                <h2 className="text-xl font-bold text-text">Warunki wykonywania badań i zgody klienta</h2>
+                                <p className="text-xs text-text-muted mt-1">
+                                    Zarządzaj treścią zasad badania wyświetlanych przed startem testu, w oknie modalnym, na podstronie{' '}
+                                    <a href="/warunki-badania" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                                        /warunki-badania
+                                    </a>{' '}
+                                    oraz w stopce raportów PDF.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setLocalSettings(prev => ({
+                                        ...prev,
+                                        termsOfTestingTitle: DEFAULT_TERMS_OF_TESTING_TITLE,
+                                        termsOfTestingSummary: DEFAULT_TERMS_OF_TESTING_SUMMARY,
+                                        termsOfTestingContent: DEFAULT_TERMS_OF_TESTING_CONTENT,
+                                        requireTermsConsent: true,
+                                        termsConsentCheckboxText: DEFAULT_TERMS_CONSENT_CHECKBOX_TEXT,
+                                        clientThankYouSafetyNote: DEFAULT_CLIENT_THANK_YOU_SAFETY_NOTE,
+                                        reportDisclaimerEnabled: true,
+                                        reportDisclaimerText: DEFAULT_REPORT_DISCLAIMER_TEXT,
+                                    }));
+                                }}
+                                className="px-3.5 py-2 text-xs font-semibold bg-background border border-border hover:border-primary text-text rounded-lg transition-colors"
+                            >
+                                Przywróć domyślną treść warunków
+                            </button>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div>
+                                <label className="block text-sm font-medium text-text mb-1">
+                                    Tytuł dokumentu i linku w stopce
+                                </label>
+                                <input
+                                    type="text"
+                                    className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text"
+                                    value={localSettings.termsOfTestingTitle ?? DEFAULT_TERMS_OF_TESTING_TITLE}
+                                    onChange={e => updateSetting('termsOfTestingTitle', e.target.value)}
+                                />
+                            </div>
+
+                            <div className="p-4 bg-background/60 border border-border rounded-xl space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="checkbox"
+                                        id="requireTermsConsent"
+                                        checked={localSettings.requireTermsConsent !== false}
+                                        onChange={e => updateSetting('requireTermsConsent', e.target.checked)}
+                                        className="h-5 w-5 accent-[var(--primary-color)]"
+                                    />
+                                    <label htmlFor="requireTermsConsent" className="font-semibold text-text text-sm cursor-pointer">
+                                        Wymagaj zaznaczenia zgody na ekranie potwierdzenia przed rozpoczęciem badania (/test-confirmation)
+                                    </label>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-text mb-1">
+                                        Treść checkboxa akceptacji przed startem badania
+                                    </label>
+                                    <textarea
+                                        rows={2}
+                                        className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text text-sm"
+                                        value={localSettings.termsConsentCheckboxText ?? DEFAULT_TERMS_CONSENT_CHECKBOX_TEXT}
+                                        onChange={e => updateSetting('termsConsentCheckboxText', e.target.value)}
+                                    />
+                                    <p className="text-xs text-text-muted mt-1">
+                                        Użyj znacznika <code>{`{termsLink}`}</code> w miejscu, gdzie ma pojawić się klikalny link otwierający pełne Warunki wykonywania badań.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <RichTextInput
+                                    label="Skrócone podsumowanie zasad na ekranie przed rozpoczęciem badania (/test-confirmation)"
+                                    value={localSettings.termsOfTestingSummary ?? DEFAULT_TERMS_OF_TESTING_SUMMARY}
+                                    onChange={val => updateSetting('termsOfTestingSummary', val)}
+                                />
+                                <p className="text-xs text-text-muted mt-1">
+                                    Zwięzłe punkty wyświetlane w ramce nad przyciskiem „Rozumiem, zaczynamy”.
+                                </p>
+                            </div>
+
+                            <div>
+                                <RichTextInput
+                                    label="Pełna treść zakładki / okna „Warunki wykonywania badań” (/warunki-badania)"
+                                    value={localSettings.termsOfTestingContent ?? DEFAULT_TERMS_OF_TESTING_CONTENT}
+                                    onChange={val => updateSetting('termsOfTestingContent', val)}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-text mb-1">
+                                    Wskazówka informacyjna / bezpieczeństwa na ekranie podziękowania (po zakończeniu badania)
+                                </label>
+                                <textarea
+                                    rows={3}
+                                    className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text text-sm"
+                                    value={localSettings.clientThankYouSafetyNote ?? DEFAULT_CLIENT_THANK_YOU_SAFETY_NOTE}
+                                    onChange={e => updateSetting('clientThankYouSafetyNote', e.target.value)}
+                                />
+                            </div>
+
+                            <div className="p-4 bg-background/60 border border-border rounded-xl space-y-3">
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="checkbox"
+                                        id="reportDisclaimerEnabledTab"
+                                        checked={localSettings.reportDisclaimerEnabled !== false}
+                                        onChange={e => updateSetting('reportDisclaimerEnabled', e.target.checked)}
+                                        className="h-5 w-5 accent-[var(--primary-color)]"
+                                    />
+                                    <label htmlFor="reportDisclaimerEnabledTab" className="font-semibold text-text text-sm cursor-pointer">
+                                        Dołączaj klauzulę metodologiczną na końcu raportu PDF oraz w widoku raportu terapeuty
+                                    </label>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-text mb-1">
+                                        Treść klauzuli metodologicznej w raporcie PDF
+                                    </label>
+                                    <textarea
+                                        rows={2}
+                                        className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text text-sm"
+                                        value={localSettings.reportDisclaimerText ?? DEFAULT_REPORT_DISCLAIMER_TEXT}
+                                        onChange={e => updateSetting('reportDisclaimerText', e.target.value)}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -645,6 +808,30 @@ export default function BrandingPage() {
                                 onChange={(e) => updateSetting('reportFooterText', e.target.value)}
                                 className="w-full p-3 border rounded-lg min-h-[100px] focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                                 placeholder="Platforma Testów Psychologicznych | www.twojastrona.pl"
+                            />
+                        </div>
+
+                        <hr />
+
+                        {/* Methodological Disclaimer */}
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="checkbox"
+                                    id="reportDisclaimerEnabledPdfTab"
+                                    checked={localSettings.reportDisclaimerEnabled !== false}
+                                    onChange={(e) => updateSetting('reportDisclaimerEnabled', e.target.checked)}
+                                    className="h-5 w-5 accent-[var(--primary-color)]"
+                                />
+                                <label htmlFor="reportDisclaimerEnabledPdfTab" className="font-semibold text-text text-sm cursor-pointer">
+                                    Dołączaj klauzulę metodologiczną na końcu raportu PDF (charakter pomocniczy i przesiewowy badania)
+                                </label>
+                            </div>
+                            <textarea
+                                value={localSettings.reportDisclaimerText ?? DEFAULT_REPORT_DISCLAIMER_TEXT}
+                                onChange={(e) => updateSetting('reportDisclaimerText', e.target.value)}
+                                className="w-full p-3 border rounded-lg min-h-[90px] focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+                                placeholder="Informacja metodologiczna..."
                             />
                         </div>
                     </Tab.Panel>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { fetchPublicTestForClient } from '@/app/actions/testActions';
 import { submitTest } from '@/app/actions/resultActions';
@@ -8,6 +8,8 @@ import { validateAccessCode } from '@/app/actions/accessCodeActions';
 import type { Test, ClientAnswer, Question, TestResult } from './types';
 import DOMPurify from 'isomorphic-dompurify';
 import { ClientThankYou } from './ClientThankYou';
+import { BrandingContext, DEFAULT_TERMS_OF_TESTING_TITLE } from '@/contexts/BrandingContext';
+import TermsOfTestingModal from './TermsOfTestingModal';
 
 interface ClientTestViewProps {
     testId?: string;
@@ -20,6 +22,7 @@ export default function ClientTestView(props: ClientTestViewProps) {
     const clientCode = (props.clientCode || (typeof params?.clientCode === 'string' ? params.clientCode : '')).trim().toUpperCase();
 
     const router = useRouter();
+    const { branding } = useContext(BrandingContext);
 
     const [test, setTest] = useState<Test | null>(null);
     const [answers, setAnswers] = useState<Record<string, ClientAnswer>>({});
@@ -30,6 +33,7 @@ export default function ClientTestView(props: ClientTestViewProps) {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [currentPage, setCurrentPage] = useState(0);
     const [validationError, setValidationError] = useState<string | null>(null);
+    const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
 
     const draftStorageKey = clientCode ? `rm_test_draft_${clientCode}` : '';
 
@@ -386,7 +390,22 @@ export default function ClientTestView(props: ClientTestViewProps) {
                         </div>
                     </form>
                 </div>
+
+                <footer className="mt-5 text-center text-xs text-text-muted">
+                    <button
+                        type="button"
+                        onClick={() => setIsTermsModalOpen(true)}
+                        className="text-primary hover:underline font-semibold opacity-80 hover:opacity-100 transition-opacity"
+                    >
+                        {branding.termsOfTestingTitle || DEFAULT_TERMS_OF_TESTING_TITLE}
+                    </button>
+                </footer>
             </div>
+
+            <TermsOfTestingModal
+                isOpen={isTermsModalOpen}
+                onClose={() => setIsTermsModalOpen(false)}
+            />
         </div>
     );
 }

@@ -662,6 +662,30 @@ export async function generatePdf(
         await drawRichText(ctx, { id: 'cust-int', type: 'RichText', options: { content: customInterpretation } }, result, test);
     }
 
+    // Methodological Disclaimer at the end of the report
+    if (branding.reportDisclaimerEnabled !== false) {
+        const disclaimerHtml =
+            branding.reportDisclaimerText ||
+            'Informacja metodologiczna: Wyniki niniejszego kwestionariusza mają charakter pomocniczy, przesiewowy i orientacyjny. Stanowią one materiał wspierający pracę ze specjalistą i nie zastępują pełnej diagnozy klinicznej ani lekarskiej.';
+        if (disclaimerHtml.replace(/<[^>]+>/g, '').trim().length > 0) {
+            ctx.checkNewPage(55);
+            ctx.moveDown(8);
+            ctx.page.drawLine({
+                start: { x: 50, y: ctx.y + 4 },
+                end: { x: ctx.page.getWidth() - 50, y: ctx.y + 4 },
+                thickness: 0.75,
+                color: rgb(0.75, 0.75, 0.78),
+            });
+            ctx.moveDown(12);
+            await drawRichText(
+                ctx,
+                { id: 'report-disclaimer', type: 'RichText', options: { content: `<em>${disclaimerHtml}</em>` } },
+                result,
+                test
+            );
+        }
+    }
+
     // Draw Footer and Pagination on every page
     const pages = pdfDoc.getPages();
     const pageCount = pages.length;

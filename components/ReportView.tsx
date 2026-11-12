@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { fetchReportBundle, saveAnalysis } from '@/app/actions/resultActions';
 import type { TestResult, Test, PdfTemplate, Question } from './types';
 import { DownloadIcon, SparklesIcon, ChevronLeftIcon } from './common/Icons';
-import { BrandingContext } from '@/contexts/BrandingContext';
+import { BrandingContext, DEFAULT_REPORT_DISCLAIMER_TEXT } from '@/contexts/BrandingContext';
 import RichTextInput from './common/RichTextInput';
 import { toast } from 'react-toastify';
 import DOMPurify from 'isomorphic-dompurify';
@@ -654,6 +654,18 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                                 <p className="text-xs text-text-muted mt-2">Ta interpretacja jest zapisywana przy wyniku oraz dołączana do raportu PDF.</p>
                             </div>
                         </div>
+
+                        {branding.reportDisclaimerEnabled !== false && (
+                            <div className="mt-6 p-4 bg-background/50 border border-border/70 rounded-xl text-xs text-text-muted leading-relaxed">
+                                <div
+                                    dangerouslySetInnerHTML={{
+                                        __html: DOMPurify.sanitize(
+                                            branding.reportDisclaimerText || DEFAULT_REPORT_DISCLAIMER_TEXT
+                                        ),
+                                    }}
+                                />
+                            </div>
+                        )}
                     </div>
 
                     <div className="bg-surface/90 border border-[var(--border-color)] p-6 rounded-2xl shadow-xl self-start sticky top-24">

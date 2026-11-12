@@ -18,6 +18,58 @@ const deepMerge = (target: any, source: any) => {
 };
 
 
+export const DEFAULT_TERMS_OF_TESTING_TITLE = 'Warunki wykonywania badań';
+
+export const DEFAULT_TERMS_OF_TESTING_SUMMARY = `<ul>
+  <li><strong>Charakter pomocniczy i przesiewowy:</strong> Wyniki kwestionariusza mają charakter orientacyjny, pomocniczy oraz rozwojowy — nie stanowią samodzielnej diagnozy medycznej (psychiatrycznej) ani oficjalnego orzeczenia klinicznego.</li>
+  <li><strong>Omówienie ze specjalistą:</strong> Uzyskane odpowiedzi trafiają bezpośrednio do Twojego terapeuty, psychologa lub coacha w celu profesjonalnego omówienia podczas sesji.</li>
+  <li><strong>Zasady wypełniania:</strong> Wypełnij badanie samodzielnie, w spokojnym miejscu, kierując się pierwszym odczuciem (w badaniu nie ma „dobrych” ani „złych” odpowiedzi).</li>
+  <li><strong>Bezpieczeństwo:</strong> Platforma testowa nie służy do zgłaszania nagłego zagrożenia zdrowia lub życia. W sytuacji kryzysu skontaktuj się bezpośrednio ze specjalistą lub pod numerem alarmowym <strong>112</strong> / telefonem zaufania <strong>116 123</strong>.</li>
+</ul>`;
+
+export const DEFAULT_TERMS_OF_TESTING_CONTENT = `<h3>1. Postanowienia ogólne i cel badania</h3>
+<p>Kwestionariusze udostępniane na platformie diagnostycznej <strong>Real Moment</strong> są realizowane na zaproszenie prowadzącego specjalisty (psychologa, psychoterapeuty, terapeuty lub coacha) przy użyciu indywidualnego, jednorazowego kodu dostępu. Celem badania jest wsparcie procesu terapeutycznego, konsultacyjnego lub rozwojowego poprzez lepsze poznanie aktualnego samopoczucia, sposobów reagowania lub cech osobowości osoby badanej.</p>
+
+<h3>2. Charakter pomocniczy i przesiewowy narzędzi (brak automatycznej diagnozy medycznej)</h3>
+<p>Wyniki uzyskiwane w ramach kwestionariuszy mają charakter <strong>wyłącznie pomocniczy, przesiewowy i orientacyjny</strong>. Uzyskany wynik liczbowy ani automatyczne podsumowanie skali:</p>
+<ul>
+  <li><strong>nie stanowią</strong> samodzielnej diagnozy lekarskiej (w szczególności psychiatrycznej) ani oficjalnego orzeczenia klinicznego,</li>
+  <li><strong>nie zastępują</strong> bezpośredniej konsultacji lekarskiej, psychiatrycznej ani pełnego procesu diagnostyki psychologicznej,</li>
+  <li>stanowią punkt wyjścia do pogłębionej rozmowy i interpretacji wspólnie ze specjalistą prowadzącym podczas sesji.</li>
+</ul>
+
+<h3>3. Dobrowolność udziału i świadoma akceptacja</h3>
+<p>Przystąpienie do badania jest całkowicie dobrowolne. Rozpoczęcie wypełniania kwestionariusza po zatwierdzeniu komunikatu startowego oznacza, że osoba badana zapoznała się z niniejszymi warunkami, rozumie pomocniczy charakter narzędzia i wyraża zgodę na przekazanie swoich odpowiedzi specjaliście, od którego otrzymała kod dostępu.</p>
+
+<h3>4. Zasady rzetelnego wypełniania kwestionariusza (higiena badania)</h3>
+<p>Aby wyniki badania były jak najbardziej miarodajne i użyteczne podczas spotkania ze specjalistą, zaleca się:</p>
+<ul>
+  <li>wypełnianie kwestionariusza <strong>samodzielnie</strong>, w spokojnym miejscu i w chwili wolnej od pośpiechu oraz czynników rozpraszających,</li>
+  <li>odpowiadanie <strong>szczerze i spontanicznie</strong>, zgodnie z pierwszym odczuciem oraz stanem faktycznym (w kwestionariuszach psychologicznych nie ma odpowiedzi „dobrych” ani „złych”),</li>
+  <li>uważne przeczytanie instrukcji danego kwestionariusza (np. czy pytania dotyczą ostatniego tygodnia, czy ogólnego sposobu funkcjonowania).</li>
+</ul>
+
+<h3>5. Wyłączenie interwencji kryzysowej i bezpieczeństwo</h3>
+<p>Platforma testowa służy wyłącznie do wypełniania kwestionariuszy omawianych podczas umówionych spotkań i <strong>nie jest monitorowana w trybie całodobowym (24/7)</strong> ani nie służy do zgłaszania nagłego zagrożenia zdrowia lub życia. Specjalista zapoznaje się z wynikami w ramach swojego harmonogramu pracy.</p>
+<p>W przypadku gwałtownego pogorszenia samopoczucia, silnego kryzysu psychicznego lub myśli zagrażających życiu należy niezwłocznie skorzystać z bezpośredniej pomocy doraźnej:</p>
+<ul>
+  <li>Numer alarmowy: <strong>112</strong> lub najbliższy Szpitalny Oddział Ratunkowy (SOR) / Izba Przyjęć,</li>
+  <li>Całodobowe Centrum Wsparcia dla Osób Dorosłych w Kryzysie Psychicznym: <strong>800 70 2222</strong> (bezpłatnie),</li>
+  <li>Telefon Zaufania dla Dorosłych: <strong>116 123</strong>, dla Dzieci i Młodzieży: <strong>116 111</strong>.</li>
+</ul>
+
+<h3>6. Jednorazowość kodu dostępu i prawa autorskie</h3>
+<p>Indywidualny kod dostępu jest przeznaczony wyłącznie dla osoby zaproszonej do badania i wygasa automatycznie po przesłaniu wypełnionego kwestionariusza lub po upływie terminu ważności. Treści pytań, skale oraz materiały udostępnione na platformie podlegają ochronie prawnej i nie mogą być kopiowane, fotografowane ani rozpowszechniane poza systemem.</p>`;
+
+export const DEFAULT_TERMS_CONSENT_CHECKBOX_TEXT =
+  'Zapoznałem/am się z {termsLink} i rozumiem, że badanie ma charakter pomocniczy oraz nie zastępuje diagnozy medycznej ani konsultacji ze specjalistą.';
+
+export const DEFAULT_CLIENT_THANK_YOU_SAFETY_NOTE =
+  'Wyniki zostały bezpiecznie przekazane Twojemu specjaliście do omówienia podczas sesji. Pamiętaj, że platforma testowa nie służy do kontaktu w sytuacjach nagłych — w razie pilnej potrzeby wsparcia skontaktuj się bezpośrednio ze swoim specjalistą lub pod numerem 112 / 116 123.';
+
+export const DEFAULT_REPORT_DISCLAIMER_TEXT =
+  'Informacja metodologiczna: Wyniki niniejszego kwestionariusza mają charakter pomocniczy, przesiewowy i orientacyjny. Stanowią one materiał wspierający pracę ze specjalistą i nie zastępują pełnej diagnozy klinicznej ani lekarskiej.';
+
 // --- Base Settings (Real Moment - realmoment.pl) --- //
 const baseSettings = {
   appName: 'Real Moment',
@@ -25,6 +77,14 @@ const baseSettings = {
   reportLogoUrl: '/logo-realmoment-main.png',
   reportPrimaryColor: '#314293',
   reportFooterText: 'Real Moment – Przestrzeń Rozwojowa i Diagnostyczna | www.realmoment.pl',
+  reportDisclaimerEnabled: true,
+  reportDisclaimerText: DEFAULT_REPORT_DISCLAIMER_TEXT,
+  termsOfTestingTitle: DEFAULT_TERMS_OF_TESTING_TITLE,
+  termsOfTestingSummary: DEFAULT_TERMS_OF_TESTING_SUMMARY,
+  termsOfTestingContent: DEFAULT_TERMS_OF_TESTING_CONTENT,
+  requireTermsConsent: true,
+  termsConsentCheckboxText: DEFAULT_TERMS_CONSENT_CHECKBOX_TEXT,
+  clientThankYouSafetyNote: DEFAULT_CLIENT_THANK_YOU_SAFETY_NOTE,
   fontFamily: `'Jost', system-ui, sans-serif`,
   borderRadius: 0.85,
   boxShadow: '0 10px 30px -5px rgba(20, 22, 29, 0.35)',

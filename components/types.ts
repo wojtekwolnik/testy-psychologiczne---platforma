@@ -227,6 +227,16 @@ export interface BrandingSettings {
   reportLogoUrl?: string;
   reportPrimaryColor?: string;
   reportFooterText?: string;
+  reportDisclaimerEnabled?: boolean;
+  reportDisclaimerText?: string;
+
+  // Terms of Testing (Warunki wykonywania badań)
+  termsOfTestingTitle?: string;
+  termsOfTestingSummary?: string;
+  termsOfTestingContent?: string;
+  requireTermsConsent?: boolean;
+  termsConsentCheckboxText?: string;
+  clientThankYouSafetyNote?: string;
 
   aiSettings: {
     enabled: boolean;
