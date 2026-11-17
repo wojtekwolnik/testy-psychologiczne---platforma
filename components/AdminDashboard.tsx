@@ -6,6 +6,7 @@ import { fetchTests, fetchTestById, fetchTestVersions, updateTestStatus, deleteT
 import { type Test, type Scale, type Section, type Question, type ScoringRule } from './types';
 import { EditIcon, PlusIcon, DownloadIcon, UploadIcon, ClockIcon, TrashIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
+import TestDiagnosticsModal from './admin/TestDiagnosticsModal';
 import { generateUniqueId } from '../utils/idUtils';
 import { toast } from 'react-toastify';
 
@@ -74,6 +75,7 @@ const AdminDashboard: React.FC = () => {
 
   // Delete Test Modal State
   const [testToDelete, setTestToDelete] = useState<Test | null>(null);
+  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
 
   // CSV Import Modal State
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
@@ -512,41 +514,51 @@ const AdminDashboard: React.FC = () => {
             <h1 className="text-4xl font-bold">Panel Administratora</h1>
             <p className="opacity-80 mt-1">Zarządzaj testami, użytkownikami i wyglądem platformy.</p>
           </div>
-          <div className="relative" ref={createMenuRef}>
-            <input type="file" accept=".json" ref={importJsonInputRef} onChange={handleJsonFileSelected} className="hidden" />
+          <div className="flex flex-wrap items-center gap-3">
             <button
-              onClick={() => setIsCreateMenuOpen(prev => !prev)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-contrast font-bold rounded-xl shadow-md hover:-translate-y-0.5 hover:shadow-lg transition-all"
+              type="button"
+              onClick={() => setIsDiagnosticsOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-surface border border-border hover:border-primary text-text font-semibold rounded-xl shadow-sm transition-all text-sm"
+              title="Sprawdź kompletność pytań, przypisanie skal i ciągłość progów punktowych wszystkich testów"
             >
-              <PlusIcon /> Utwórz Test
+              ✓ Diagnostyka spójności testów
             </button>
-            {isCreateMenuOpen && (
-              <div
-                className="absolute right-0 mt-2 w-72 bg-surface rounded-xl shadow-2xl z-50 border border-border backdrop-blur-md overflow-hidden"
+            <div className="relative" ref={createMenuRef}>
+              <input type="file" accept=".json" ref={importJsonInputRef} onChange={handleJsonFileSelected} className="hidden" />
+              <button
+                onClick={() => setIsCreateMenuOpen(prev => !prev)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-contrast font-bold rounded-xl shadow-md hover:-translate-y-0.5 hover:shadow-lg transition-all"
               >
-                <button
-                  onClick={handleCreateNewClick}
-                  className="w-full text-left px-4 py-3 hover:bg-background transition-colors text-text"
+                <PlusIcon /> Utwórz Test
+              </button>
+              {isCreateMenuOpen && (
+                <div
+                  className="absolute right-0 mt-2 w-72 bg-surface rounded-xl shadow-2xl z-50 border border-border backdrop-blur-md overflow-hidden"
                 >
-                  <p className="font-semibold">Utwórz nowy w edytorze</p>
-                  <p className="text-xs text-text-muted">Zaprojektuj test od zera w edytorze wizualnym.</p>
-                </button>
-                <button
-                  onClick={handleCsvImportClick}
-                  className="w-full text-left px-4 py-3 hover:bg-background border-t border-border/50 transition-colors text-text"
-                >
-                  <p className="font-semibold text-primary">Importuj z pliku CSV (Excel)</p>
-                  <p className="text-xs text-text-muted">Szybkie tworzenie testu z arkusza pytań wraz z instrukcją i szablonem.</p>
-                </button>
-                <button
-                  onClick={handleJsonImportClick}
-                  className="w-full text-left px-4 py-3 hover:bg-background border-t border-border/50 transition-colors text-text"
-                >
-                  <p className="font-semibold">Importuj kopię JSON</p>
-                  <p className="text-xs text-text-muted">Do przywracania pełnych kopii zapasowych testów.</p>
-                </button>
-              </div>
-            )}
+                  <button
+                    onClick={handleCreateNewClick}
+                    className="w-full text-left px-4 py-3 hover:bg-background transition-colors text-text"
+                  >
+                    <p className="font-semibold">Utwórz nowy w edytorze</p>
+                    <p className="text-xs text-text-muted">Zaprojektuj test od zera w edytorze wizualnym.</p>
+                  </button>
+                  <button
+                    onClick={handleCsvImportClick}
+                    className="w-full text-left px-4 py-3 hover:bg-background border-t border-border/50 transition-colors text-text"
+                  >
+                    <p className="font-semibold text-primary">Importuj z pliku CSV (Excel)</p>
+                    <p className="text-xs text-text-muted">Szybkie tworzenie testu z arkusza pytań wraz z instrukcją i szablonem.</p>
+                  </button>
+                  <button
+                    onClick={handleJsonImportClick}
+                    className="w-full text-left px-4 py-3 hover:bg-background border-t border-border/50 transition-colors text-text"
+                  >
+                    <p className="font-semibold">Importuj kopię JSON</p>
+                    <p className="text-xs text-text-muted">Do przywracania pełnych kopii zapasowych testów.</p>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -806,6 +818,16 @@ const AdminDashboard: React.FC = () => {
         title="Potwierdź usunięcie testu"
         message={`Czy na pewno chcesz trwale usunąć test "${testToDelete?.title} (v${testToDelete?.version})" wraz z powiązanymi z tą wersją kodami i wynikami?`}
         confirmText="Usuń test"
+      />
+
+      <TestDiagnosticsModal
+        isOpen={isDiagnosticsOpen}
+        onClose={() => setIsDiagnosticsOpen(false)}
+        tests={filteredTests}
+        onEditTest={(testId) => {
+          setIsDiagnosticsOpen(false);
+          router.push(`/admin/test/edit/${testId}`);
+        }}
       />
     </>
   );

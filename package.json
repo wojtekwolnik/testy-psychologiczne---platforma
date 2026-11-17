@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "vitest"
+    "test": "tsx scripts/test-unit.ts",
+    "test:unit": "tsx scripts/test-unit.ts",
+    "test:e2e-dev": "node scripts/test-e2e-dev.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
