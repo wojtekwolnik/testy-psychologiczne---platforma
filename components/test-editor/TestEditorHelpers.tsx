@@ -144,7 +144,7 @@ export const TestEditorHelpModal: React.FC<{
                 <div className="mt-6 flex justify-end">
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 bg-primary text-background font-semibold rounded hover:bg-primary/90"
+                        className="px-4 py-2 bg-primary text-primary-contrast font-semibold rounded hover:bg-primary/90"
                     >
                         Rozumiem
                     </button>

@@ -31,15 +31,15 @@ export const getContrastRatio = (color1: string, color2: string): number => {
 };
 
 export const getWcagRating = (ratio: number): { rating: 'Słaby' | 'Dobry' | 'Doskonały', color: string } => {
-  if (ratio >= 7) return { rating: 'Doskonały', color: 'text-green-700' };
-  if (ratio >= 4.5) return { rating: 'Dobry', color: 'text-green-600' };
-  return { rating: 'Słaby', color: 'text-red-600' };
+  if (ratio >= 7) return { rating: 'Doskonały', color: 'text-emerald-400' };
+  if (ratio >= 4.5) return { rating: 'Dobry', color: 'text-emerald-400' };
+  return { rating: 'Słaby', color: 'text-amber-400' };
 };
 
 export const getContrastingTextColor = (hexColor: string) => {
-  if (!hexColor) return '#000000';
+  if (!hexColor) return '#FFFFFF';
   const rgb = hexToRgb(hexColor);
-  if (!rgb) return '#000000';
-  const yiq = ((rgb.r * 299) + (rgb.g * 587) + (rgb.b * 114)) / 1000;
-  return (yiq >= 128) ? '#000000' : '#FFFFFF';
+  if (!rgb) return '#FFFFFF';
+  const lum = getLuminance(rgb.r, rgb.g, rgb.b);
+  return lum > 0.28 ? '#14161D' : '#FFFFFF';
 };

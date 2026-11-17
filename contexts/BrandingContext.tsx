@@ -125,7 +125,7 @@ const baseSettings = {
 
 // --- Unified Real Moment Theme (realmoment.pl) --- //
 export const unifiedPalette: ThemePalette = {
-  primaryColor: '#4e9054',
+  primaryColor: '#2f7a3e',
   secondaryColor: '#1f222b',
   accentColor: '#e89183',
   backgroundColor: '#14161d',
@@ -133,9 +133,9 @@ export const unifiedPalette: ThemePalette = {
   borderColor: '#313647',
   inputBackgroundColor: '#14161d',
   inputTextColor: '#fbfaf7',
-  errorColor: '#e42806',
+  errorColor: '#dc2626',
   warningColor: '#fcb900',
-  successColor: '#4e9054',
+  successColor: '#2f7a3e',
   adminColor: '#e89183',
   adminBackgroundColor: '#314293',
   therapistColor: '#7bdcb5',
@@ -189,7 +189,21 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
 
           const merged = deepMerge(defaultBranding, serverSettings);
-          const fullyMerged = { ...merged, ...migrationData };
+          const fullyMerged: BrandingSettings = { ...merged, ...migrationData };
+
+          // Upgrade legacy low-contrast default greens (#4e9054 -> #2f7a3e) and ensure input contrast
+          if (fullyMerged.primaryColor?.toLowerCase() === '#4e9054') {
+            fullyMerged.primaryColor = unifiedPalette.primaryColor;
+          }
+          if (fullyMerged.successColor?.toLowerCase() === '#4e9054') {
+            fullyMerged.successColor = unifiedPalette.successColor;
+          }
+          if (!fullyMerged.inputBackgroundColor || fullyMerged.inputBackgroundColor.toLowerCase() === '#ffffff') {
+            fullyMerged.inputBackgroundColor = unifiedPalette.inputBackgroundColor;
+          }
+          if (!fullyMerged.inputTextColor) {
+            fullyMerged.inputTextColor = unifiedPalette.inputTextColor;
+          }
           
           setBrandingState(fullyMerged);
         } else {

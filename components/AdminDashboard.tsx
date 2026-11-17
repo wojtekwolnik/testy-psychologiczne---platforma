@@ -600,18 +600,23 @@ const AdminDashboard: React.FC = () => {
                         <select
                           value={test.status}
                           onChange={(e) => handleStatusChange(test.id, e.target.value as 'DRAFT' | 'PUBLISHED')}
-                          className="text-xs font-bold uppercase tracking-wider pl-3 pr-8 py-1.5 rounded border-none outline-none cursor-pointer shadow-sm hover:brightness-110 transition-all appearance-none text-left"
+                          className="text-xs font-bold uppercase tracking-wider pl-3.5 pr-9 py-1.5 rounded-lg border-none outline-none cursor-pointer shadow-sm hover:brightness-110 transition-all appearance-none text-left"
                           style={{
                             backgroundColor: test.status === 'PUBLISHED' ? 'var(--success-color)' : 'var(--warning-color)',
-                            color: 'white',
-                            minWidth: '130px'
+                            color: test.status === 'PUBLISHED' ? 'var(--success-contrast)' : 'var(--warning-contrast)',
+                            minWidth: '156px'
                           }}
                           title="Zmień status testu"
                         >
-                          <option value="DRAFT">Szkic</option>
-                          <option value="PUBLISHED">Opublikowany</option>
+                          <option value="DRAFT" className="bg-surface text-text font-semibold">Szkic</option>
+                          <option value="PUBLISHED" className="bg-surface text-text font-semibold">Opublikowany</option>
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">
+                        <div
+                          className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5"
+                          style={{
+                            color: test.status === 'PUBLISHED' ? 'var(--success-contrast)' : 'var(--warning-contrast)'
+                          }}
+                        >
                           <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>
                         </div>
                       </div>

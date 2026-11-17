@@ -40,7 +40,7 @@ export const ClientThankYou: React.FC<ClientThankYouProps> = ({ result, test }) 
                 <div className="flex flex-col gap-4">
                     <button
                         onClick={() => router.push('/')}
-                        className="no-underline px-6 py-3 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-semibold rounded-xl shadow-md hover:opacity-90 transition-colors"
+                        className="no-underline px-6 py-3 bg-primary text-primary-contrast font-bold rounded-xl shadow-md hover:opacity-90 transition-colors"
                     >
                         {branding.clientThankYouButtonText}
                     </button>

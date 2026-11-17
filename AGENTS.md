@@ -13,9 +13,14 @@ Na serwerze produkcyjnym (`https://testy.realmoment.pl`, projekt Docker Compose 
 2. **BEZPIECZNE MIGRACJE I AKTUALIZACJE:** Wszelkie zmiany w kodzie i bazie danych muszą być w 100% niedestrukcyjne (additive / backward-compatible). Nowe testy lub aktualizacje kluczy testów muszą używać bezpiecznego `upsert` / aktualizacji w miejscu bez naruszania powiązanych rekordów `TestResult` i `User`.
 3. **OBOWIĄZEK OSTRZEŻENIA PRZED ZMIANĄ BAZODANOWĄ:** Jeżeli jakakolwiek zmiana wymagałaby modyfikacji schematu bazy danych lub operacji mogącej w najmniejszym stopniu wpłynąć na istniejące elementy bazy danych, agent **MUSI najpierw wyraźnie ostrzec użytkownika**, szczegółowo opisać ryzyko, zaproponować bezpieczne rozwiązanie (np. wcześniejszy zrzut kopii zapasowej + plan bezstratnej migracji) i **poczekać na wyraźną zgodę użytkownika przed wykonaniem jakichkolwiek działań**.
 
-## 2. Izolacja Projektu na VPS
+## 2. Izolacja Projektu na VPS oraz Rozdział Gałęzi `dev` i `main`
 - Na serwerze VPS (`virtualMachineId: 1057110`) wolno operować wyłącznie w obrębie projektu `platforma-testowa-realmoment`.
 - Nigdy nie wolno modyfikować ani zatrzymywać innych projektów na serwerze (w szczególności `root` z Traefik i n8n oraz `db_vector_store`).
+- **Środowisko rozwojowe (`DEV`) vs Produkcja (`PROD`):**
+  - Gałąź `dev` obsługuje kontener rozwojowy `testy_app_dev` (`http://193.160.119.239:3001`) z odseparowaną bazą `testy_db_dev` (`postgres_data_dev`).
+  - Gałąź `main` obsługuje kontener produkcyjny `testy_app` (`https://testy.realmoment.pl`) z bazą `testy_db` (`postgres_data`).
+  - **Zasada dla testów E2E (Opcja 1):** Skrypt `scripts/test-e2e-dev.mjs` (oraz wszelkie testy E2E) pozostaje **wyłącznie na gałęzi `dev`**. Przy przenoszeniu zmian z `dev` do `main` plik `scripts/test-e2e-dev.mjs` nie może trafiać na gałąź `main` (na produkcję trafiają wyłącznie bezdotykowe testy jednostkowe `test:unit` oraz diagnostyka `READ-ONLY`).
+  - Żadne zmiany z `dev` nie są przenoszone na `main` (produkcję) bez wyraźnego polecenia użytkownika.
 
 ## 3. Anonimowość Badanych i Język
 - Wszystkie interfejsy, komunikaty, skale, podskale i interpretacje muszą być w języku polskim.

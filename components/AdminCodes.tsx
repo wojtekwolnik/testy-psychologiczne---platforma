@@ -248,7 +248,7 @@ const AdminCodes = () => {
                             <button
                                 type="button"
                                 onClick={() => handleCopyBatch('links')}
-                                className="px-3 py-1.5 bg-primary text-background hover:bg-primary/90 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors"
+                                className="px-3 py-1.5 bg-primary text-primary-contrast hover:bg-primary/90 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors"
                             >
                                 <LinkIcon className="w-4 h-4" /> Kopiuj wszystkie linki ({lastBatchCodes.length})
                             </button>

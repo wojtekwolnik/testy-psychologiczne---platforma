@@ -46,28 +46,28 @@ const Enable2FAModal: React.FC<{ user: User; onClose: () => void; }> = ({ user, 
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-      <div className="bg-[var(--background-color)] border border-[var(--border-color)] rounded-lg shadow-xl p-8 w-full max-w-lg text-center">
+    <div className="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-surface border border-border rounded-xl shadow-2xl p-8 w-full max-w-lg text-center text-text">
         <h2 className="text-2xl font-bold mb-4">Konfiguracja Weryfikacji Dwuetapowej (2FA)</h2>
-        <p className="text-slate-600 mb-4">Zeskanuj poniższy kod QR za pomocą aplikacji uwierzytelniającej, takiej jak Google Authenticator.</p>
+        <p className="text-text-muted mb-4">Zeskanuj poniższy kod QR za pomocą aplikacji uwierzytelniającej, takiej jak Google Authenticator.</p>
         {qrCode ? (
-          <img src={qrCode} alt="QR Code dla 2FA" className="mx-auto border-4 border-white shadow-lg" />
+          <img src={qrCode} alt="QR Code dla 2FA" className="mx-auto border-4 border-white shadow-lg rounded-lg" />
         ) : (
-          <div className="w-48 h-48 bg-gray-200 mx-auto animate-pulse rounded-lg"></div>
+          <div className="w-48 h-48 bg-background mx-auto animate-pulse rounded-lg"></div>
         )}
-        <p className="text-slate-600 my-4">Następnie wprowadź 6-cyfrowy kod wygenerowany przez aplikację, aby zakończyć konfigurację.</p>
+        <p className="text-text-muted my-4">Następnie wprowadź 6-cyfrowy kod wygenerowany przez aplikację, aby zakończyć konfigurację.</p>
         <input
           type="text"
           maxLength={6}
           value={verificationCode}
           onChange={(e) => setVerificationCode(e.target.value)}
-          className="w-full p-3 text-center text-2xl tracking-[.5em] font-mono border-2 border-slate-300 rounded-lg"
+          className="w-full p-3 text-center text-2xl tracking-[.5em] font-mono border-2 border-border bg-input-bg text-input-text rounded-lg"
           placeholder="------"
         />
-        {error && <p className="text-red-500 mt-2">{error}</p>}
+        {error && <p className="text-error mt-2">{error}</p>}
         <div className="flex justify-end gap-4 mt-6">
-          <button type="button" onClick={onClose} className="px-5 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg">Anuluj</button>
-          <button type="button" onClick={handleVerifyAndEnable} className="px-5 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700">Aktywuj 2FA</button>
+          <button type="button" onClick={onClose} className="px-5 py-2 bg-background border border-border text-text font-semibold rounded-lg hover:bg-surface">Anuluj</button>
+          <button type="button" onClick={handleVerifyAndEnable} className="px-5 py-2 bg-primary text-primary-contrast font-bold rounded-lg hover:opacity-90">Aktywuj 2FA</button>
         </div>
       </div>
     </div>
@@ -127,36 +127,35 @@ const UserManagement: React.FC = () => {
   if (error) return <div className="text-red-500">{error}</div>;
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-8 max-w-6xl mx-auto text-text">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-4xl font-bold">Zarządzanie Użytkownikami</h1>
-        <button onClick={openAddModal} className="px-5 py-2 bg-blue-600 text-white font-bold rounded-lg shadow-md hover:bg-blue-700 flex items-center gap-2"><PlusIcon /> Dodaj Użytkownika</button>
+        <button onClick={openAddModal} className="px-5 py-2 bg-primary text-primary-contrast font-bold rounded-lg shadow-md hover:opacity-90 flex items-center gap-2"><PlusIcon /> Dodaj Użytkownika</button>
       </div>
-      <div className="bg-[var(--background-color)] border border-[var(--border-color)] rounded-xl shadow-lg overflow-hidden">
+      <div className="bg-surface border border-border rounded-xl shadow-lg overflow-hidden">
         <table className="w-full">
-          <thead className="bg-gray-50"><tr>
-            <th className="p-4 text-left font-semibold text-gray-600">Nazwa</th>
-            <th className="p-4 text-left font-semibold text-gray-600">Email</th>
-            <th className="p-4 text-left font-semibold text-gray-600">Rola</th>
-            <th className="p-4 text-left font-semibold text-gray-600">2FA</th>
-            <th className="p-4 text-left font-semibold text-gray-600">Akcje</th>
+          <thead className="bg-background/60 border-b border-border"><tr>
+            <th className="p-4 text-left font-semibold text-text-muted">Nazwa</th>
+            <th className="p-4 text-left font-semibold text-text-muted">Email</th>
+            <th className="p-4 text-left font-semibold text-text-muted">Rola</th>
+            <th className="p-4 text-left font-semibold text-text-muted">2FA</th>
+            <th className="p-4 text-left font-semibold text-text-muted">Akcje</th>
           </tr></thead>
-          <tbody className="divide-y divide-gray-200">{users.map(user => (
-            <tr key={user.id}>
+          <tbody className="divide-y divide-border/50">{users.map(user => (
+            <tr key={user.id} className="hover:bg-background/40">
               <td className="p-4">{user.fullName}</td>
               <td className="p-4">{user.email}</td>
-              <td className="p-4"><span className={`px-2 py-1 text-xs font-semibold rounded-full ${user.role === UserRole.Admin ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>{user.role}</span></td>
+              <td className="p-4"><span className={`px-2 py-1 text-xs font-semibold rounded-full ${user.role === UserRole.Admin ? 'bg-accent/20 text-accent' : 'bg-primary/20 text-primary'}`}>{user.role}</span></td>
               <td className="p-4 text-center">
                 {user.twoFactorSecret ?
-                  <span className="text-green-600"><ShieldCheckIcon className="inline-block" /></span> :
-                  <span className="text-gray-400">Wyłączone</span>
+                  <span className="text-primary"><ShieldCheckIcon className="inline-block" /></span> :
+                  <span className="text-text-muted">Wyłączone</span>
                 }
               </td>
               <td className="p-4 flex gap-1">
-                <button onClick={() => openEditModal(user)} className="p-2 text-gray-500 hover:text-blue-600" title="Edytuj"><EditIcon /></button>
-                {/* NOWY PRZYCISK DO KONFIGURACJI 2FA */}
-                <button onClick={() => open2FAModal(user)} className="p-2 text-gray-500 hover:text-green-600" title="Konfiguruj 2FA"><ShieldCheckIcon /></button>
-                <button onClick={() => openDeleteModal(user)} className="p-2 text-gray-500 hover:text-red-600" title="Usuń"><TrashIcon /></button>
+                <button onClick={() => openEditModal(user)} className="p-2 text-text-muted hover:text-primary" title="Edytuj"><EditIcon /></button>
+                <button onClick={() => open2FAModal(user)} className="p-2 text-text-muted hover:text-primary" title="Konfiguruj 2FA"><ShieldCheckIcon /></button>
+                <button onClick={() => openDeleteModal(user)} className="p-2 text-text-muted hover:text-error" title="Usuń"><TrashIcon /></button>
               </td>
             </tr>
           ))}</tbody>
@@ -176,10 +175,10 @@ const UserFormModal: React.FC<{ user: User | null; onSave: (user: User) => void;
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => { setFormData({ ...formData, [e.target.name]: e.target.value }); };
   const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); if (!formData.fullName || !formData.email) { alert("Proszę wypełnić wszystkie pola."); return; } onSave(formData as User); };
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-[var(--background-color)] border border-[var(--border-color)] rounded-lg shadow-xl p-8 w-full max-w-md">
+    <div className="fixed inset-0 bg-black/65 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-surface border border-border rounded-xl shadow-2xl p-8 w-full max-w-md text-text">
         <h2 className="text-2xl font-bold mb-6">{user ? 'Edytuj Użytkownika' : 'Dodaj Użytkownika'}</h2>
-        <form onSubmit={handleSubmit}><div className="mb-4"><label className="block text-gray-700 font-semibold mb-2">Imię i Nazwisko</label><input type="text" name="fullName" value={formData.fullName} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" /></div><div className="mb-4"><label className="block text-gray-700 font-semibold mb-2">Adres E-mail</label><input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" /></div><div className="mb-6"><label className="block text-gray-700 font-semibold mb-2">Rola</label><select name="role" value={formData.role} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg bg-white"><option value={UserRole.Admin}>Administrator</option><option value={UserRole.Therapist}>Terapeuta</option></select></div><div className="flex justify-end gap-4"><button type="button" onClick={onClose} className="px-5 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg">Anuluj</button><button type="submit" className="px-5 py-2 bg-blue-600 text-white font-bold rounded-lg">Zapisz</button></div></form>
+        <form onSubmit={handleSubmit}><div className="mb-4"><label className="block text-text-muted font-semibold mb-2">Imię i Nazwisko</label><input type="text" name="fullName" value={formData.fullName} onChange={handleChange} className="w-full px-4 py-2 border border-border bg-input-bg text-input-text rounded-lg" /></div><div className="mb-4"><label className="block text-text-muted font-semibold mb-2">Adres E-mail</label><input type="email" name="email" value={formData.email} onChange={handleChange} className="w-full px-4 py-2 border border-border bg-input-bg text-input-text rounded-lg" /></div><div className="mb-6"><label className="block text-text-muted font-semibold mb-2">Rola</label><select name="role" value={formData.role} onChange={handleChange} className="w-full px-4 py-2 border border-border rounded-lg bg-input-bg text-input-text"><option value={UserRole.Admin}>Administrator</option><option value={UserRole.Therapist}>Terapeuta</option></select></div><div className="flex justify-end gap-4"><button type="button" onClick={onClose} className="px-5 py-2 bg-background border border-border text-text font-semibold rounded-lg">Anuluj</button><button type="submit" className="px-5 py-2 bg-primary text-primary-contrast font-bold rounded-lg">Zapisz</button></div></form>
       </div>
     </div>
   );

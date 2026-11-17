@@ -1128,10 +1128,10 @@ const TestEditor: React.FC = () => {
                 <button
                     onClick={() => handleSave(false)}
                     disabled={isSaving}
-                    className="px-6 py-2 border font-bold rounded-lg transition-colors disabled:opacity-50"
+                    className="px-6 py-2 border font-bold rounded-lg transition-colors disabled:opacity-50 hover:brightness-105"
                     style={{
                         backgroundColor: 'var(--warning-color)',
-                        color: 'white',
+                        color: 'var(--warning-contrast)',
                         borderColor: 'var(--warning-color)'
                     }}
                 >
@@ -1140,10 +1140,10 @@ const TestEditor: React.FC = () => {
                 <button
                     onClick={() => handleSave(true)}
                     disabled={isSaving}
-                    className="px-6 py-2 font-bold rounded-lg transition-colors disabled:opacity-50"
+                    className="px-6 py-2 font-bold rounded-lg transition-colors disabled:opacity-50 hover:brightness-105"
                     style={{
                         backgroundColor: 'var(--success-color)',
-                        color: 'white'
+                        color: 'var(--success-contrast)'
                     }}
                 >
                     {isSaving ? 'Zapisywanie...' : 'Opublikuj'}

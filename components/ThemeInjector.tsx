@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useContext, useEffect } from 'react';
-import { BrandingContext } from '@/contexts/BrandingContext';
-import { getContrastingTextColor } from '@/utils/colorUtils';
+import { BrandingContext, unifiedPalette } from '@/contexts/BrandingContext';
+import { getContrastingTextColor, getContrastRatio } from '@/utils/colorUtils';
 
 export const ThemeInjector: React.FC = () => {
     const { branding } = useContext(BrandingContext);
@@ -25,40 +25,60 @@ export const ThemeInjector: React.FC = () => {
         });
     }, [branding.faviconUrl]);
 
-    // Filter out only ThemePalette keys
     const { fontFamily } = branding;
-    
-    // Safety check - generate fallbacks if somehow variables are missing
-    const primaryColor = branding.primaryColor || '#2dd4bf';
+
+    const primaryColor = branding.primaryColor || unifiedPalette.primaryColor;
+    const accentColor = branding.accentColor || unifiedPalette.accentColor;
+    const successColor = branding.successColor || unifiedPalette.successColor;
+    const warningColor = branding.warningColor || unifiedPalette.warningColor;
+    const errorColor = branding.errorColor || unifiedPalette.errorColor;
+
     const primaryContrast = getContrastingTextColor(primaryColor);
+    const accentContrast = getContrastingTextColor(accentColor);
+    const successContrast = getContrastingTextColor(successColor);
+    const warningContrast = getContrastingTextColor(warningColor);
+    const errorContrast = getContrastingTextColor(errorColor);
+
+    // Ensure input background and input text always have readable contrast (>= 3.5:1)
+    const rawInputBg = branding.inputBackgroundColor || unifiedPalette.inputBackgroundColor;
+    const rawInputText = branding.inputTextColor || unifiedPalette.inputTextColor;
+    const safeInputText =
+        getContrastRatio(rawInputBg, rawInputText) >= 3.5
+            ? rawInputText
+            : getContrastingTextColor(rawInputBg);
 
     const styleContent = `
     :root {
         --font-family: ${fontFamily || "system-ui, sans-serif"};
         --primary-color: ${primaryColor};
         --primary-contrast: ${primaryContrast};
-        --secondary-color: ${branding.secondaryColor || '#1e293b'};
-        --accent-color: ${branding.accentColor || '#60a5fa'};
-        --background-color: ${branding.backgroundColor || '#0f172a'};
-        --surface-color: ${branding.secondaryColor || '#1e293b'};
-        --text-color: ${branding.textColor || '#e2e8f0'};
-        --text-muted: ${branding.textColor ? branding.textColor + '99' : '#94a3b8'};
-        --border-color: ${branding.borderColor || '#334155'};
-        --input-background-color: ${branding.inputBackgroundColor || '#1e293b'};
-        --input-text-color: ${branding.inputTextColor || '#e2e8f0'};
-        --error-color: ${branding.errorColor || '#f87171'};
-        --warning-color: ${branding.warningColor || '#fbbf24'};
-        --success-color: ${branding.successColor || '#4ade80'};
-        --admin-color: ${branding.adminColor || '#c084fc'};
-        --admin-background-color: ${branding.adminBackgroundColor || '#3b0764'};
-        --therapist-color: ${branding.therapistColor || '#2dd4bf'};
-        --therapist-background-color: ${branding.therapistBackgroundColor || '#115e59'};
-        --sidebar-background: ${branding.sidebarBackground || '#020617'};
-        --sidebar-text-color: ${branding.sidebarTextColor || '#e2e8f0'};
-        --sidebar-active-background: ${branding.sidebarActiveBackground || '#1e293b'};
-        --sidebar-active-text: ${branding.sidebarActiveText || '#ffffff'};
-        --sidebar-hover-background: ${branding.sidebarHoverBackground || '#1e293b'};
-        --sidebar-hover-text: ${branding.sidebarHoverText || '#ffffff'};
+        --primary-contrast-text-color: ${primaryContrast};
+        --secondary-color: ${branding.secondaryColor || unifiedPalette.secondaryColor};
+        --accent-color: ${accentColor};
+        --accent-contrast: ${accentContrast};
+        --background-color: ${branding.backgroundColor || unifiedPalette.backgroundColor};
+        --surface-color: ${branding.secondaryColor || unifiedPalette.secondaryColor};
+        --text-color: ${branding.textColor || unifiedPalette.textColor};
+        --text-muted: ${branding.textColor ? branding.textColor + 'b3' : '#94a3b8'};
+        --border-color: ${branding.borderColor || unifiedPalette.borderColor};
+        --input-background-color: ${rawInputBg};
+        --input-text-color: ${safeInputText};
+        --error-color: ${errorColor};
+        --error-contrast: ${errorContrast};
+        --warning-color: ${warningColor};
+        --warning-contrast: ${warningContrast};
+        --success-color: ${successColor};
+        --success-contrast: ${successContrast};
+        --admin-color: ${branding.adminColor || unifiedPalette.adminColor};
+        --admin-background-color: ${branding.adminBackgroundColor || unifiedPalette.adminBackgroundColor};
+        --therapist-color: ${branding.therapistColor || unifiedPalette.therapistColor};
+        --therapist-background-color: ${branding.therapistBackgroundColor || unifiedPalette.therapistBackgroundColor};
+        --sidebar-background: ${branding.sidebarBackground || unifiedPalette.sidebarBackground};
+        --sidebar-text-color: ${branding.sidebarTextColor || unifiedPalette.sidebarTextColor};
+        --sidebar-active-background: ${branding.sidebarActiveBackground || unifiedPalette.sidebarActiveBackground};
+        --sidebar-active-text: ${branding.sidebarActiveText || unifiedPalette.sidebarActiveText};
+        --sidebar-hover-background: ${branding.sidebarHoverBackground || unifiedPalette.sidebarHoverBackground};
+        --sidebar-hover-text: ${branding.sidebarHoverText || unifiedPalette.sidebarHoverText};
     }
     `;
 
