@@ -7,6 +7,7 @@ import { type Test, type Scale, type Section, type Question, type ScoringRule } 
 import { EditIcon, PlusIcon, DownloadIcon, UploadIcon, ClockIcon, TrashIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
 import TestDiagnosticsModal from './admin/TestDiagnosticsModal';
+import TestSimulatorModal from './admin/TestSimulatorModal';
 import { generateUniqueId } from '../utils/idUtils';
 import { toast } from 'react-toastify';
 
@@ -76,6 +77,7 @@ const AdminDashboard: React.FC = () => {
   // Delete Test Modal State
   const [testToDelete, setTestToDelete] = useState<Test | null>(null);
   const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
+  const [simulatedTest, setSimulatedTest] = useState<Test | null>(null);
 
   // CSV Import Modal State
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
@@ -621,6 +623,13 @@ const AdminDashboard: React.FC = () => {
                         </div>
                       </div>
                       <button
+                        onClick={() => setSimulatedTest(test)}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-primary/15 border border-primary/30 text-primary font-semibold rounded-lg hover:bg-primary/25 hover:shadow-sm text-sm transition-all"
+                        title="Przetestuj kwestionariusz i wygeneruj symulowany raport bez tworzenia kodu dostępu"
+                      >
+                        ▶ Podgląd / Symuluj
+                      </button>
+                      <button
                         onClick={() => handleShowHistory(test.canonicalId)}
                         className="flex items-center gap-2 px-3 py-2 bg-background border border-border/50 text-text font-semibold rounded-lg hover:bg-border/30 hover:shadow-sm text-sm transition-all" title="Historia wersji"
                       >
@@ -833,6 +842,12 @@ const AdminDashboard: React.FC = () => {
           setIsDiagnosticsOpen(false);
           router.push(`/admin/test/edit/${testId}`);
         }}
+      />
+
+      <TestSimulatorModal
+        isOpen={!!simulatedTest}
+        test={simulatedTest}
+        onClose={() => setSimulatedTest(null)}
       />
     </>
   );

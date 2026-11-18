@@ -37,6 +37,8 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
     const [customInterpretation, setCustomInterpretation] = useState('');
     const [isSavingNotes, setIsSavingNotes] = useState(false);
     const [chartMode, setChartMode] = useState<'bars' | 'radar'>('bars');
+    const [answerScaleFilter, setAnswerScaleFilter] = useState<string>('all');
+    const [answerSortHighFirst, setAnswerSortHighFirst] = useState<boolean>(false);
 
     useEffect(() => {
         if (!resultId) {
@@ -93,7 +95,7 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
         if (!result || !test || !branding) return;
         setIsGenerating(true);
         try {
-            const { generatePdf } = await import('./pdfGenerator');
+            const { generatePdf } = await import('@/lib/pdf/pdfGenerator');
             const templateToUse = pdfTemplates.find(t => t.id === selectedTemplate);
             const pdfBytes = await generatePdf(result, test, branding, templateToUse, customInterpretation);
 
@@ -555,28 +557,175 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                                 {pdfTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                             </select>
                         </div>
-                        <h3 className="text-lg font-semibold text-text border-b border-border pb-3 my-4">Udzielone Odpowiedzi</h3>
-                        <div className="space-y-4 max-h-[420px] overflow-y-auto pr-2">
-                            {test.sections.flatMap(sec => sec.questions).map((question, index) => {
-                                const answerValue = result.answers[question.id];
-                                if (answerValue === undefined) return null;
+                        <div className="flex items-center justify-between border-b border-border pb-3 my-4 gap-2">
+                            <h3 className="text-lg font-semibold text-text">Udzielone Odpowiedzi</h3>
+                            <button
+                                type="button"
+                                onClick={() => setAnswerSortHighFirst(prev => !prev)}
+                                className={`px-2.5 py-1 rounded-lg border text-xs font-semibold transition-colors ${
+                                    answerSortHighFirst
+                                        ? 'bg-primary/20 border-primary/40 text-primary'
+                                        : 'bg-background border-border text-text-muted hover:text-text'
+                                }`}
+                                title="Przełącz sortowanie między kolejnością pytań a najwyżej punktowanymi odpowiedziami"
+                            >
+                                {answerSortHighFirst ? '↓ Najwyżej punktowane' : 'Kolejność pytań'}
+                            </button>
+                        </div>
 
-                                let answerText = '';
-                                if (Array.isArray(answerValue)) {
-                                    answerText = answerValue.map(val => question.options.find(opt => opt.id === val)?.text || val).join(', ');
-                                } else {
-                                    answerText = question.options.find(opt => opt.id === answerValue)?.text || String(answerValue);
+                        <div className="mb-4">
+                            <label htmlFor="answer-scale-filter" className="block text-xs font-medium text-text-muted mb-1.5">
+                                Filtruj odpowiedzi według skali
+                            </label>
+                            <select
+                                id="answer-scale-filter"
+                                value={answerScaleFilter}
+                                onChange={e => setAnswerScaleFilter(e.target.value)}
+                                className="w-full p-2 border border-border rounded-lg bg-input-bg text-input-text text-xs font-medium"
+                            >
+                                <option value="all">
+                                    Wszystkie pytania ({test.sections.reduce((acc, s) => acc + s.questions.length, 0)})
+                                </option>
+                                {test.scales
+                                    .filter(s => s.type === 'standard')
+                                    .map(scale => {
+                                        const scScore = result.scores[scale.id] ?? 0;
+                                        return (
+                                            <option key={scale.id} value={scale.id}>
+                                                {scale.name} — wynik: {scScore}{scale.maxScore ? `/${scale.maxScore}` : ''} pkt
+                                            </option>
+                                        );
+                                    })}
+                            </select>
+                        </div>
+
+                        <div className="space-y-3.5 max-h-[460px] overflow-y-auto pr-2">
+                            {(() => {
+                                const allNumberedQuestions = test.sections
+                                    .flatMap(sec => sec.questions)
+                                    .map((question, index) => {
+                                        const answerValue = result.answers[question.id];
+                                        const selectedIds = Array.isArray(answerValue)
+                                            ? answerValue.map(String)
+                                            : answerValue !== undefined
+                                            ? [String(answerValue)]
+                                            : [];
+
+                                        // Determine all scales associated with this question and points earned
+                                        const questionScalesSet = new Set<string>();
+                                        const maxPointsByScale: Record<string, number> = {};
+                                        Object.values(question.scoring || {}).forEach(rules => {
+                                            (rules || []).forEach(r => {
+                                                if (r?.scaleId) {
+                                                    questionScalesSet.add(r.scaleId);
+                                                    maxPointsByScale[r.scaleId] = Math.max(
+                                                        maxPointsByScale[r.scaleId] ?? 0,
+                                                        Number(r.points) || 0
+                                                    );
+                                                }
+                                            });
+                                        });
+
+                                        const earnedByScale: Record<string, number> = {};
+                                        questionScalesSet.forEach(sid => {
+                                            earnedByScale[sid] = 0;
+                                        });
+                                        selectedIds.forEach(optId => {
+                                            const rules = question.scoring?.[optId] || [];
+                                            rules.forEach(r => {
+                                                if (r?.scaleId) {
+                                                    earnedByScale[r.scaleId] = (earnedByScale[r.scaleId] ?? 0) + (Number(r.points) || 0);
+                                                }
+                                            });
+                                        });
+
+                                        const totalPointsEarned =
+                                            answerScaleFilter !== 'all'
+                                                ? earnedByScale[answerScaleFilter] ?? 0
+                                                : Object.values(earnedByScale).reduce((acc, v) => acc + v, 0);
+
+                                        return {
+                                            question,
+                                            number: index + 1,
+                                            answerValue,
+                                            questionScalesSet,
+                                            earnedByScale,
+                                            maxPointsByScale,
+                                            totalPointsEarned,
+                                        };
+                                    })
+                                    .filter(item => {
+                                        if (item.answerValue === undefined) return false;
+                                        if (answerScaleFilter === 'all') return true;
+                                        return item.questionScalesSet.has(answerScaleFilter);
+                                    });
+
+                                if (answerSortHighFirst) {
+                                    allNumberedQuestions.sort((a, b) => b.totalPointsEarned - a.totalPointsEarned || a.number - b.number);
                                 }
 
-                                return (
-                                    <div key={question.id} className="text-sm border-b border-border/40 pb-2.5">
-                                        <p className="font-semibold text-text">
-                                            {index + 1}. <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(question.text) }} />
+                                if (allNumberedQuestions.length === 0) {
+                                    return (
+                                        <p className="text-xs text-text-muted italic py-4 text-center">
+                                            Brak pytań przypisanych bezpośrednio do wybranej skali.
                                         </p>
-                                        <p className="text-primary font-medium pl-4 mt-1">Odpowiedź: {answerText}</p>
-                                    </div>
-                                );
-                            })}
+                                    );
+                                }
+
+                                return allNumberedQuestions.map(({ question, number, answerValue, earnedByScale, maxPointsByScale }) => {
+                                    let answerText = '';
+                                    if (Array.isArray(answerValue)) {
+                                        answerText = answerValue.map(val => question.options.find(opt => opt.id === val)?.text || val).join(', ');
+                                    } else {
+                                        answerText = question.options.find(opt => opt.id === answerValue)?.text || String(answerValue);
+                                    }
+
+                                    const relevantScaleIds =
+                                        answerScaleFilter !== 'all'
+                                            ? [answerScaleFilter]
+                                            : Object.keys(earnedByScale).filter(sid => {
+                                                  const sc = test.scales.find(s => s.id === sid);
+                                                  return sc && !isBigFiveFacetScale(sc);
+                                              });
+
+                                    const displayScaleIds =
+                                        relevantScaleIds.length > 0 ? relevantScaleIds : Object.keys(earnedByScale).slice(0, 2);
+
+                                    return (
+                                        <div key={question.id} className="text-sm border-b border-border/40 pb-3">
+                                            <p className="font-semibold text-text leading-snug">
+                                                {number}. <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(question.text) }} />
+                                            </p>
+                                            <div className="flex flex-wrap items-center justify-between gap-2 pl-4 mt-1.5">
+                                                <p className="text-primary font-medium text-xs sm:text-sm">
+                                                    Odpowiedź: <strong>{answerText}</strong>
+                                                </p>
+                                                <div className="flex flex-wrap items-center gap-1">
+                                                    {displayScaleIds.map(sid => {
+                                                        const sc = test.scales.find(s => s.id === sid);
+                                                        const pts = earnedByScale[sid] ?? 0;
+                                                        const maxPts = maxPointsByScale[sid] ?? 0;
+                                                        const isHigh = maxPts > 0 && pts >= maxPts * 0.75;
+                                                        return (
+                                                            <span
+                                                                key={sid}
+                                                                className={`px-2 py-0.5 rounded text-[11px] font-mono font-semibold border ${
+                                                                    isHigh
+                                                                        ? 'bg-accent/20 text-accent border-accent/40'
+                                                                        : 'bg-background text-text-muted border-border'
+                                                                }`}
+                                                                title={sc?.name || sid}
+                                                            >
+                                                                {sc?.abbreviation || sc?.name || sid}: +{pts}{maxPts ? `/${maxPts}` : ''} pkt
+                                                            </span>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                });
+                            })()}
                         </div>
                     </div>
                 </div>
