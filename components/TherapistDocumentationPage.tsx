@@ -23,7 +23,7 @@ const TherapistDocumentationPage: React.FC = () => {
         <ol className="list-decimal pl-5 space-y-2.5">
           <li>Przejdź do zakładki <strong>Wyniki i Kody</strong> (Panel Główny).</li>
           <li>W sekcji generatora wybierz z listy opublikowany test psychologiczny (np. <em>Wielka Piątka</em> lub <em>DASS-42</em>).</li>
-          <li>Ustaw datę ważności kodu (domyślnie 7 dni) oraz <strong>liczbę kodów</strong> (możesz wygenerować od <strong>1 do 20 kodów jednocześnie</strong>).</li>
+          <li>Ustaw datę ważności kodu (domyślnie 7 dni) oraz wpisz w polu <strong>Liczba kodów</strong> dokładnie taką liczbę kodów, jakiej potrzebujesz (np. 1, 4, 7 — od <strong>1 do 50 kodów jednocześnie</strong>, bez tworzenia nadmiarowych kodów).</li>
           <li>Kliknij <strong>„Generuj kod”</strong> (lub <strong>„Generuj (N)”</strong> przy serii).</li>
           <li>
             Przy wygenerowaniu serii kilku kodów pojawi się pasek szybkiego kopiowania: możesz jednym kliknięciem wybrać{' '}

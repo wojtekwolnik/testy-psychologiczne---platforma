@@ -28,7 +28,8 @@ const AdminCodes = () => {
         d.setDate(d.getDate() + 7);
         return d.toISOString().split('T')[0];
     });
-    const [codeCount, setCodeCount] = useState<number>(1);
+    const [codeCountInput, setCodeCountInput] = useState<string>('1');
+    const codeCount = Math.max(1, Math.min(50, parseInt(codeCountInput, 10) || 1));
     const [lastBatchCodes, setLastBatchCodes] = useState<AccessCode[]>([]);
     const [batchCopyMessage, setBatchCopyMessage] = useState<string>('');
 
@@ -204,17 +205,19 @@ const AdminCodes = () => {
                             className="w-full h-[46px] px-3 py-2 border border-border rounded-xl bg-input-bg text-input-text text-sm"
                         />
                     </div>
-                    <div className="w-full sm:w-32">
-                        <label className="block text-xs font-medium text-text-muted mb-1">Liczba kodów</label>
-                        <select
-                            value={codeCount}
-                            onChange={e => setCodeCount(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
-                            className="w-full h-[46px] px-3 py-2 border border-border rounded-xl bg-input-bg text-input-text text-sm font-semibold"
-                        >
-                            {[1, 2, 3, 5, 10, 15, 20].map(n => (
-                                <option key={n} value={n}>{n} {n === 1 ? 'kod' : n < 5 ? 'kody' : 'kodów'}</option>
-                            ))}
-                        </select>
+                    <div className="w-full sm:w-36">
+                        <label className="block text-xs font-medium text-text-muted mb-1">Liczba kodów (1–50)</label>
+                        <input
+                            type="number"
+                            min={1}
+                            max={50}
+                            step={1}
+                            value={codeCountInput}
+                            onChange={e => setCodeCountInput(e.target.value)}
+                            onBlur={() => setCodeCountInput(String(codeCount))}
+                            placeholder="1"
+                            className="w-full h-[46px] px-3.5 py-2 border border-border rounded-xl bg-input-bg text-input-text text-sm font-semibold"
+                        />
                     </div>
                     <button
                         onClick={handleGenerateBatch}

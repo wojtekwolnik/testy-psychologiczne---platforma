@@ -117,7 +117,7 @@ Część 2;Jak często odczuwasz zmęczenie?;multiple-choice;Napięcie;NIE;Nigdy
 
       <DocumentationSection title="4. Zarządzanie Kodami Dostępu (Generator Seryjny) i Użytkownikami">
         <p>
-          W zakładce <strong>Kody dostępu</strong> możesz generować od <strong>1 do 20 jednorazowych kodów naraz</strong> z przypisaniem do wybranego terapeuty oraz kopiować bezpośrednie linki do badania.
+          W zakładce <strong>Kody dostępu</strong> możesz wpisać dokładną liczbę potrzebnych kodów (od <strong>1 do 50 jednorazowych kodów naraz</strong>) z przypisaniem do wybranego terapeuty oraz kopiować bezpośrednie linki do badania.
         </p>
         <Alert type="info" title="Przekazywanie kodów i wyników między terapeutami">
           <ul className="list-disc pl-5 space-y-1 mt-1">

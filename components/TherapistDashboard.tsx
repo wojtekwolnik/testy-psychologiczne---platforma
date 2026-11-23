@@ -45,7 +45,8 @@ const TherapistDashboard = () => {
   const [activeCodes, setActiveCodes] = useState<AccessCode[]>([]);
   const [selectedTest, setSelectedTest] = useState<string>('');
   const [expiryDate, setExpiryDate] = useState<string>('');
-  const [codeCount, setCodeCount] = useState<number>(1);
+  const [codeCountInput, setCodeCountInput] = useState<string>('1');
+  const codeCount = Math.max(1, Math.min(50, parseInt(codeCountInput, 10) || 1));
   const [lastBatchCodes, setLastBatchCodes] = useState<AccessCode[]>([]);
   const [batchCopyMessage, setBatchCopyMessage] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
@@ -296,21 +297,23 @@ const TherapistDashboard = () => {
               />
             </div>
 
-            <div className="w-full sm:w-32">
+            <div className="w-full sm:w-36">
               <label htmlFor="code-count" className="block text-xs font-medium text-text-muted mb-1">
                 Liczba kodów
-                <InfoTooltip id="genCount" label="Liczba kodów (seria)" text="Możesz wygenerować od 1 do 20 jednorazowych kodów jednocześnie (np. dla grupy lub kilku klientów naraz)." activeId={activeTooltip} setActiveId={setActiveTooltip} />
+                <InfoTooltip id="genCount" label="Liczba kodów (dokładna ilość)" text="Wpisz dokładną liczbę jednorazowych kodów, jakiej potrzebujesz (od 1 do 50), aby nie tworzyć nadmiarowych, nieużywanych kodów." activeId={activeTooltip} setActiveId={setActiveTooltip} />
               </label>
-              <select
+              <input
                 id="code-count"
-                value={codeCount}
-                onChange={e => setCodeCount(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
-                className="w-full h-[48px] px-3 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner font-semibold"
-              >
-                {[1, 2, 3, 5, 10, 15, 20].map(n => (
-                  <option key={n} value={n}>{n} {n === 1 ? 'kod' : n < 5 ? 'kody' : 'kodów'}</option>
-                ))}
-              </select>
+                type="number"
+                min={1}
+                max={50}
+                step={1}
+                value={codeCountInput}
+                onChange={e => setCodeCountInput(e.target.value)}
+                onBlur={() => setCodeCountInput(String(codeCount))}
+                placeholder="1"
+                className="w-full h-[48px] px-3.5 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner font-semibold"
+              />
             </div>
 
             <button onClick={handleGenerateCode} className="flex items-center justify-center gap-2 px-8 bg-primary text-primary-contrast font-bold rounded-xl shadow-lg hover:shadow-primary/30 hover:-translate-y-1 transition-all h-[48px] w-full sm:w-auto flex-shrink-0">
