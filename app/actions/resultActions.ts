@@ -1,60 +1,13 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import type { TestResult, Test, Scale, Question, ClientAnswer, ScoringRule, PdfTemplate } from '@/components/types';
+import type { TestResult, Test, Scale, Question, ScoringRule, PdfTemplate } from '@/components/types';
 import { revalidatePath } from 'next/cache';
-import { evaluate } from 'mathjs';
 import { checkAuth, requireAuth } from './authActions';
 import { buildKeyInterpretation, getNormalizedBigFiveScaleData } from '@/lib/interpretationBuilder';
+import { calculateTestScores } from '@/lib/scoring/scoreCalculator';
 import { ensureBigFiveTestUpgraded } from '@/lib/bigFiveSync';
-
-// Helper for formula evaluation (supports any alphanumeric scale ID, with or without hyphens)
-const evaluateFormula = (formula: string, availableScores: Record<string, number>): number => {
-    const populatedFormula = formula.replace(/\{([a-zA-Z0-9_-]+)\}/g, (_match, scaleId) => {
-        return availableScores[scaleId]?.toString() || '0';
-    });
-
-    try {
-        const result = evaluate(populatedFormula);
-
-        if (typeof result !== 'number' || !isFinite(result) || isNaN(result)) {
-            return 0;
-        }
-        return result;
-    } catch (error) {
-        console.error(`[Formula Error] Could not evaluate: "${populatedFormula}"`, error);
-        return 0;
-    }
-};
-
-const RETENTION_DAYS = 60;
-
-/**
- * Automatically purges test results older than 60 days (matching the 60-day countdown in the UI)
- * as well as expired unused access codes and old used access codes.
- */
-async function cleanupExpiredData(): Promise<void> {
-    try {
-        const now = new Date();
-        const cutoffDate = new Date(now.getTime() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
-
-        await Promise.all([
-            prisma.testResult.deleteMany({
-                where: { completedAt: { lt: cutoffDate } }
-            }),
-            prisma.accessCode.deleteMany({
-                where: {
-                    OR: [
-                        { isUsed: false, expiresAt: { lt: now } },
-                        { isUsed: true, createdAt: { lt: cutoffDate } }
-                    ]
-                }
-            })
-        ]);
-    } catch (error) {
-        console.error('[Retention Cleanup] Failed to purge expired records:', error);
-    }
-}
+import { cleanupExpiredData } from '@/app/services/retentionService';
 
 export async function submitTest(testId: string, answers: Record<string, string[]>, clientIdentifier: string): Promise<TestResult> {
     const trimmedCode = (clientIdentifier || '').trim().toUpperCase();
@@ -118,64 +71,7 @@ export async function submitTest(testId: string, answers: Record<string, string[
         }))
     };
 
-    const standardScores: Record<string, number> = {};
-    const standardScales = processedTest.scales.filter(s => s.type === 'standard');
-
-    // Phase 1: Validate all questions are answered & Calculate Standard Scores
-    for (const scale of standardScales) {
-        standardScores[scale.id] = 0;
-    }
-
-    for (const section of processedTest.sections) {
-        for (const question of section.questions) {
-            const givenAnswer = answers[question.id];
-            const answerIds = Array.isArray(givenAnswer) ? givenAnswer : (givenAnswer ? [givenAnswer] : []);
-            if (answerIds.length === 0) {
-                throw new Error("Proszę odpowiedzieć na wszystkie pytania przed zakończeniem testu.");
-            }
-
-            for (const answerId of answerIds) {
-                const scoringRules = question.scoring[answerId];
-                if (scoringRules) {
-                    for (const rule of scoringRules) {
-                        if (standardScores[rule.scaleId] !== undefined) {
-                            standardScores[rule.scaleId] += rule.points;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Phase 2: Calculate Calculated Scores
-    const calculatedScores: Record<string, number> = {};
-    const calculatedScales = processedTest.scales.filter(s => s.type === 'calculated');
-    calculatedScales.forEach(s => calculatedScores[s.id] = 0);
-
-    let iterations = 0;
-    let scoresChanged = true;
-    const maxIterations = 10;
-    const currentAllScores: Record<string, number> = { ...standardScores, ...calculatedScores };
-
-    while (scoresChanged && iterations < maxIterations) {
-        scoresChanged = false;
-        iterations++;
-
-        for (const scale of calculatedScales) {
-            if (scale.type === 'calculated' && scale.formula) {
-                const oldValue = calculatedScores[scale.id];
-                const newValue = evaluateFormula(scale.formula, currentAllScores);
-
-                if (newValue !== oldValue) {
-                    calculatedScores[scale.id] = newValue;
-                    currentAllScores[scale.id] = newValue;
-                    scoresChanged = true;
-                }
-            }
-        }
-    }
-
-    const finalScores = { ...standardScores, ...calculatedScores };
+    const finalScores = calculateTestScores(processedTest, answers);
     const dbAnswers = JSON.stringify(answers);
     const dbScores = JSON.stringify(finalScores);
     const initialKeyAnalysis = buildKeyInterpretation(
@@ -459,35 +355,20 @@ export async function fetchReportBundle(resultId: string): Promise<{
 
     // If a Big Five result was saved before facet subscales were added, compute the missing facet scores from answers
     if (isBigFive && Object.keys(parsedScores).length < serializedTest.scales.length && parsedAnswers) {
-        const recomputed: Record<string, number> = {};
-        for (const sc of serializedTest.scales) {
-            if (sc.type === 'standard') recomputed[sc.id] = 0;
-        }
-        for (const sec of serializedTest.sections) {
-            for (const q of sec.questions) {
-                const given = parsedAnswers[q.id];
-                const answerIds = Array.isArray(given) ? given : given ? [String(given)] : [];
-                for (const ansId of answerIds) {
-                    const rules = q.scoring?.[ansId];
-                    if (Array.isArray(rules)) {
-                        for (const rule of rules) {
-                            if (recomputed[rule.scaleId] !== undefined) {
-                                recomputed[rule.scaleId] += Number(rule.points) || 0;
-                            }
-                        }
-                    }
-                }
+        try {
+            const recomputed = calculateTestScores(serializedTest, parsedAnswers);
+            const nonZeroCount = Object.values(recomputed).filter(v => v > 0).length;
+            if (nonZeroCount >= 5) {
+                Object.assign(parsedScores, recomputed);
+                prisma.testResult
+                    .update({
+                        where: { id: resultRecord.id },
+                        data: { scores: JSON.stringify(parsedScores) },
+                    })
+                    .catch(err => console.error('Non-fatal error saving recomputed Big Five facet scores:', err));
             }
-        }
-        const nonZeroCount = Object.values(recomputed).filter(v => v > 0).length;
-        if (nonZeroCount >= 5) {
-            Object.assign(parsedScores, recomputed);
-            prisma.testResult
-                .update({
-                    where: { id: resultRecord.id },
-                    data: { scores: JSON.stringify(parsedScores) },
-                })
-                .catch(err => console.error('Non-fatal error saving recomputed Big Five facet scores:', err));
+        } catch {
+            // Ignore if legacy answers were incomplete
         }
     }
 

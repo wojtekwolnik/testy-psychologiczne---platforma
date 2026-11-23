@@ -6,6 +6,8 @@ import { fetchTests, fetchTestById, fetchTestVersions, updateTestStatus, deleteT
 import { type Test, type Scale, type Section, type Question, type ScoringRule } from './types';
 import { EditIcon, PlusIcon, DownloadIcon, UploadIcon, ClockIcon, TrashIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
+import TestDiagnosticsModal from './admin/TestDiagnosticsModal';
+import TestSimulatorModal from './admin/TestSimulatorModal';
 import { generateUniqueId } from '../utils/idUtils';
 import { toast } from 'react-toastify';
 
@@ -74,6 +76,8 @@ const AdminDashboard: React.FC = () => {
 
   // Delete Test Modal State
   const [testToDelete, setTestToDelete] = useState<Test | null>(null);
+  const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
+  const [simulatedTest, setSimulatedTest] = useState<Test | null>(null);
 
   // CSV Import Modal State
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
@@ -512,41 +516,51 @@ const AdminDashboard: React.FC = () => {
             <h1 className="text-4xl font-bold">Panel Administratora</h1>
             <p className="opacity-80 mt-1">Zarządzaj testami, użytkownikami i wyglądem platformy.</p>
           </div>
-          <div className="relative" ref={createMenuRef}>
-            <input type="file" accept=".json" ref={importJsonInputRef} onChange={handleJsonFileSelected} className="hidden" />
+          <div className="flex flex-wrap items-center gap-3">
             <button
-              onClick={() => setIsCreateMenuOpen(prev => !prev)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-contrast font-bold rounded-xl shadow-md hover:-translate-y-0.5 hover:shadow-lg transition-all"
+              type="button"
+              onClick={() => setIsDiagnosticsOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-surface border border-border hover:border-primary text-text font-semibold rounded-xl shadow-sm transition-all text-sm"
+              title="Sprawdź kompletność pytań, przypisanie skal i ciągłość progów punktowych wszystkich testów"
             >
-              <PlusIcon /> Utwórz Test
+              ✓ Diagnostyka spójności testów
             </button>
-            {isCreateMenuOpen && (
-              <div
-                className="absolute right-0 mt-2 w-72 bg-surface rounded-xl shadow-2xl z-50 border border-border backdrop-blur-md overflow-hidden"
+            <div className="relative" ref={createMenuRef}>
+              <input type="file" accept=".json" ref={importJsonInputRef} onChange={handleJsonFileSelected} className="hidden" />
+              <button
+                onClick={() => setIsCreateMenuOpen(prev => !prev)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-contrast font-bold rounded-xl shadow-md hover:-translate-y-0.5 hover:shadow-lg transition-all"
               >
-                <button
-                  onClick={handleCreateNewClick}
-                  className="w-full text-left px-4 py-3 hover:bg-background transition-colors text-text"
+                <PlusIcon /> Utwórz Test
+              </button>
+              {isCreateMenuOpen && (
+                <div
+                  className="absolute right-0 mt-2 w-72 bg-surface rounded-xl shadow-2xl z-50 border border-border backdrop-blur-md overflow-hidden"
                 >
-                  <p className="font-semibold">Utwórz nowy w edytorze</p>
-                  <p className="text-xs text-text-muted">Zaprojektuj test od zera w edytorze wizualnym.</p>
-                </button>
-                <button
-                  onClick={handleCsvImportClick}
-                  className="w-full text-left px-4 py-3 hover:bg-background border-t border-border/50 transition-colors text-text"
-                >
-                  <p className="font-semibold text-primary">Importuj z pliku CSV (Excel)</p>
-                  <p className="text-xs text-text-muted">Szybkie tworzenie testu z arkusza pytań wraz z instrukcją i szablonem.</p>
-                </button>
-                <button
-                  onClick={handleJsonImportClick}
-                  className="w-full text-left px-4 py-3 hover:bg-background border-t border-border/50 transition-colors text-text"
-                >
-                  <p className="font-semibold">Importuj kopię JSON</p>
-                  <p className="text-xs text-text-muted">Do przywracania pełnych kopii zapasowych testów.</p>
-                </button>
-              </div>
-            )}
+                  <button
+                    onClick={handleCreateNewClick}
+                    className="w-full text-left px-4 py-3 hover:bg-background transition-colors text-text"
+                  >
+                    <p className="font-semibold">Utwórz nowy w edytorze</p>
+                    <p className="text-xs text-text-muted">Zaprojektuj test od zera w edytorze wizualnym.</p>
+                  </button>
+                  <button
+                    onClick={handleCsvImportClick}
+                    className="w-full text-left px-4 py-3 hover:bg-background border-t border-border/50 transition-colors text-text"
+                  >
+                    <p className="font-semibold text-primary">Importuj z pliku CSV (Excel)</p>
+                    <p className="text-xs text-text-muted">Szybkie tworzenie testu z arkusza pytań wraz z instrukcją i szablonem.</p>
+                  </button>
+                  <button
+                    onClick={handleJsonImportClick}
+                    className="w-full text-left px-4 py-3 hover:bg-background border-t border-border/50 transition-colors text-text"
+                  >
+                    <p className="font-semibold">Importuj kopię JSON</p>
+                    <p className="text-xs text-text-muted">Do przywracania pełnych kopii zapasowych testów.</p>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -588,21 +602,37 @@ const AdminDashboard: React.FC = () => {
                         <select
                           value={test.status}
                           onChange={(e) => handleStatusChange(test.id, e.target.value as 'DRAFT' | 'PUBLISHED')}
-                          className="text-xs font-bold uppercase tracking-wider pl-3 pr-8 py-1.5 rounded border-none outline-none cursor-pointer shadow-sm hover:brightness-110 transition-all appearance-none text-left"
+                          className="text-xs font-bold uppercase tracking-wider pl-3.5 pr-9 py-1.5 rounded-lg border-none outline-none cursor-pointer shadow-sm hover:brightness-110 transition-all appearance-none text-left"
                           style={{
                             backgroundColor: test.status === 'PUBLISHED' ? 'var(--success-color)' : 'var(--warning-color)',
-                            color: 'white',
-                            minWidth: '130px'
+                            color: test.status === 'PUBLISHED' ? 'var(--success-contrast)' : 'var(--warning-contrast)',
+                            minWidth: '156px',
+                            WebkitAppearance: 'none',
+                            MozAppearance: 'none',
+                            appearance: 'none',
+                            backgroundImage: 'none',
                           }}
                           title="Zmień status testu"
                         >
-                          <option value="DRAFT">Szkic</option>
-                          <option value="PUBLISHED">Opublikowany</option>
+                          <option value="DRAFT" className="bg-surface text-text font-semibold">Szkic</option>
+                          <option value="PUBLISHED" className="bg-surface text-text font-semibold">Opublikowany</option>
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">
+                        <div
+                          className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5"
+                          style={{
+                            color: test.status === 'PUBLISHED' ? 'var(--success-contrast)' : 'var(--warning-contrast)'
+                          }}
+                        >
                           <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" /></svg>
                         </div>
                       </div>
+                      <button
+                        onClick={() => setSimulatedTest(test)}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-primary/15 border border-primary/30 text-primary font-semibold rounded-lg hover:bg-primary/25 hover:shadow-sm text-sm transition-all"
+                        title="Przetestuj kwestionariusz i wygeneruj symulowany raport bez tworzenia kodu dostępu"
+                      >
+                        ▶ Podgląd / Symuluj
+                      </button>
                       <button
                         onClick={() => handleShowHistory(test.canonicalId)}
                         className="flex items-center gap-2 px-3 py-2 bg-background border border-border/50 text-text font-semibold rounded-lg hover:bg-border/30 hover:shadow-sm text-sm transition-all" title="Historia wersji"
@@ -806,6 +836,22 @@ const AdminDashboard: React.FC = () => {
         title="Potwierdź usunięcie testu"
         message={`Czy na pewno chcesz trwale usunąć test "${testToDelete?.title} (v${testToDelete?.version})" wraz z powiązanymi z tą wersją kodami i wynikami?`}
         confirmText="Usuń test"
+      />
+
+      <TestDiagnosticsModal
+        isOpen={isDiagnosticsOpen}
+        onClose={() => setIsDiagnosticsOpen(false)}
+        tests={filteredTests}
+        onEditTest={(testId) => {
+          setIsDiagnosticsOpen(false);
+          router.push(`/admin/test/edit/${testId}`);
+        }}
+      />
+
+      <TestSimulatorModal
+        isOpen={!!simulatedTest}
+        test={simulatedTest}
+        onClose={() => setSimulatedTest(null)}
       />
     </>
   );

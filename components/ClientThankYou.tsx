@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import {
     BrandingContext,
     DEFAULT_CLIENT_THANK_YOU_SAFETY_NOTE,
+    DEFAULT_PRIVACY_POLICY_TITLE,
     DEFAULT_TERMS_OF_TESTING_TITLE,
 } from '../contexts/BrandingContext';
 import type { TestResult, Test } from './types';
@@ -19,6 +20,7 @@ export const ClientThankYou: React.FC<ClientThankYouProps> = ({ result, test }) 
     const router = useRouter();
     const { branding } = useContext(BrandingContext);
     const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+    const [termsModalTab, setTermsModalTab] = useState<'terms' | 'privacy'>('terms');
 
     const formattedTitle = branding.clientThankYouTitle.replace(/{appName}/g, branding.appName);
     const formattedMessage = branding.clientThankYouMessage.replace(/{appName}/g, branding.appName);
@@ -40,26 +42,41 @@ export const ClientThankYou: React.FC<ClientThankYouProps> = ({ result, test }) 
                 <div className="flex flex-col gap-4">
                     <button
                         onClick={() => router.push('/')}
-                        className="no-underline px-6 py-3 bg-[var(--primary-color)] text-[var(--primary-contrast-text-color)] font-semibold rounded-xl shadow-md hover:opacity-90 transition-colors"
+                        className="no-underline px-6 py-3 bg-primary text-primary-contrast font-bold rounded-xl shadow-md hover:opacity-90 transition-colors"
                     >
                         {branding.clientThankYouButtonText}
                     </button>
                 </div>
             </div>
 
-            <footer className="mt-6 text-center text-xs text-text-muted">
+            <footer className="mt-6 text-center text-xs text-text-muted flex flex-wrap items-center justify-center gap-3">
                 <button
                     type="button"
-                    onClick={() => setIsTermsModalOpen(true)}
+                    onClick={() => {
+                        setTermsModalTab('terms');
+                        setIsTermsModalOpen(true);
+                    }}
                     className="text-primary hover:underline font-semibold"
                 >
                     {branding.termsOfTestingTitle || DEFAULT_TERMS_OF_TESTING_TITLE}
+                </button>
+                <span className="opacity-40">&bull;</span>
+                <button
+                    type="button"
+                    onClick={() => {
+                        setTermsModalTab('privacy');
+                        setIsTermsModalOpen(true);
+                    }}
+                    className="text-primary hover:underline font-semibold"
+                >
+                    {branding.privacyPolicyTitle || DEFAULT_PRIVACY_POLICY_TITLE}
                 </button>
             </footer>
 
             <TermsOfTestingModal
                 isOpen={isTermsModalOpen}
                 onClose={() => setIsTermsModalOpen(false)}
+                initialTab={termsModalTab}
             />
         </div>
     );

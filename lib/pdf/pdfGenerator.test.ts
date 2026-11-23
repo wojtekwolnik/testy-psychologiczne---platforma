@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { generatePdf } from './pdfGenerator';
-import type { TestResult, Test, BrandingSettings, PdfTemplate, ReportComponent } from './types';
+import type { TestResult, Test, BrandingSettings, PdfTemplate, ReportComponent } from '@/components/types';
 
 // Mock data setup
 const mockTest: Test = {

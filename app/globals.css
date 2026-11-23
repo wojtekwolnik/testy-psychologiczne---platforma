@@ -39,7 +39,24 @@
   --font-family: 'Jost', system-ui, sans-serif;
   --font-mono: 'Source Code Pro', ui-monospace, monospace;
   --background-color: #14161d;
+  --surface-color: #1f222b;
+  --secondary-color: #1f222b;
+  --primary-color: #2f7a3e;
+  --primary-contrast: #ffffff;
+  --primary-contrast-text-color: #ffffff;
+  --accent-color: #e89183;
+  --accent-contrast: #14161d;
   --text-color: #fbfaf7;
+  --text-muted: #94a3b8;
+  --border-color: #313647;
+  --input-background-color: #14161d;
+  --input-text-color: #fbfaf7;
+  --error-color: #dc2626;
+  --error-contrast: #ffffff;
+  --warning-color: #fcb900;
+  --warning-contrast: #14161d;
+  --success-color: #2f7a3e;
+  --success-contrast: #ffffff;
 }
 
 body {
@@ -51,4 +68,29 @@ body {
 
 code, pre, .font-mono {
   font-family: var(--font-mono);
+}
+
+/* Global fallback for form controls so inputs/textareas/selects never render white text on white background */
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]):not([type="range"]),
+  textarea,
+  select
+) {
+  background-color: var(--input-background-color);
+  color: var(--input-text-color);
+  border-color: var(--border-color);
+}
+
+:where(input, textarea)::placeholder {
+  color: var(--text-muted);
+  opacity: 0.75;
+}
+
+select option {
+  background-color: var(--surface-color);
+  color: var(--text-color);
+}
+
+:where(hr) {
+  border-color: var(--border-color);
 }

@@ -38,7 +38,7 @@ export const StaffLoginPage: React.FC = () => {
                         Logowanie personelu
                     </h1>
                     <p className="mt-2 text-lg opacity-80">
-                        Zaloguj się do <span className="font-bold text-[var(--primary-color)]">{branding.appName}</span>
+                        Zaloguj się do <span className="font-bold text-emerald-400">{branding.appName}</span>
                     </p>
                 </header>
 

@@ -9,6 +9,7 @@ import { getUsers, UserData } from '@/app/actions/userActions';
 import { TestResult, Test, AccessCode } from './types';
 import { ChartBarIcon, TrashIcon, PlusIcon, ClipboardCopyIcon, LinkIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
+import ResultComparisonModal from './report/ResultComparisonModal';
 import { useAuth } from '@/contexts/AuthContext';
 
 const InfoTooltip: React.FC<{ id: string, label: string, text: string, activeId: string | null, setActiveId: (id: string | null) => void }> = ({ id, label, text, activeId, setActiveId }) => {
@@ -44,7 +45,8 @@ const TherapistDashboard = () => {
   const [activeCodes, setActiveCodes] = useState<AccessCode[]>([]);
   const [selectedTest, setSelectedTest] = useState<string>('');
   const [expiryDate, setExpiryDate] = useState<string>('');
-  const [codeCount, setCodeCount] = useState<number>(1);
+  const [codeCountInput, setCodeCountInput] = useState<string>('1');
+  const codeCount = Math.max(1, Math.min(50, parseInt(codeCountInput, 10) || 1));
   const [lastBatchCodes, setLastBatchCodes] = useState<AccessCode[]>([]);
   const [batchCopyMessage, setBatchCopyMessage] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
@@ -54,6 +56,7 @@ const TherapistDashboard = () => {
   const [resultToDelete, setResultToDelete] = useState<string | null>(null);
   const [codeToDelete, setCodeToDelete] = useState<string | null>(null);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [comparisonTarget, setComparisonTarget] = useState<TestResult | null>(null);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -243,13 +246,13 @@ const TherapistDashboard = () => {
 
         {/* Code Generator */}
         <div className="bg-surface/60 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden border border-border/50 mb-8 p-6">
-          <div className="flex flex-col sm:flex-row items-end gap-4 mb-4">
-            <div className="flex-grow w-full sm:w-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 items-end gap-4 mb-4">
+            <div className={`sm:col-span-1 ${user?.role === 'admin' ? 'xl:col-span-4' : 'xl:col-span-6'} min-w-0`}>
               <label htmlFor="test-select" className="block text-xs font-medium text-text-muted mb-1">
                 Wybierz test
                 <InfoTooltip id="genTest" label="Wybierz test" text="Wybierz test psychologiczny z listy dostępnych narzędzi, do którego chcesz wygenerować jednorazowy anonimowy kod dostępu dla klienta." activeId={activeTooltip} setActiveId={setActiveTooltip} />
               </label>
-              <select id="test-select" value={selectedTest} onChange={e => setSelectedTest(e.target.value)} className="w-full h-[48px] px-4 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner">
+              <select id="test-select" value={selectedTest} onChange={e => setSelectedTest(e.target.value)} className="w-full h-[48px] px-3.5 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner text-sm truncate">
                 {publishedTests.length === 0 ? (
                   <option value="">Brak opublikowanych testów</option>
                 ) : (
@@ -259,7 +262,7 @@ const TherapistDashboard = () => {
             </div>
 
             {user?.role === 'admin' && (
-              <div className="flex-grow w-full sm:w-auto">
+              <div className="sm:col-span-1 xl:col-span-3 min-w-0">
                 <label htmlFor="therapist-select" className="block text-xs font-medium text-text-muted mb-1">
                   Przypisz do
                   <InfoTooltip id="genTherapist" label="Przypisz do" text="Wybierz terapeutę, do którego konta zostanie przypisany ten kod dostępu oraz późniejszy wynik testu." activeId={activeTooltip} setActiveId={setActiveTooltip} />
@@ -268,7 +271,7 @@ const TherapistDashboard = () => {
                   id="therapist-select"
                   value={selectedTherapistId}
                   onChange={e => setSelectedTherapistId(e.target.value)}
-                  className="w-full h-[48px] px-4 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner"
+                  className="w-full h-[48px] px-3.5 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner text-sm truncate"
                 >
                   {therapists.map(t => (
                     <option key={t.id} value={t.id}>
@@ -279,7 +282,7 @@ const TherapistDashboard = () => {
               </div>
             )}
 
-            <div className="flex-grow w-full sm:w-auto">
+            <div className="sm:col-span-1 xl:col-span-2 min-w-0">
               <label htmlFor="expiry-date" className="block text-xs font-medium text-text-muted mb-1">
                 Data ważności
                 <InfoTooltip id="genExpiry" label="Data ważności" text="Określa datę, do której wygenerowany kod dostępu pozostaje aktywny. Po tej dacie klient nie będzie mógł uruchomić testu." activeId={activeTooltip} setActiveId={setActiveTooltip} />
@@ -290,30 +293,34 @@ const TherapistDashboard = () => {
                 value={expiryDate}
                 onChange={e => setExpiryDate(e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
-                className="w-full h-[48px] px-4 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner"
+                className="w-full h-[48px] px-3 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner text-sm"
               />
             </div>
 
-            <div className="w-full sm:w-32">
-              <label htmlFor="code-count" className="block text-xs font-medium text-text-muted mb-1">
-                Liczba kodów
-                <InfoTooltip id="genCount" label="Liczba kodów (seria)" text="Możesz wygenerować od 1 do 20 jednorazowych kodów jednocześnie (np. dla grupy lub kilku klientów naraz)." activeId={activeTooltip} setActiveId={setActiveTooltip} />
+            <div className="sm:col-span-1 xl:col-span-1 min-w-0">
+              <label htmlFor="code-count" className="block text-xs font-medium text-text-muted mb-1 whitespace-nowrap">
+                Liczba
+                <InfoTooltip id="genCount" label="Liczba kodów (dokładna ilość)" text="Wpisz dokładną liczbę jednorazowych kodów, jakiej potrzebujesz (od 1 do 50), aby nie tworzyć nadmiarowych, nieużywanych kodów." activeId={activeTooltip} setActiveId={setActiveTooltip} />
               </label>
-              <select
+              <input
                 id="code-count"
-                value={codeCount}
-                onChange={e => setCodeCount(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))}
-                className="w-full h-[48px] px-3 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner font-semibold"
-              >
-                {[1, 2, 3, 5, 10, 15, 20].map(n => (
-                  <option key={n} value={n}>{n} {n === 1 ? 'kod' : n < 5 ? 'kody' : 'kodów'}</option>
-                ))}
-              </select>
+                type="number"
+                min={1}
+                max={50}
+                step={1}
+                value={codeCountInput}
+                onChange={e => setCodeCountInput(e.target.value)}
+                onBlur={() => setCodeCountInput(String(codeCount))}
+                placeholder="1"
+                className="w-full h-[48px] px-3 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner font-semibold text-sm text-center"
+              />
             </div>
 
-            <button onClick={handleGenerateCode} className="flex items-center justify-center gap-2 px-8 bg-primary text-primary-contrast font-bold rounded-xl shadow-lg hover:shadow-primary/30 hover:-translate-y-1 transition-all h-[48px] w-full sm:w-auto flex-shrink-0">
-              <PlusIcon /> {codeCount > 1 ? `Generuj (${codeCount})` : 'Generuj kod'}
-            </button>
+            <div className="sm:col-span-2 xl:col-span-2">
+              <button onClick={handleGenerateCode} className="w-full flex items-center justify-center gap-2 px-5 bg-primary text-primary-contrast font-bold rounded-xl shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 transition-all h-[48px] text-sm whitespace-nowrap">
+                <PlusIcon /> {codeCount > 1 ? `Generuj (${codeCount})` : 'Generuj kod'}
+              </button>
+            </div>
           </div>
 
           {lastBatchCodes.length > 1 && (
@@ -340,7 +347,7 @@ const TherapistDashboard = () => {
                 <button
                   type="button"
                   onClick={() => handleCopyBatch('links')}
-                  className="px-3 py-1.5 bg-primary text-background hover:bg-primary/90 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors"
+                  className="px-3 py-1.5 bg-primary text-primary-contrast hover:bg-primary/90 text-xs font-bold rounded-lg flex items-center gap-1.5 transition-colors"
                 >
                   <LinkIcon className="w-4 h-4" /> Kopiuj wszystkie linki ({lastBatchCodes.length})
                 </button>
@@ -514,13 +521,20 @@ const TherapistDashboard = () => {
                           <td className="p-4">{new Date(result.completedAt).toLocaleDateString()}</td>
                           <td className="p-4 font-medium">{deletionDateStr}</td>
                           <td className={`p-4 ${urgencyClass}`}>{daysLeft > 0 ? `${daysLeft} dni` : 'Dziś'}</td>
-                          <td className="p-4 flex items-center gap-2">
+                          <td className="p-4 flex flex-wrap items-center gap-2">
                             <button
                               onClick={() => router.push(`/report/${result.id}`)}
                               className="flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent font-semibold rounded-lg hover:bg-accent/20 transition-all text-sm border border-accent/20"
                             >
                               <ChartBarIcon />
                               Zobacz raport
+                            </button>
+                            <button
+                              onClick={() => setComparisonTarget(result)}
+                              className="flex items-center gap-1.5 px-3 py-2 bg-primary/15 text-primary font-semibold rounded-lg hover:bg-primary/25 transition-all text-xs border border-primary/30"
+                              title="Porównaj ten wynik z innym badaniem tego samego testu (Pre-test / Post-test)"
+                            >
+                              ⇄ Porównaj
                             </button>
                             <button
                               onClick={() => setResultToDelete(result.id)}
@@ -561,6 +575,19 @@ const TherapistDashboard = () => {
         title="Unieważnienie kodu"
         message="Czy na pewno chcesz unieważnić ten kod dostępu? Po usunięciu klient nie będzie mógł rozwiązać testu."
         confirmText="Unieważnij"
+      />
+      <ResultComparisonModal
+        isOpen={!!comparisonTarget}
+        onClose={() => setComparisonTarget(null)}
+        initialResultA={comparisonTarget}
+        availableResults={results}
+        test={
+          comparisonTarget
+            ? tests.find(t => t.id === comparisonTarget.testId) ||
+              tests.find(t => t.title === comparisonTarget.testTitle) ||
+              null
+            : null
+        }
       />
     </>
   );

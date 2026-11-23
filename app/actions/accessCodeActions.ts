@@ -15,7 +15,7 @@ export async function generateAccessCodesBatch(
 ): Promise<AccessCode[]> {
     const user = await requireAuth();
     const effectiveTherapistId = user.role === 'admin' && therapistId ? therapistId : user.id;
-    const safeCount = Math.max(1, Math.min(20, Math.floor(count || 1)));
+    const safeCount = Math.max(1, Math.min(50, Math.floor(count || 1)));
 
     if (!expiresAt || new Date(expiresAt) <= new Date()) {
         throw new Error('Data ważności kodu musi być w przyszłości.');

@@ -326,14 +326,14 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
                                         setConfirmPassword('');
                                         setPwMessage(null);
                                     }}
-                                    className="px-3 py-2 text-xs text-text-muted hover:text-text hover:bg-white/5 rounded-lg transition-colors"
+                                    className="px-3.5 py-2 text-xs font-semibold bg-background border border-border text-text hover:bg-surface rounded-lg transition-colors"
                                 >
                                     Anuluj
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={pwSaving}
-                                    className="px-4 py-2 text-xs font-semibold bg-primary hover:bg-primary/90 text-background rounded-lg disabled:opacity-50 transition-colors"
+                                    className="px-4 py-2 text-xs font-bold bg-primary hover:bg-primary/90 text-primary-contrast rounded-lg disabled:opacity-50 transition-colors"
                                 >
                                     {pwSaving ? 'Zapisywanie...' : 'Zapisz hasło'}
                                 </button>

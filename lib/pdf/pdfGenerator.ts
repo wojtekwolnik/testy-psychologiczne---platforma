@@ -1,7 +1,7 @@
 
 import { PDFDocument, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
-import type { TestResult, Test, PdfTemplate, ReportComponent, BrandingSettings } from './types';
+import type { TestResult, Test, PdfTemplate, ReportComponent, BrandingSettings } from '@/components/types';
 import { resolveScaleLevel, isBigFiveFacetScale } from '@/lib/interpretationBuilder';
 
 function safeText(str: string | undefined | null): string {
