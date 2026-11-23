@@ -3,7 +3,7 @@ import React from 'react';
 const DocSection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <section className="bg-surface/90 border border-border p-6 sm:p-8 rounded-2xl shadow-xl mb-8">
     <h2 className="text-2xl sm:text-3xl font-bold mb-4 border-b border-border pb-3 text-text">{title}</h2>
-    <div className="prose prose-invert max-w-none text-text-muted prose-headings:text-text prose-strong:text-text">
+    <div className="prose prose-invert max-w-none text-text-muted prose-headings:text-text prose-strong:text-text prose-code:text-primary">
       {children}
     </div>
   </section>
@@ -14,42 +14,128 @@ const TherapistDocumentationPage: React.FC = () => {
     <div className="p-4 sm:p-8 max-w-5xl mx-auto text-text">
       <div className="mb-8">
         <h1 className="text-4xl sm:text-5xl font-extrabold">Instrukcja dla Terapeuty</h1>
-        <p className="text-text-muted mt-2 text-lg">Przewodnik krok po kroku po przeprowadzaniu badań na platformie Real Moment.</p>
+        <p className="text-text-muted mt-2 text-lg">
+          Przewodnik krok po kroku po przeprowadzaniu badań, analizie raportów i porównywaniu wyników na platformie Real Moment.
+        </p>
       </div>
 
-      <DocSection title="Krok 1: Generowanie Kodu lub Bezpośredniego Linku">
-        <ol className="list-decimal pl-5 space-y-2">
-          <li>Przejdź do <strong>Panelu Głównego</strong>.</li>
-          <li>W sekcji <strong>Generator kodów dostępu</strong> wybierz z listy opublikowany test psychologiczny.</li>
-          <li>Ustaw datę ważności kodu (domyślnie 7 dni) i kliknij <strong>„Generuj kod”</strong>.</li>
-          <li>Na liście aktywnych kodów możesz kliknąć <strong>„Kopiuj kod”</strong> (sam kod <code>AC-...</code>) lub <strong>„Kopiuj link”</strong> (bezpośredni link, po kliknięciu którego klient od razu trafia do potwierdzenia testu bez konieczności ręcznego wpisywania kodu).</li>
+      <DocSection title="Krok 1: Generowanie Kodów (Pojedynczo lub w Serii) oraz Bezpośrednich Linków">
+        <ol className="list-decimal pl-5 space-y-2.5">
+          <li>Przejdź do zakładki <strong>Wyniki i Kody</strong> (Panel Główny).</li>
+          <li>W sekcji generatora wybierz z listy opublikowany test psychologiczny (np. <em>Wielka Piątka</em> lub <em>DASS-42</em>).</li>
+          <li>Ustaw datę ważności kodu (domyślnie 7 dni) oraz <strong>liczbę kodów</strong> (możesz wygenerować od <strong>1 do 20 kodów jednocześnie</strong>).</li>
+          <li>Kliknij <strong>„Generuj kod”</strong> (lub <strong>„Generuj (N)”</strong> przy serii).</li>
+          <li>
+            Przy wygenerowaniu serii kilku kodów pojawi się pasek szybkiego kopiowania: możesz jednym kliknięciem wybrać{' '}
+            <strong>„Kopiuj wszystkie kody”</strong> lub <strong>„Kopiuj wszystkie linki”</strong>.
+          </li>
+          <li>
+            Na liście aktywnych kodów przy każdym kodzie masz do dyspozycji dwa przyciski:
+            <ul className="list-disc pl-5 mt-1.5 space-y-1">
+              <li>
+                <strong>„Kopiuj kod”</strong> — kopiuje sam jednorazowy kod dostępu, który klient może wpisać na stronie głównej.
+              </li>
+              <li>
+                <strong>„Kopiuj link” (Zalecane)</strong> — kopiuje bezpośredni link do badania z automatycznie podstawionym kodem, dzięki czemu klient po kliknięciu trafia od razu do ekranu powitalnego testu bez ręcznego przepisywania znaków.
+              </li>
+            </ul>
+          </li>
         </ol>
       </DocSection>
 
-      <DocSection title="Krok 2: Wypełnienie Testu przez Klienta i Powiadomienia">
-        <p>
-          Klient otwiera otrzymany link (lub wpisuje kod na stronie głównej) i odpowiada na pytania. Postęp odpowiedzi klienta jest zapisywany w pamięci jego przeglądarki na wypadek przypadkowego odświeżenia karty.
-        </p>
+      <DocSection title="Krok 2: Przebieg Badania u Klienta (Warunki Badania, Auto-zapis i Walidacja)">
+        <ul className="list-disc pl-5 space-y-2.5">
+          <li>
+            <strong>Akceptacja warunków badania:</strong> Przed rozpoczęciem testu klient widzi skrócone podsumowanie{' '}
+            <em>Warunków wykonywania badań</em> (informujące o pomocniczym i przesiewowym charakterze narzędzia oraz zasadach bezpieczeństwa) i zatwierdza przystąpienie do badania.
+          </li>
+          <li>
+            <strong>Trwały auto-zapis postępu w przeglądarce:</strong> Odpowiedzi klienta oraz numer aktualnej sekcji zapisują się automatycznie po każdym kliknięciu. Nawet jeśli klient wypełnia długi test (np. 120 pytań) na telefonie i przypadkowo odświeży stronę lub zamknie kartę, po ponownym otwarciu linku system przywróci wszystkie zaznaczone odpowiedzi i pozwoli kontynuować od miejsca przerwania.
+          </li>
+          <li>
+            <strong>Wskazywanie pominiętych pytań:</strong> Jeśli klient pominie odpowiedź na stronie i kliknie <em>„Dalej”</em>, ekran płynnie przewinie się prosto do pierwszego brakującego pytania i wyróżni je czytelną ramką <strong>BRAK ODPOWIEDZI</strong>.
+          </li>
+        </ul>
+
         <div className="p-4 bg-primary/10 border-l-4 border-primary rounded-r-xl mt-4">
           <p className="font-bold text-text mb-1">Powiadomienia o ukończeniu badania</p>
           <p className="text-sm text-text-muted">
-            Gdy klient zakończy badanie, otrzymasz powiadomienie w aplikacji (ikona dzwonka w menu bocznym) oraz wiadomość e-mail z bezpośrednim linkiem do raportu.
+            Gdy klient prześle odpowiedzi, kod dostępu wygasa, a Ty otrzymujesz powiadomienie w aplikacji (ikona dzwonka w panelu bocznym) oraz wiadomość e-mail (jeśli powiadomienia SMTP są aktywne).
           </p>
         </div>
       </DocSection>
 
-      <DocSection title="Krok 3: Analiza Raportu, Wykresy i Notatki">
-        <ul className="list-disc pl-5 space-y-2">
-          <li>Kliknij <strong>„Zobacz raport”</strong> przy wybranym wyniku w tabeli ukończonych testów.</li>
-          <li>W raporcie online możesz przełączać widok między <strong>wykresem słupkowym</strong> a <strong>wykresem radarowym (pajączkowym)</strong>.</li>
-          <li>W sekcji <strong>Interpretacja i notatki terapeuty</strong> możesz wygenerować wspomagającą analizę AI (przycisk <strong>„Generuj z AI”</strong>), edytować własne wnioski i zapisać je na stałe przyciskiem <strong>„Zapisz notatki w bazie”</strong>.</li>
-          <li>Przycisk <strong>„Pobierz PDF”</strong> generuje gotowy dokument PDF z wybranym szablonem.</li>
+      <DocSection title="Krok 3: Analiza Raportu, Filtrowanie Odpowiedzi po Skali, Klucz Testu i AI">
+        <ul className="list-disc pl-5 space-y-2.5">
+          <li>
+            <strong>Wykresy i progi punktowe:</strong> W widoku raportu możesz przełączać wizualizację między{' '}
+            <strong>wykresem słupkowym</strong> a <strong>wykresem radarowym (pajączkowym)</strong>. Wyniki są automatycznie przyporządkowane do progów interpretacyjnych zdefiniowanych w teście (np. poziomy <em>Niski / Przeciętny / Wysoki</em> w Wielkiej Piątce lub 6 poziomów stenowych w <em>DASS-42</em>).
+          </li>
+          <li>
+            <strong>Filtrowanie i sortowanie odpowiedzi według skali:</strong> W prawej kolumnie <em>„Udzielone Odpowiedzi”</em> możesz:
+            <ul className="list-disc pl-5 mt-1.5 space-y-1">
+              <li>
+                wybrać z listy konkretną skalę (np. <em>Lęk</em>, <em>Depresja</em>, <em>Neurotyczność</em>), aby zobaczyć wyłącznie pytania budujące wynik tej skali,
+              </li>
+              <li>
+                kliknąć przycisk <strong>„↓ Najwyżej punktowane”</strong>, aby posortować odpowiedzi klienta od tych, które dodały najwięcej punktów do badanej skali (przy każdej odpowiedzi widoczny jest znacznik punktowy, np. <code>+4/5 pkt</code>).
+              </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Interpretacja z klucza testu oraz Synteza AI:</strong> W sekcji <em>Interpretacja i notatki terapeuty</em> masz do dyspozycji:
+            <ul className="list-disc pl-5 mt-1.5 space-y-1">
+              <li>
+                <strong>„Wstaw z klucza testu”</strong> — automatycznie odtwarza pełną interpretację opisową przypisaną do osiągniętych progów punktowych we wszystkich skalach i podskalach.
+              </li>
+              <li>
+                <strong>„Synteza profilu z AI”</strong> — generuje pogłębioną analizę interakcji między skalami oraz hipotezy kliniczne i pytania pogłębiające na sesję. Po wygenerowaniu możesz wybrać:{' '}
+                <strong>„Dołącz pod obecną interpretacją i zapisz”</strong> (zachowując opis z klucza i dopisując pod nim syntezę AI) lub{' '}
+                <strong>„Zastąp całość i zapisz”</strong>.
+              </li>
+            </ul>
+          </li>
+          <li>
+            <strong>Eksport do PDF:</strong> Przycisk <strong>„Pobierz PDF”</strong> tworzy sformatowany dokument PDF zawierający wykresy, tabele wyników, zapisane notatki/interpretacje oraz klauzulę metodologiczną.
+          </li>
         </ul>
       </DocSection>
 
-      <DocSection title="Krok 4: 100% Anonimowości i 60-dniowa Retencja">
+      <DocSection title="Krok 4: Porównywanie Dwóch Wyników Badań (Pre-test / Post-test)">
         <p>
-          Platforma nie zbiera żadnych danych osobowych ani adresów e-mail osób badanych — tylko Ty w swoich notatkach poza systemem wiesz, któremu klientowi przekazałeś dany kod. Wyniki są automatycznie usuwane z bazy danych po upływie <strong>60 dni</strong> od ukończenia badania.
+          Jeśli klient wypełnił ten sam kwestionariusz dwukrotnie (np. na początku współpracy i po kilku tygodniach terapii), możesz zestawić oba badania obok siebie:
+        </p>
+        <ol className="list-decimal pl-5 space-y-2 mt-3">
+          <li>
+            Kliknij przycisk <strong>„⇄ Porównaj”</strong> przy wybranym wyniku w tabeli <em>Ukończone testy</em> albo przycisk{' '}
+            <strong>„⇄ Porównaj z innym wynikiem (Pre / Post)”</strong> bezpośrednio wewnątrz otwartego raportu.
+          </li>
+          <li>
+            W oknie porównania wybierz <strong>Badanie 1 (Bazowe / Pre-test)</strong> oraz <strong>Badanie 2 (Porównawcze / Post-test)</strong> (możesz też zamienić je miejscami przyciskiem <strong>„⇄”</strong>).
+          </li>
+          <li>
+            Analizuj zmiany w trzech zakładkach:
+            <ul className="list-disc pl-5 mt-1.5 space-y-1">
+              <li>
+                <strong>📊 Skale i Różnice (Δ):</strong> podwójne paski porównawcze pokazujące dokładną zmianę punktową i procentową (<code>Δ</code>) oraz wyróżniające skale, w których nastąpiła <strong>zmiana progu interpretacyjnego</strong> (np. <em>Wysoki &rarr; Umiarkowany</em>).
+              </li>
+              <li>
+                <strong>🕸️ Wykres Radarowy:</strong> nakładany wykres pajączkowy obu badań na jednej siatce (linia przerywana dla Pre-testu i pełna dla Post-testu).
+              </li>
+              <li>
+                <strong>📝 Odpowiedzi na Pytania:</strong> zestawienie konkretnych pytań, w których odpowiedź klienta uległa zmianie między pierwszym a drugim badaniem (z możliwością filtrowania po skali).
+              </li>
+            </ul>
+          </li>
+          <li>
+            Klikając <strong>„➕ Dołącz zestawienie Pre/Post do notatek raportu”</strong> (gdy otwierasz porównanie z widoku raportu), możesz jednym kliknięciem dopisać podsumowanie zmian do notatek terapeuty, aby znalazło się również w wydruku PDF.
+          </li>
+        </ol>
+      </DocSection>
+
+      <DocSection title="Krok 5: 100% Anonimowości Klienta i 60-dniowa Retencja Danych">
+        <p>
+          Platforma nie zbiera imion, nazwisk ani adresów e-mail osób badanych — jedynym identyfikatorem w systemie jest wygenerowany przez Ciebie jednorazowy kod dostępu. Zgodnie z polityką minimalizacji danych wyniki badań są automatycznie usuwane z bazy po upływie <strong>60 dni</strong> od daty ukończenia (w tabeli wyników widoczny jest licznik dni pozostałych do automatycznego usunięcia).
         </p>
       </DocSection>
     </div>

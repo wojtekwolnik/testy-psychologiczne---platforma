@@ -9,6 +9,7 @@ import { getUsers, UserData } from '@/app/actions/userActions';
 import { TestResult, Test, AccessCode } from './types';
 import { ChartBarIcon, TrashIcon, PlusIcon, ClipboardCopyIcon, LinkIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
+import ResultComparisonModal from './report/ResultComparisonModal';
 import { useAuth } from '@/contexts/AuthContext';
 
 const InfoTooltip: React.FC<{ id: string, label: string, text: string, activeId: string | null, setActiveId: (id: string | null) => void }> = ({ id, label, text, activeId, setActiveId }) => {
@@ -54,6 +55,7 @@ const TherapistDashboard = () => {
   const [resultToDelete, setResultToDelete] = useState<string | null>(null);
   const [codeToDelete, setCodeToDelete] = useState<string | null>(null);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+  const [comparisonTarget, setComparisonTarget] = useState<TestResult | null>(null);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -514,13 +516,20 @@ const TherapistDashboard = () => {
                           <td className="p-4">{new Date(result.completedAt).toLocaleDateString()}</td>
                           <td className="p-4 font-medium">{deletionDateStr}</td>
                           <td className={`p-4 ${urgencyClass}`}>{daysLeft > 0 ? `${daysLeft} dni` : 'Dziś'}</td>
-                          <td className="p-4 flex items-center gap-2">
+                          <td className="p-4 flex flex-wrap items-center gap-2">
                             <button
                               onClick={() => router.push(`/report/${result.id}`)}
                               className="flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent font-semibold rounded-lg hover:bg-accent/20 transition-all text-sm border border-accent/20"
                             >
                               <ChartBarIcon />
                               Zobacz raport
+                            </button>
+                            <button
+                              onClick={() => setComparisonTarget(result)}
+                              className="flex items-center gap-1.5 px-3 py-2 bg-primary/15 text-primary font-semibold rounded-lg hover:bg-primary/25 transition-all text-xs border border-primary/30"
+                              title="Porównaj ten wynik z innym badaniem tego samego testu (Pre-test / Post-test)"
+                            >
+                              ⇄ Porównaj
                             </button>
                             <button
                               onClick={() => setResultToDelete(result.id)}
@@ -561,6 +570,19 @@ const TherapistDashboard = () => {
         title="Unieważnienie kodu"
         message="Czy na pewno chcesz unieważnić ten kod dostępu? Po usunięciu klient nie będzie mógł rozwiązać testu."
         confirmText="Unieważnij"
+      />
+      <ResultComparisonModal
+        isOpen={!!comparisonTarget}
+        onClose={() => setComparisonTarget(null)}
+        initialResultA={comparisonTarget}
+        availableResults={results}
+        test={
+          comparisonTarget
+            ? tests.find(t => t.id === comparisonTarget.testId) ||
+              tests.find(t => t.title === comparisonTarget.testTitle) ||
+              null
+            : null
+        }
       />
     </>
   );

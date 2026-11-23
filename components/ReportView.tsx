@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchReportBundle, saveAnalysis } from '@/app/actions/resultActions';
+import { fetchReportBundle, fetchResults, saveAnalysis } from '@/app/actions/resultActions';
 import type { TestResult, Test, PdfTemplate, Question } from './types';
 import { DownloadIcon, SparklesIcon, ChevronLeftIcon } from './common/Icons';
 import { BrandingContext, DEFAULT_REPORT_DISCLAIMER_TEXT } from '@/contexts/BrandingContext';
 import RichTextInput from './common/RichTextInput';
+import ResultComparisonModal from './report/ResultComparisonModal';
 import { toast } from 'react-toastify';
 import DOMPurify from 'isomorphic-dompurify';
 import {
@@ -39,6 +40,8 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
     const [chartMode, setChartMode] = useState<'bars' | 'radar'>('bars');
     const [answerScaleFilter, setAnswerScaleFilter] = useState<string>('all');
     const [answerSortHighFirst, setAnswerSortHighFirst] = useState<boolean>(false);
+    const [sameTestResults, setSameTestResults] = useState<TestResult[]>([]);
+    const [isComparisonOpen, setIsComparisonOpen] = useState<boolean>(false);
 
     useEffect(() => {
         if (!resultId) {
@@ -65,6 +68,16 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                 if (fetchedTest.defaultTemplateId) {
                     setSelectedTemplate(fetchedTest.defaultTemplateId);
                 }
+
+                // Load other results of the same test for Pre-test / Post-test comparison
+                fetchResults()
+                    .then(all => {
+                        const matching = all.filter(
+                            r => r.testId === fetchedTest.id || r.testTitle === fetchedTest.title
+                        );
+                        setSameTestResults(matching);
+                    })
+                    .catch(() => {});
             } catch (err: any) {
                 console.error(err);
                 setError("Wystąpił błąd podczas ładowania danych.");
@@ -241,14 +254,24 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 bg-surface/90 border border-[var(--border-color)] p-8 rounded-2xl shadow-xl">
                         <div className="border-b border-border pb-6 mb-6">
-                            <div className="flex justify-between items-start gap-4">
+                            <div className="flex flex-wrap justify-between items-start gap-4">
                                 <div>
                                     <h2 className="text-3xl font-bold text-text">{test.title}</h2>
                                     <p className="text-lg text-text-muted mt-1">Identyfikator klienta (kod): <span className="font-mono font-bold text-primary">{result.clientIdentifier}</span></p>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-sm text-text-muted">Data Ukończenia</p>
-                                    <p className="font-semibold text-text">{new Date(result.completedAt).toLocaleDateString('pl-PL')}</p>
+                                <div className="flex flex-wrap items-center gap-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsComparisonOpen(true)}
+                                        className="px-4 py-2 bg-primary/15 border border-primary/30 text-primary font-bold rounded-xl hover:bg-primary/25 transition-colors text-xs sm:text-sm"
+                                        title="Porównaj ten wynik z innym badaniem tego samego testu (Pre-test / Post-test)"
+                                    >
+                                        ⇄ Porównaj z innym wynikiem (Pre / Post)
+                                    </button>
+                                    <div className="text-right">
+                                        <p className="text-sm text-text-muted">Data Ukończenia</p>
+                                        <p className="font-semibold text-text">{new Date(result.completedAt).toLocaleDateString('pl-PL')}</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -730,6 +753,21 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                     </div>
                 </div>
             </main>
+
+            <ResultComparisonModal
+                isOpen={isComparisonOpen}
+                onClose={() => setIsComparisonOpen(false)}
+                initialResultA={result}
+                availableResults={sameTestResults.length > 0 ? sameTestResults : [result]}
+                test={test}
+                onAppendComparisonToNotes={(htmlSummary) => {
+                    const nextContent = customInterpretation
+                        ? `${customInterpretation}${htmlSummary}`
+                        : htmlSummary;
+                    setCustomInterpretation(nextContent);
+                    handleSaveNotes(nextContent);
+                }}
+            />
         </div>
     );
 };
