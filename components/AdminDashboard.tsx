@@ -606,7 +606,11 @@ const AdminDashboard: React.FC = () => {
                           style={{
                             backgroundColor: test.status === 'PUBLISHED' ? 'var(--success-color)' : 'var(--warning-color)',
                             color: test.status === 'PUBLISHED' ? 'var(--success-contrast)' : 'var(--warning-contrast)',
-                            minWidth: '156px'
+                            minWidth: '156px',
+                            WebkitAppearance: 'none',
+                            MozAppearance: 'none',
+                            appearance: 'none',
+                            backgroundImage: 'none',
                           }}
                           title="Zmień status testu"
                         >

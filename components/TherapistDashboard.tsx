@@ -246,13 +246,13 @@ const TherapistDashboard = () => {
 
         {/* Code Generator */}
         <div className="bg-surface/60 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden border border-border/50 mb-8 p-6">
-          <div className="flex flex-col sm:flex-row items-end gap-4 mb-4">
-            <div className="flex-grow w-full sm:w-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 items-end gap-4 mb-4">
+            <div className={`sm:col-span-1 ${user?.role === 'admin' ? 'xl:col-span-4' : 'xl:col-span-6'} min-w-0`}>
               <label htmlFor="test-select" className="block text-xs font-medium text-text-muted mb-1">
                 Wybierz test
                 <InfoTooltip id="genTest" label="Wybierz test" text="Wybierz test psychologiczny z listy dostępnych narzędzi, do którego chcesz wygenerować jednorazowy anonimowy kod dostępu dla klienta." activeId={activeTooltip} setActiveId={setActiveTooltip} />
               </label>
-              <select id="test-select" value={selectedTest} onChange={e => setSelectedTest(e.target.value)} className="w-full h-[48px] px-4 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner">
+              <select id="test-select" value={selectedTest} onChange={e => setSelectedTest(e.target.value)} className="w-full h-[48px] px-3.5 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner text-sm truncate">
                 {publishedTests.length === 0 ? (
                   <option value="">Brak opublikowanych testów</option>
                 ) : (
@@ -262,7 +262,7 @@ const TherapistDashboard = () => {
             </div>
 
             {user?.role === 'admin' && (
-              <div className="flex-grow w-full sm:w-auto">
+              <div className="sm:col-span-1 xl:col-span-3 min-w-0">
                 <label htmlFor="therapist-select" className="block text-xs font-medium text-text-muted mb-1">
                   Przypisz do
                   <InfoTooltip id="genTherapist" label="Przypisz do" text="Wybierz terapeutę, do którego konta zostanie przypisany ten kod dostępu oraz późniejszy wynik testu." activeId={activeTooltip} setActiveId={setActiveTooltip} />
@@ -271,7 +271,7 @@ const TherapistDashboard = () => {
                   id="therapist-select"
                   value={selectedTherapistId}
                   onChange={e => setSelectedTherapistId(e.target.value)}
-                  className="w-full h-[48px] px-4 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner"
+                  className="w-full h-[48px] px-3.5 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner text-sm truncate"
                 >
                   {therapists.map(t => (
                     <option key={t.id} value={t.id}>
@@ -282,7 +282,7 @@ const TherapistDashboard = () => {
               </div>
             )}
 
-            <div className="flex-grow w-full sm:w-auto">
+            <div className="sm:col-span-1 xl:col-span-2 min-w-0">
               <label htmlFor="expiry-date" className="block text-xs font-medium text-text-muted mb-1">
                 Data ważności
                 <InfoTooltip id="genExpiry" label="Data ważności" text="Określa datę, do której wygenerowany kod dostępu pozostaje aktywny. Po tej dacie klient nie będzie mógł uruchomić testu." activeId={activeTooltip} setActiveId={setActiveTooltip} />
@@ -293,13 +293,13 @@ const TherapistDashboard = () => {
                 value={expiryDate}
                 onChange={e => setExpiryDate(e.target.value)}
                 min={new Date().toISOString().split('T')[0]}
-                className="w-full h-[48px] px-4 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner"
+                className="w-full h-[48px] px-3 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner text-sm"
               />
             </div>
 
-            <div className="w-full sm:w-36">
-              <label htmlFor="code-count" className="block text-xs font-medium text-text-muted mb-1">
-                Liczba kodów
+            <div className="sm:col-span-1 xl:col-span-1 min-w-0">
+              <label htmlFor="code-count" className="block text-xs font-medium text-text-muted mb-1 whitespace-nowrap">
+                Liczba
                 <InfoTooltip id="genCount" label="Liczba kodów (dokładna ilość)" text="Wpisz dokładną liczbę jednorazowych kodów, jakiej potrzebujesz (od 1 do 50), aby nie tworzyć nadmiarowych, nieużywanych kodów." activeId={activeTooltip} setActiveId={setActiveTooltip} />
               </label>
               <input
@@ -312,13 +312,15 @@ const TherapistDashboard = () => {
                 onChange={e => setCodeCountInput(e.target.value)}
                 onBlur={() => setCodeCountInput(String(codeCount))}
                 placeholder="1"
-                className="w-full h-[48px] px-3.5 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner font-semibold"
+                className="w-full h-[48px] px-3 py-2 border border-border rounded-xl bg-input-bg text-input-text focus:ring-2 focus:ring-primary/50 transition-all shadow-inner font-semibold text-sm text-center"
               />
             </div>
 
-            <button onClick={handleGenerateCode} className="flex items-center justify-center gap-2 px-8 bg-primary text-primary-contrast font-bold rounded-xl shadow-lg hover:shadow-primary/30 hover:-translate-y-1 transition-all h-[48px] w-full sm:w-auto flex-shrink-0">
-              <PlusIcon /> {codeCount > 1 ? `Generuj (${codeCount})` : 'Generuj kod'}
-            </button>
+            <div className="sm:col-span-2 xl:col-span-2">
+              <button onClick={handleGenerateCode} className="w-full flex items-center justify-center gap-2 px-5 bg-primary text-primary-contrast font-bold rounded-xl shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 transition-all h-[48px] text-sm whitespace-nowrap">
+                <PlusIcon /> {codeCount > 1 ? `Generuj (${codeCount})` : 'Generuj kod'}
+              </button>
+            </div>
           </div>
 
           {lastBatchCodes.length > 1 && (

@@ -31,9 +31,9 @@ const ComparisonRadarChart: React.FC<{
     colorA?: string;
     colorB?: string;
 }> = ({ items, labelA, labelB, colorA = '#60a5fa', colorB = '#2f7a3e' }) => {
-    const size = 380;
+    const size = 440;
     const center = size / 2;
-    const radius = 125;
+    const radius = 115;
     const count = items.length;
 
     if (count < 3) {
@@ -739,7 +739,7 @@ export const ResultComparisonModal: React.FC<ResultComparisonModalProps> = ({
                                         >
                                             <p className="font-semibold text-text mb-2">
                                                 {number}.{' '}
-                                                <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(question.text) }} />
+                                                <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(question.text.replace(/^\s*\d+[\.\)]\s*/, '')) }} />
                                             </p>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-3">
                                                 <div className="p-2 rounded-lg bg-surface border border-border">

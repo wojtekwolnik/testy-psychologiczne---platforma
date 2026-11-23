@@ -414,7 +414,7 @@ export const TestSimulatorModal: React.FC<TestSimulatorModalProps> = ({
                                                 <div className="flex items-start justify-between gap-2 mb-3">
                                                     <p className="font-semibold text-base text-text">
                                                         {questionStartIndex + qIdx + 1}.{' '}
-                                                        <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(q.text) }} />
+                                                        <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(q.text.replace(/^\s*\d+[\.\)]\s*/, '')) }} />
                                                     </p>
                                                     {q.isReversed && (
                                                         <span className="shrink-0 px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold">

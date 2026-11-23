@@ -112,7 +112,7 @@ const ClientCodeEntry: React.FC = () => {
                             setTermsModalTab('terms');
                             setIsTermsModalOpen(true);
                         }}
-                        className="text-primary hover:underline font-semibold opacity-90 hover:opacity-100 transition-opacity"
+                        className="text-emerald-400 hover:text-emerald-300 hover:underline font-semibold transition-colors"
                     >
                         {branding.termsOfTestingTitle || DEFAULT_TERMS_OF_TESTING_TITLE}
                     </button>
@@ -123,7 +123,7 @@ const ClientCodeEntry: React.FC = () => {
                             setTermsModalTab('privacy');
                             setIsTermsModalOpen(true);
                         }}
-                        className="text-primary hover:underline font-semibold opacity-90 hover:opacity-100 transition-opacity"
+                        className="text-emerald-400 hover:text-emerald-300 hover:underline font-semibold transition-colors"
                     >
                         {branding.privacyPolicyTitle || DEFAULT_PRIVACY_POLICY_TITLE}
                     </button>

@@ -166,13 +166,13 @@ const AdminCodes = () => {
 
             {/* Batch Code Generator */}
             <div className="bg-surface/60 backdrop-blur-md rounded-2xl shadow-xl overflow-hidden border border-border/50 mb-8 p-6">
-                <div className="flex flex-col sm:flex-row items-end gap-4">
-                    <div className="flex-grow w-full sm:w-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 items-end gap-4">
+                    <div className="sm:col-span-1 xl:col-span-4 min-w-0">
                         <label className="block text-xs font-medium text-text-muted mb-1">Wybierz test</label>
                         <select
                             value={selectedTestId}
                             onChange={e => setSelectedTestId(e.target.value)}
-                            className="w-full h-[46px] px-4 py-2 border border-border rounded-xl bg-input-bg text-input-text text-sm"
+                            className="w-full h-[46px] px-3.5 py-2 border border-border rounded-xl bg-input-bg text-input-text text-sm truncate"
                         >
                             {publishedTests.length === 0 ? (
                                 <option value="">Brak opublikowanych testów</option>
@@ -181,12 +181,12 @@ const AdminCodes = () => {
                             )}
                         </select>
                     </div>
-                    <div className="flex-grow w-full sm:w-auto">
+                    <div className="sm:col-span-1 xl:col-span-3 min-w-0">
                         <label className="block text-xs font-medium text-text-muted mb-1">Przypisz do terapeuty</label>
                         <select
                             value={selectedTherapistId}
                             onChange={e => setSelectedTherapistId(e.target.value)}
-                            className="w-full h-[46px] px-4 py-2 border border-border rounded-xl bg-input-bg text-input-text text-sm"
+                            className="w-full h-[46px] px-3.5 py-2 border border-border rounded-xl bg-input-bg text-input-text text-sm truncate"
                         >
                             {users.map(u => (
                                 <option key={u.id} value={u.id}>
@@ -195,7 +195,7 @@ const AdminCodes = () => {
                             ))}
                         </select>
                     </div>
-                    <div className="w-full sm:w-44">
+                    <div className="sm:col-span-1 xl:col-span-2 min-w-0">
                         <label className="block text-xs font-medium text-text-muted mb-1">Data ważności</label>
                         <input
                             type="date"
@@ -205,8 +205,8 @@ const AdminCodes = () => {
                             className="w-full h-[46px] px-3 py-2 border border-border rounded-xl bg-input-bg text-input-text text-sm"
                         />
                     </div>
-                    <div className="w-full sm:w-36">
-                        <label className="block text-xs font-medium text-text-muted mb-1">Liczba kodów (1–50)</label>
+                    <div className="sm:col-span-1 xl:col-span-1 min-w-0">
+                        <label className="block text-xs font-medium text-text-muted mb-1 whitespace-nowrap">Liczba (1–50)</label>
                         <input
                             type="number"
                             min={1}
@@ -216,15 +216,17 @@ const AdminCodes = () => {
                             onChange={e => setCodeCountInput(e.target.value)}
                             onBlur={() => setCodeCountInput(String(codeCount))}
                             placeholder="1"
-                            className="w-full h-[46px] px-3.5 py-2 border border-border rounded-xl bg-input-bg text-input-text text-sm font-semibold"
+                            className="w-full h-[46px] px-3 py-2 border border-border rounded-xl bg-input-bg text-input-text text-sm font-semibold text-center"
                         />
                     </div>
-                    <button
-                        onClick={handleGenerateBatch}
-                        className="flex items-center justify-center gap-2 px-6 bg-primary text-primary-contrast font-bold rounded-xl shadow-lg hover:shadow-primary/30 transition-all h-[46px] w-full sm:w-auto flex-shrink-0 text-sm"
-                    >
-                        <PlusIcon /> {codeCount > 1 ? `Generuj (${codeCount})` : 'Generuj kod'}
-                    </button>
+                    <div className="sm:col-span-2 xl:col-span-2">
+                        <button
+                            onClick={handleGenerateBatch}
+                            className="w-full flex items-center justify-center gap-2 px-5 bg-primary text-primary-contrast font-bold rounded-xl shadow-lg hover:shadow-primary/30 transition-all h-[46px] text-sm whitespace-nowrap"
+                        >
+                            <PlusIcon /> {codeCount > 1 ? `Generuj (${codeCount})` : 'Generuj kod'}
+                        </button>
+                    </div>
                 </div>
 
                 {lastBatchCodes.length > 1 && (

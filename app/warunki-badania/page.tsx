@@ -58,13 +58,21 @@ export default function TermsOfTestingPage() {
                         <span>
                             {branding.reportFooterText || 'Real Moment – Przestrzeń Rozwojowa i Diagnostyczna | www.realmoment.pl'}
                         </span>
-                        <button
-                            type="button"
-                            onClick={() => router.push('/')}
-                            className="px-5 py-2 bg-primary text-primary-contrast font-bold rounded-xl shadow hover:opacity-90 transition-all text-xs"
-                        >
-                            Przejdź do wpisania kodu badania
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <a
+                                href="/polityka-prywatnosci"
+                                className="text-text-muted hover:text-emerald-400 underline font-semibold"
+                            >
+                                Polityka prywatności i RODO
+                            </a>
+                            <button
+                                type="button"
+                                onClick={() => router.push('/')}
+                                className="px-5 py-2 bg-primary text-primary-contrast font-bold rounded-xl shadow hover:opacity-90 transition-all text-xs"
+                            >
+                                Przejdź do wpisania kodu badania
+                            </button>
+                        </div>
                     </footer>
                 </div>
             </div>

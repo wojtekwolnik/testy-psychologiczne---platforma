@@ -420,7 +420,7 @@ export default function ClientTestView(props: ClientTestViewProps) {
                                         <div className="flex items-start justify-between gap-3 mb-5">
                                             <legend
                                                 className="text-lg font-medium text-text leading-relaxed"
-                                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(`${questionStartIndex + index + 1}. ${q.text}`) }}
+                                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(`${questionStartIndex + index + 1}. ${q.text.replace(/^\s*\d+[\.\)]\s*/, '')}`) }}
                                             />
                                             {isHighlightedMissing && (
                                                 <span

@@ -179,27 +179,27 @@ export default function BrandingPage() {
             {error && <div className="bg-error/15 border border-error/30 text-error p-4 rounded-xl mb-4">{error}</div>}
 
             <Tab.Group>
-                <Tab.List className="flex flex-wrap sm:flex-nowrap space-x-1 rounded-xl bg-surface border border-border p-1 mb-6">
-                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm leading-5 transition-colors outline-none', selected ? 'bg-primary shadow-md text-primary-contrast font-bold' : 'text-text-muted hover:bg-background/60 hover:text-text font-medium')}>
-                        <div className="flex items-center justify-center gap-2"><FaCog /> Ogólne</div>
+                <Tab.List className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-7 gap-1.5 rounded-xl bg-surface border border-border p-1.5 mb-6">
+                    <Tab className={({ selected }) => classNames('w-full rounded-lg px-3 py-2.5 text-xs sm:text-sm leading-5 transition-colors outline-none whitespace-nowrap', selected ? 'bg-primary shadow-md text-primary-contrast font-bold' : 'text-text-muted hover:bg-background/60 hover:text-text font-medium')}>
+                        <div className="flex items-center justify-center gap-2"><FaCog className="shrink-0" /> <span>Ogólne</span></div>
                     </Tab>
-                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm leading-5 transition-colors outline-none', selected ? 'bg-primary shadow-md text-primary-contrast font-bold' : 'text-text-muted hover:bg-background/60 hover:text-text font-medium')}>
-                        <div className="flex items-center justify-center gap-2"><FaGlobe /> Portal Klienta</div>
+                    <Tab className={({ selected }) => classNames('w-full rounded-lg px-3 py-2.5 text-xs sm:text-sm leading-5 transition-colors outline-none whitespace-nowrap', selected ? 'bg-primary shadow-md text-primary-contrast font-bold' : 'text-text-muted hover:bg-background/60 hover:text-text font-medium')}>
+                        <div className="flex items-center justify-center gap-2"><FaGlobe className="shrink-0" /> <span>Portal Klienta</span></div>
                     </Tab>
-                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm leading-5 transition-colors outline-none', selected ? 'bg-primary shadow-md text-primary-contrast font-bold' : 'text-text-muted hover:bg-background/60 hover:text-text font-medium')}>
-                        <div className="flex items-center justify-center gap-2"><FaAlignLeft /> Warunki i RODO</div>
+                    <Tab className={({ selected }) => classNames('w-full rounded-lg px-3 py-2.5 text-xs sm:text-sm leading-5 transition-colors outline-none whitespace-nowrap', selected ? 'bg-primary shadow-md text-primary-contrast font-bold' : 'text-text-muted hover:bg-background/60 hover:text-text font-medium')}>
+                        <div className="flex items-center justify-center gap-2"><FaAlignLeft className="shrink-0" /> <span>Warunki i RODO</span></div>
                     </Tab>
-                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm leading-5 transition-colors outline-none', selected ? 'bg-primary shadow-md text-primary-contrast font-bold' : 'text-text-muted hover:bg-background/60 hover:text-text font-medium')}>
-                        <div className="flex items-center justify-center gap-2"><FaPalette /> Kolorystyka</div>
+                    <Tab className={({ selected }) => classNames('w-full rounded-lg px-3 py-2.5 text-xs sm:text-sm leading-5 transition-colors outline-none whitespace-nowrap', selected ? 'bg-primary shadow-md text-primary-contrast font-bold' : 'text-text-muted hover:bg-background/60 hover:text-text font-medium')}>
+                        <div className="flex items-center justify-center gap-2"><FaPalette className="shrink-0" /> <span>Kolorystyka</span></div>
                     </Tab>
-                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm leading-5 transition-colors outline-none', selected ? 'bg-primary shadow-md text-primary-contrast font-bold' : 'text-text-muted hover:bg-background/60 hover:text-text font-medium')}>
-                        <div className="flex items-center justify-center gap-2"><FaEnvelope /> E-mail</div>
+                    <Tab className={({ selected }) => classNames('w-full rounded-lg px-3 py-2.5 text-xs sm:text-sm leading-5 transition-colors outline-none whitespace-nowrap', selected ? 'bg-primary shadow-md text-primary-contrast font-bold' : 'text-text-muted hover:bg-background/60 hover:text-text font-medium')}>
+                        <div className="flex items-center justify-center gap-2"><FaEnvelope className="shrink-0" /> <span>E-mail</span></div>
                     </Tab>
-                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm leading-5 transition-colors outline-none', selected ? 'bg-primary shadow-md text-primary-contrast font-bold' : 'text-text-muted hover:bg-background/60 hover:text-text font-medium')}>
-                        <div className="flex items-center justify-center gap-2"><FaRobot /> AI</div>
+                    <Tab className={({ selected }) => classNames('w-full rounded-lg px-3 py-2.5 text-xs sm:text-sm leading-5 transition-colors outline-none whitespace-nowrap', selected ? 'bg-primary shadow-md text-primary-contrast font-bold' : 'text-text-muted hover:bg-background/60 hover:text-text font-medium')}>
+                        <div className="flex items-center justify-center gap-2"><FaRobot className="shrink-0" /> <span>AI</span></div>
                     </Tab>
-                    <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm leading-5 transition-colors outline-none', selected ? 'bg-primary shadow-md text-primary-contrast font-bold' : 'text-text-muted hover:bg-background/60 hover:text-text font-medium')}>
-                        <div className="flex items-center justify-center gap-2"><FaCog /> Raporty PDF</div>
+                    <Tab className={({ selected }) => classNames('w-full rounded-lg px-3 py-2.5 text-xs sm:text-sm leading-5 transition-colors outline-none whitespace-nowrap', selected ? 'bg-primary shadow-md text-primary-contrast font-bold' : 'text-text-muted hover:bg-background/60 hover:text-text font-medium')}>
+                        <div className="flex items-center justify-center gap-2"><FaCog className="shrink-0" /> <span>Raporty PDF</span></div>
                     </Tab>
                 </Tab.List>
 
@@ -592,22 +592,22 @@ export default function BrandingPage() {
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Kolor Podstawowy (Primary)</label>
                                             <div className="flex gap-2">
-                                                <input type="color" className="h-10 w-10 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette?.primaryColor || '#2f7a3e'} onChange={e => updateThemeSetting('primaryColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette?.primaryColor || '#2f7a3e'} onChange={e => updateThemeSetting('primaryColor', e.target.value)} />
+                                                <input type="color" className="h-10 w-10 shrink-0 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette?.primaryColor || '#2f7a3e'} onChange={e => updateThemeSetting('primaryColor', e.target.value)} />
+                                                <input type="text" className="flex-1 min-w-0 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette?.primaryColor || '#2f7a3e'} onChange={e => updateThemeSetting('primaryColor', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Kolor Akcentu (Accent)</label>
                                             <div className="flex gap-2">
-                                                <input type="color" className="h-10 w-10 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.accentColor} onChange={e => updateThemeSetting('accentColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.accentColor} onChange={e => updateThemeSetting('accentColor', e.target.value)} />
+                                                <input type="color" className="h-10 w-10 shrink-0 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.accentColor} onChange={e => updateThemeSetting('accentColor', e.target.value)} />
+                                                <input type="text" className="flex-1 min-w-0 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.accentColor} onChange={e => updateThemeSetting('accentColor', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Kolor Dodatkowy (Secondary)</label>
                                             <div className="flex gap-2">
-                                                <input type="color" className="h-10 w-10 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.secondaryColor} onChange={e => updateThemeSetting('secondaryColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.secondaryColor} onChange={e => updateThemeSetting('secondaryColor', e.target.value)} />
+                                                <input type="color" className="h-10 w-10 shrink-0 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.secondaryColor} onChange={e => updateThemeSetting('secondaryColor', e.target.value)} />
+                                                <input type="text" className="flex-1 min-w-0 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.secondaryColor} onChange={e => updateThemeSetting('secondaryColor', e.target.value)} />
                                             </div>
                                         </div>
                                     </div>
@@ -621,15 +621,15 @@ export default function BrandingPage() {
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Tło Panelu</label>
                                             <div className="flex gap-2">
-                                                <input type="color" className="h-10 w-10 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.sidebarBackground} onChange={e => updateThemeSetting('sidebarBackground', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.sidebarBackground} onChange={e => updateThemeSetting('sidebarBackground', e.target.value)} />
+                                                <input type="color" className="h-10 w-10 shrink-0 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.sidebarBackground} onChange={e => updateThemeSetting('sidebarBackground', e.target.value)} />
+                                                <input type="text" className="flex-1 min-w-0 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.sidebarBackground} onChange={e => updateThemeSetting('sidebarBackground', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Kolor Tekstu</label>
                                             <div className="flex gap-2">
-                                                <input type="color" className="h-10 w-10 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.sidebarTextColor} onChange={e => updateThemeSetting('sidebarTextColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.sidebarTextColor} onChange={e => updateThemeSetting('sidebarTextColor', e.target.value)} />
+                                                <input type="color" className="h-10 w-10 shrink-0 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.sidebarTextColor} onChange={e => updateThemeSetting('sidebarTextColor', e.target.value)} />
+                                                <input type="text" className="flex-1 min-w-0 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.sidebarTextColor} onChange={e => updateThemeSetting('sidebarTextColor', e.target.value)} />
                                             </div>
                                         </div>
                                     </div>
@@ -637,15 +637,15 @@ export default function BrandingPage() {
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Tło Aktywnego Elementu</label>
                                             <div className="flex gap-2">
-                                                <input type="color" className="h-10 w-10 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.sidebarActiveBackground} onChange={e => updateThemeSetting('sidebarActiveBackground', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.sidebarActiveBackground} onChange={e => updateThemeSetting('sidebarActiveBackground', e.target.value)} />
+                                                <input type="color" className="h-10 w-10 shrink-0 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.sidebarActiveBackground} onChange={e => updateThemeSetting('sidebarActiveBackground', e.target.value)} />
+                                                <input type="text" className="flex-1 min-w-0 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.sidebarActiveBackground} onChange={e => updateThemeSetting('sidebarActiveBackground', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Tekst Aktywnego Elementu</label>
                                             <div className="flex gap-2">
-                                                <input type="color" className="h-10 w-10 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.sidebarActiveText} onChange={e => updateThemeSetting('sidebarActiveText', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.sidebarActiveText} onChange={e => updateThemeSetting('sidebarActiveText', e.target.value)} />
+                                                <input type="color" className="h-10 w-10 shrink-0 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.sidebarActiveText} onChange={e => updateThemeSetting('sidebarActiveText', e.target.value)} />
+                                                <input type="text" className="flex-1 min-w-0 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.sidebarActiveText} onChange={e => updateThemeSetting('sidebarActiveText', e.target.value)} />
                                             </div>
                                         </div>
                                     </div>
@@ -658,22 +658,22 @@ export default function BrandingPage() {
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Tło Strony (Body)</label>
                                             <div className="flex gap-2">
-                                                <input type="color" className="h-10 w-10 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.backgroundColor} onChange={e => updateThemeSetting('backgroundColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.backgroundColor} onChange={e => updateThemeSetting('backgroundColor', e.target.value)} />
+                                                <input type="color" className="h-10 w-10 shrink-0 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.backgroundColor} onChange={e => updateThemeSetting('backgroundColor', e.target.value)} />
+                                                <input type="text" className="flex-1 min-w-0 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.backgroundColor} onChange={e => updateThemeSetting('backgroundColor', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Główny Kolor Tekstu</label>
                                             <div className="flex gap-2">
-                                                <input type="color" className="h-10 w-10 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.textColor} onChange={e => updateThemeSetting('textColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.textColor} onChange={e => updateThemeSetting('textColor', e.target.value)} />
+                                                <input type="color" className="h-10 w-10 shrink-0 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.textColor} onChange={e => updateThemeSetting('textColor', e.target.value)} />
+                                                <input type="text" className="flex-1 min-w-0 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.textColor} onChange={e => updateThemeSetting('textColor', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Kolor Obramowań</label>
                                             <div className="flex gap-2">
-                                                <input type="color" className="h-10 w-10 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.borderColor} onChange={e => updateThemeSetting('borderColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.borderColor} onChange={e => updateThemeSetting('borderColor', e.target.value)} />
+                                                <input type="color" className="h-10 w-10 shrink-0 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.borderColor} onChange={e => updateThemeSetting('borderColor', e.target.value)} />
+                                                <input type="text" className="flex-1 min-w-0 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.borderColor} onChange={e => updateThemeSetting('borderColor', e.target.value)} />
                                             </div>
                                         </div>
                                     </div>
@@ -686,15 +686,15 @@ export default function BrandingPage() {
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Tło Pól Input</label>
                                             <div className="flex gap-2">
-                                                <input type="color" className="h-10 w-10 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.inputBackgroundColor} onChange={e => updateThemeSetting('inputBackgroundColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.inputBackgroundColor} onChange={e => updateThemeSetting('inputBackgroundColor', e.target.value)} />
+                                                <input type="color" className="h-10 w-10 shrink-0 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.inputBackgroundColor} onChange={e => updateThemeSetting('inputBackgroundColor', e.target.value)} />
+                                                <input type="text" className="flex-1 min-w-0 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.inputBackgroundColor} onChange={e => updateThemeSetting('inputBackgroundColor', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Tekst w Polach</label>
                                             <div className="flex gap-2">
-                                                <input type="color" className="h-10 w-10 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.inputTextColor} onChange={e => updateThemeSetting('inputTextColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.inputTextColor} onChange={e => updateThemeSetting('inputTextColor', e.target.value)} />
+                                                <input type="color" className="h-10 w-10 shrink-0 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.inputTextColor} onChange={e => updateThemeSetting('inputTextColor', e.target.value)} />
+                                                <input type="text" className="flex-1 min-w-0 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.inputTextColor} onChange={e => updateThemeSetting('inputTextColor', e.target.value)} />
                                             </div>
                                         </div>
                                     </div>
@@ -707,22 +707,22 @@ export default function BrandingPage() {
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Sukces (Success)</label>
                                             <div className="flex gap-2">
-                                                <input type="color" className="h-10 w-10 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.successColor} onChange={e => updateThemeSetting('successColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.successColor} onChange={e => updateThemeSetting('successColor', e.target.value)} />
+                                                <input type="color" className="h-10 w-10 shrink-0 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.successColor} onChange={e => updateThemeSetting('successColor', e.target.value)} />
+                                                <input type="text" className="flex-1 min-w-0 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.successColor} onChange={e => updateThemeSetting('successColor', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Ostrzeżenie (Warning)</label>
                                             <div className="flex gap-2">
-                                                <input type="color" className="h-10 w-10 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.warningColor} onChange={e => updateThemeSetting('warningColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.warningColor} onChange={e => updateThemeSetting('warningColor', e.target.value)} />
+                                                <input type="color" className="h-10 w-10 shrink-0 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.warningColor} onChange={e => updateThemeSetting('warningColor', e.target.value)} />
+                                                <input type="text" className="flex-1 min-w-0 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.warningColor} onChange={e => updateThemeSetting('warningColor', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Błąd (Error)</label>
                                             <div className="flex gap-2">
-                                                <input type="color" className="h-10 w-10 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.errorColor} onChange={e => updateThemeSetting('errorColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.errorColor} onChange={e => updateThemeSetting('errorColor', e.target.value)} />
+                                                <input type="color" className="h-10 w-10 shrink-0 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.errorColor} onChange={e => updateThemeSetting('errorColor', e.target.value)} />
+                                                <input type="text" className="flex-1 min-w-0 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.errorColor} onChange={e => updateThemeSetting('errorColor', e.target.value)} />
                                             </div>
                                         </div>
                                     </div>
@@ -735,25 +735,25 @@ export default function BrandingPage() {
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Admin (Kolor)</label>
                                             <div className="flex gap-2">
-                                                <input type="color" className="h-10 w-10 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.adminColor} onChange={e => updateThemeSetting('adminColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.adminColor} onChange={e => updateThemeSetting('adminColor', e.target.value)} />
+                                                <input type="color" className="h-10 w-10 shrink-0 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.adminColor} onChange={e => updateThemeSetting('adminColor', e.target.value)} />
+                                                <input type="text" className="flex-1 min-w-0 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.adminColor} onChange={e => updateThemeSetting('adminColor', e.target.value)} />
                                             </div>
                                             <label className="block text-sm font-medium text-text mt-2 mb-1">Admin (Tło)</label>
                                             <div className="flex gap-2">
-                                                <input type="color" className="h-10 w-10 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.adminBackgroundColor} onChange={e => updateThemeSetting('adminBackgroundColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.adminBackgroundColor} onChange={e => updateThemeSetting('adminBackgroundColor', e.target.value)} />
+                                                <input type="color" className="h-10 w-10 shrink-0 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.adminBackgroundColor} onChange={e => updateThemeSetting('adminBackgroundColor', e.target.value)} />
+                                                <input type="text" className="flex-1 min-w-0 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.adminBackgroundColor} onChange={e => updateThemeSetting('adminBackgroundColor', e.target.value)} />
                                             </div>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Terapeuta (Kolor)</label>
                                             <div className="flex gap-2">
-                                                <input type="color" className="h-10 w-10 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.therapistColor} onChange={e => updateThemeSetting('therapistColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.therapistColor} onChange={e => updateThemeSetting('therapistColor', e.target.value)} />
+                                                <input type="color" className="h-10 w-10 shrink-0 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.therapistColor} onChange={e => updateThemeSetting('therapistColor', e.target.value)} />
+                                                <input type="text" className="flex-1 min-w-0 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.therapistColor} onChange={e => updateThemeSetting('therapistColor', e.target.value)} />
                                             </div>
                                             <label className="block text-sm font-medium text-text mt-2 mb-1">Terapeuta (Tło)</label>
                                             <div className="flex gap-2">
-                                                <input type="color" className="h-10 w-10 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.therapistBackgroundColor} onChange={e => updateThemeSetting('therapistBackgroundColor', e.target.value)} />
-                                                <input type="text" className="flex-1 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.therapistBackgroundColor} onChange={e => updateThemeSetting('therapistBackgroundColor', e.target.value)} />
+                                                <input type="color" className="h-10 w-10 shrink-0 border border-border bg-input-bg rounded-lg cursor-pointer p-0.5" value={currentPalette.therapistBackgroundColor} onChange={e => updateThemeSetting('therapistBackgroundColor', e.target.value)} />
+                                                <input type="text" className="flex-1 min-w-0 p-2 border border-border rounded-lg uppercase bg-input-bg text-input-text font-mono text-sm" value={currentPalette.therapistBackgroundColor} onChange={e => updateThemeSetting('therapistBackgroundColor', e.target.value)} />
                                             </div>
                                         </div>
                                     </div>

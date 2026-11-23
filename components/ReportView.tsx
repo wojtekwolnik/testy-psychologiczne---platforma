@@ -717,7 +717,7 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                                     return (
                                         <div key={question.id} className="text-sm border-b border-border/40 pb-3">
                                             <p className="font-semibold text-text leading-snug">
-                                                {number}. <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(question.text) }} />
+                                                {number}. <span dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(question.text.replace(/^\s*\d+[\.\)]\s*/, '')) }} />
                                             </p>
                                             <div className="flex flex-wrap items-center justify-between gap-2 pl-4 mt-1.5">
                                                 <p className="text-primary font-medium text-xs sm:text-sm">
