@@ -231,13 +231,15 @@ export interface BrandingSettings {
   reportDisclaimerEnabled?: boolean;
   reportDisclaimerText?: string;
 
-  // Terms of Testing (Warunki wykonywania badań)
+  // Terms of Testing (Warunki wykonywania badań) & Privacy Policy (RODO)
   termsOfTestingTitle?: string;
   termsOfTestingSummary?: string;
   termsOfTestingContent?: string;
   requireTermsConsent?: boolean;
   termsConsentCheckboxText?: string;
   clientThankYouSafetyNote?: string;
+  privacyPolicyTitle?: string;
+  privacyPolicyContent?: string;
 
   aiSettings: {
     enabled: boolean;

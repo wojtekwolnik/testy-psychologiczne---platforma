@@ -8,7 +8,7 @@ import { validateAccessCode } from '@/app/actions/accessCodeActions';
 import type { Test, ClientAnswer, Question, TestResult } from './types';
 import DOMPurify from 'isomorphic-dompurify';
 import { ClientThankYou } from './ClientThankYou';
-import { BrandingContext, DEFAULT_TERMS_OF_TESTING_TITLE } from '@/contexts/BrandingContext';
+import { BrandingContext, DEFAULT_PRIVACY_POLICY_TITLE, DEFAULT_TERMS_OF_TESTING_TITLE } from '@/contexts/BrandingContext';
 import TermsOfTestingModal from './TermsOfTestingModal';
 
 interface ClientTestViewProps {
@@ -44,6 +44,7 @@ export default function ClientTestView(props: ClientTestViewProps) {
     const [highlightedUnansweredIds, setHighlightedUnansweredIds] = useState<string[]>([]);
     const [restoredBannerVisible, setRestoredBannerVisible] = useState(false);
     const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+    const [termsModalTab, setTermsModalTab] = useState<'terms' | 'privacy'>('terms');
 
     const draftStorageKey = clientCode ? `rm_test_draft_${testId ? `${testId}_` : ''}${clientCode}` : '';
     const legacyDraftStorageKey = clientCode ? `rm_test_draft_${clientCode}` : '';
@@ -565,13 +566,27 @@ export default function ClientTestView(props: ClientTestViewProps) {
                     </form>
                 </div>
 
-                <footer className="mt-5 text-center text-xs text-text-muted">
+                <footer className="mt-5 text-center text-xs text-text-muted flex flex-wrap items-center justify-center gap-3">
                     <button
                         type="button"
-                        onClick={() => setIsTermsModalOpen(true)}
+                        onClick={() => {
+                            setTermsModalTab('terms');
+                            setIsTermsModalOpen(true);
+                        }}
                         className="text-primary hover:underline font-semibold opacity-80 hover:opacity-100 transition-opacity"
                     >
                         {branding.termsOfTestingTitle || DEFAULT_TERMS_OF_TESTING_TITLE}
+                    </button>
+                    <span className="opacity-40">&bull;</span>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setTermsModalTab('privacy');
+                            setIsTermsModalOpen(true);
+                        }}
+                        className="text-primary hover:underline font-semibold opacity-80 hover:opacity-100 transition-opacity"
+                    >
+                        {branding.privacyPolicyTitle || DEFAULT_PRIVACY_POLICY_TITLE}
                     </button>
                 </footer>
             </div>
@@ -579,6 +594,7 @@ export default function ClientTestView(props: ClientTestViewProps) {
             <TermsOfTestingModal
                 isOpen={isTermsModalOpen}
                 onClose={() => setIsTermsModalOpen(false)}
+                initialTab={termsModalTab}
             />
         </div>
     );

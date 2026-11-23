@@ -70,6 +70,39 @@ export const DEFAULT_CLIENT_THANK_YOU_SAFETY_NOTE =
 export const DEFAULT_REPORT_DISCLAIMER_TEXT =
   'Informacja metodologiczna: Wyniki niniejszego kwestionariusza mają charakter pomocniczy, przesiewowy i orientacyjny. Stanowią one materiał wspierający pracę ze specjalistą i nie zastępują pełnej diagnozy klinicznej ani lekarskiej.';
 
+export const DEFAULT_PRIVACY_POLICY_TITLE = 'Polityka prywatności i RODO';
+
+export const DEFAULT_PRIVACY_POLICY_CONTENT = `<h3>1. Zasada 100% Anonimowości Osoby Badanej w Systemie Testowym (Privacy by Design)</h3>
+<p>Platforma diagnostyczna <strong>Real Moment</strong> (<code>testy.realmoment.pl</code>) została zaprojektowana zgodnie z zasadą minimalizacji danych oraz <em>Privacy by Design</em> (art. 25 RODO). System testowy <strong>nie pobiera, nie przetwarza ani nie przechowuje danych osobowych bezpośrednich</strong> osoby wypełniającej kwestionariusz — podczas badania nie są wymagane ani zbierane informacje takie jak imię, nazwisko, adres e-mail, numer telefonu, adres zamieszkania czy numer PESEL.</p>
+<p>Jedynym identyfikatorem sesji badawczej w bazie danych systemu jest <strong>losowy, jednorazowy kod dostępu</strong> (np. <code>AC-XXXXXXXX</code>) wygenerowany przez prowadzącego specjalistę (psychologa, psychoterapeutę, terapeutę lub coacha). Ewentualne powiązanie przekazanego kodu dostępu z konkretną osobą badaną znajduje się wyłącznie w chronionej dokumentacji gabinetowej prowadzonej przez specjalistę poza publicznym interfejsem platformy testowej.</p>
+
+<h3>2. Bezpieczeństwo Techniczne, Szyfrowanie i Brak Śledzenia Marketingowego</h3>
+<ul>
+  <li>Cała komunikacja pomiędzy przeglądarką osoby badanej oraz specjalisty a serwerem platformy odbywa się wyłącznie za pośrednictwem szyfrowanego połączenia <strong>SSL/TLS (HTTPS)</strong>.</li>
+  <li>Platforma testowa <strong>nie wykorzystuje zewnętrznych plików cookies o charakterze reklamowym, marketingowym ani profilującym</strong> (brak pikseli śledzących, Google Ads, Meta/Facebook Pixel itp.).</li>
+  <li>W przeglądarce osoby badanej wykorzystywana jest wyłącznie lokalna pamięć techniczna (<code>localStorage</code> / <code>sessionStorage</code>) służąca do tymczasowego auto-zapisu postępu wypełnianego kwestionariusza na wypadek przypadkowego odświeżenia lub zamknięcia karty. Dane te są automatycznie usuwane z przeglądarki natychmiast po przesłaniu wypełnionego testu.</li>
+</ul>
+
+<h3>3. Okres Przechowywania Danych (Automatyczna Retencja 60 Dni)</h3>
+<p>Zanonimizowane wyniki wypełnionych kwestionariuszy oraz wygasłe lub wykorzystane kody dostępu są przechowywane w bazie danych platformy maksymalnie przez okres <strong>60 dni</strong> od dnia ukończenia badania lub wygaśnięcia kodu. Po upływie 60 dni rekordy wyników oraz kodów dostępu są <strong>automatycznie i bezpowrotnie usuwane</strong> z bazy danych w ramach cyklicznych zadań czyszczących (<em>Data Retention Policy</em>).</p>
+
+<h3>4. Administrator Danych Osobowych, Podstawy Prawne RODO i Prawa Użytkowników</h3>
+<p>Właścicielem serwisu oraz Administratorem danych osobowych przetwarzanych w związku z funkcjonowaniem platformy (w szczególności danych kont personelu/specjalistów oraz technicznych logów bezpieczeństwa serwera) jest:</p>
+<ul>
+  <li><strong>Nazwa podmiotu:</strong> Real Moment Wojciech Wolnik</li>
+  <li><strong>Adres e-mail kontaktowy:</strong> <a href="mailto:info@realmoment.pl">info@realmoment.pl</a></li>
+  <li><strong>Telefon kontaktowy:</strong> +48 780 922 020</li>
+  <li><strong>Serwis główny:</strong> <a href="https://realmoment.pl" target="_blank" rel="noopener noreferrer">https://realmoment.pl</a></li>
+</ul>
+<p><strong>Cele i podstawy prawne przetwarzania (RODO):</strong></p>
+<ul>
+  <li><strong>Realizacja badania kwestionariuszowego przez osobę badaną:</strong> odbywa się w formie zanonimizowanej przy użyciu jednorazowego kodu dostępu za dobrowolną zgodą osoby badanej przed rozpoczęciem testu.</li>
+  <li><strong>Obsługa kont specjalistów (terapeutów, psychologów, coachów i administratorów):</strong> niezbędność do wykonania umowy o świadczenie usług drogą elektroniczną i utrzymania konta w systemie (art. 6 ust. 1 lit. b RODO).</li>
+  <li><strong>Bezpieczeństwo teleinformatyczne i ochrona przed nadużyciami:</strong> prawnie uzasadniony interes Administratora polegający na zapewnieniu bezpieczeństwa systemu (art. 6 ust. 1 lit. f RODO).</li>
+</ul>
+<p><strong>Odbiorcy danych:</strong> Dane przechowywane są na zabezpieczonej infrastrukturze serwerowej w Europejskim Obszarze Gospodarczym (UE). Jeżeli specjalista korzysta w panelu raportu z opcjonalnego narzędzia wspomagającej syntezy AI, do zewnętrznego modelu językowego przekazywane są wyłącznie zanonimizowane wartości punktowe skal — bez żadnych danych identyfikujących osobę badaną.</p>
+<p><strong>Prawa osób, których dane dotyczą:</strong> Zgodnie z przepisami RODO (art. 15–22) każdej osobie, której dane osobowe są przetwarzane, przysługuje prawo dostępu do swoich danych oraz otrzymania ich kopii, prawo do sprostowania danych, usunięcia danych („prawo do bycia zapomnianym”), ograniczenia przetwarzania, wniesienia sprzeciwu, a także prawo wniesienia skargi do organu nadzorczego — <strong>Prezesa Urzędu Ochrony Danych Osobowych (PUODO)</strong>, ul. Stawki 2, 00-193 Warszawa. Wszelkie pytania dotyczące prywatności można kierować na adres: <strong>info@realmoment.pl</strong>. Pełna polityka prywatności serwisu głównego dostępna jest również pod adresem: <a href="https://realmoment.pl/polityka-prywatnosci/" target="_blank" rel="noopener noreferrer">https://realmoment.pl/polityka-prywatnosci/</a>.</p>`;
+
 // --- Base Settings (Real Moment - realmoment.pl) --- //
 const baseSettings = {
   appName: 'Real Moment',
@@ -86,6 +119,8 @@ const baseSettings = {
   requireTermsConsent: true,
   termsConsentCheckboxText: DEFAULT_TERMS_CONSENT_CHECKBOX_TEXT,
   clientThankYouSafetyNote: DEFAULT_CLIENT_THANK_YOU_SAFETY_NOTE,
+  privacyPolicyTitle: DEFAULT_PRIVACY_POLICY_TITLE,
+  privacyPolicyContent: DEFAULT_PRIVACY_POLICY_CONTENT,
   fontFamily: `'Jost', system-ui, sans-serif`,
   borderRadius: 0.85,
   boxShadow: '0 10px 30px -5px rgba(20, 22, 29, 0.35)',

@@ -4,6 +4,8 @@ import React, { useContext, useState, useEffect } from 'react';
 import {
     BrandingContext,
     DEFAULT_CLIENT_THANK_YOU_SAFETY_NOTE,
+    DEFAULT_PRIVACY_POLICY_CONTENT,
+    DEFAULT_PRIVACY_POLICY_TITLE,
     DEFAULT_REPORT_DISCLAIMER_TEXT,
     DEFAULT_TERMS_CONSENT_CHECKBOX_TEXT,
     DEFAULT_TERMS_OF_TESTING_CONTENT,
@@ -185,7 +187,7 @@ export default function BrandingPage() {
                         <div className="flex items-center justify-center gap-2"><FaGlobe /> Portal Klienta</div>
                     </Tab>
                     <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm leading-5 transition-colors outline-none', selected ? 'bg-primary shadow-md text-primary-contrast font-bold' : 'text-text-muted hover:bg-background/60 hover:text-text font-medium')}>
-                        <div className="flex items-center justify-center gap-2"><FaAlignLeft /> Warunki Badań</div>
+                        <div className="flex items-center justify-center gap-2"><FaAlignLeft /> Warunki i RODO</div>
                     </Tab>
                     <Tab className={({ selected }) => classNames('w-full rounded-lg py-2.5 text-sm leading-5 transition-colors outline-none', selected ? 'bg-primary shadow-md text-primary-contrast font-bold' : 'text-text-muted hover:bg-background/60 hover:text-text font-medium')}>
                         <div className="flex items-center justify-center gap-2"><FaPalette /> Kolorystyka</div>
@@ -344,11 +346,15 @@ export default function BrandingPage() {
                     <Tab.Panel className="bg-surface border border-border p-6 rounded-2xl shadow-lg space-y-6">
                         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
                             <div>
-                                <h2 className="text-xl font-bold text-text">Warunki wykonywania badań i zgody klienta</h2>
+                                <h2 className="text-xl font-bold text-text">Warunki wykonywania badań oraz Polityka Prywatności i RODO</h2>
                                 <p className="text-xs text-text-muted mt-1">
-                                    Zarządzaj treścią zasad badania wyświetlanych przed startem testu, w oknie modalnym, na podstronie{' '}
+                                    Zarządzaj treścią zasad badania i klauzul RODO wyświetlanych przed startem testu, w oknie modalnym, na podstronach{' '}
                                     <a href="/warunki-badania" target="_blank" rel="noopener noreferrer" className="text-primary underline">
                                         /warunki-badania
+                                    </a>{' '}
+                                    i{' '}
+                                    <a href="/polityka-prywatnosci" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                                        /polityka-prywatnosci
                                     </a>{' '}
                                     oraz w stopce raportów PDF.
                                 </p>
@@ -366,11 +372,13 @@ export default function BrandingPage() {
                                         clientThankYouSafetyNote: DEFAULT_CLIENT_THANK_YOU_SAFETY_NOTE,
                                         reportDisclaimerEnabled: true,
                                         reportDisclaimerText: DEFAULT_REPORT_DISCLAIMER_TEXT,
+                                        privacyPolicyTitle: DEFAULT_PRIVACY_POLICY_TITLE,
+                                        privacyPolicyContent: DEFAULT_PRIVACY_POLICY_CONTENT,
                                     }));
                                 }}
                                 className="px-3.5 py-2 text-xs font-semibold bg-background border border-border hover:border-primary text-text rounded-lg transition-colors"
                             >
-                                Przywróć domyślną treść warunków
+                                Przywróć domyślną treść warunków i RODO
                             </button>
                         </div>
 
@@ -470,6 +478,37 @@ export default function BrandingPage() {
                                         className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text text-sm"
                                         value={localSettings.reportDisclaimerText ?? DEFAULT_REPORT_DISCLAIMER_TEXT}
                                         onChange={e => updateSetting('reportDisclaimerText', e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="pt-6 border-t border-border space-y-5">
+                                <div>
+                                    <h3 className="text-lg font-bold text-text">Polityka Prywatności i RODO (/polityka-prywatnosci)</h3>
+                                    <p className="text-xs text-text-muted mt-0.5">
+                                        Treść wyświetlana w zakładce „Polityka prywatności i RODO” w stopce Portalu Klienta oraz pod adresem{' '}
+                                        <a href="/polityka-prywatnosci" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                                            /polityka-prywatnosci
+                                        </a>
+                                        .
+                                    </p>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-text mb-1">
+                                        Tytuł dokumentu Polityki Prywatności i RODO
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="w-full p-2.5 border border-border rounded-lg bg-input-bg text-input-text"
+                                        value={localSettings.privacyPolicyTitle ?? DEFAULT_PRIVACY_POLICY_TITLE}
+                                        onChange={e => updateSetting('privacyPolicyTitle', e.target.value)}
+                                    />
+                                </div>
+                                <div>
+                                    <RichTextInput
+                                        label="Pełna treść „Polityka prywatności i RODO” (/polityka-prywatnosci)"
+                                        value={localSettings.privacyPolicyContent ?? DEFAULT_PRIVACY_POLICY_CONTENT}
+                                        onChange={val => updateSetting('privacyPolicyContent', val)}
                                     />
                                 </div>
                             </div>

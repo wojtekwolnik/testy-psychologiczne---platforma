@@ -18,7 +18,7 @@ async function run() {
         console.log('✅ [1/6] Strona główna Portalu Klienta (/): HTTP 200, obecny branding i link do Warunków badań.');
     }
 
-    // 2. Podstrona Warunków wykonywania badań (/warunki-badania)
+    // 2. Podstrony prawne (/warunki-badania oraz /polityka-prywatnosci)
     {
         const res = await fetch(`${BASE_URL}/warunki-badania`);
         assert.equal(res.status, 200, 'Podstrona /warunki-badania musi zwracać HTTP 200');
@@ -27,7 +27,15 @@ async function run() {
             html.includes('Charakter pomocniczy i przesiewowy') || html.includes('Warunki wykonywania badań'),
             'Podstrona /warunki-badania musi zawierać treść warunków badań'
         );
-        console.log('✅ [2/6] Podstrona /warunki-badania: HTTP 200, pełna treść warunków badań dostępna.');
+
+        const privRes = await fetch(`${BASE_URL}/polityka-prywatnosci`);
+        assert.equal(privRes.status, 200, 'Podstrona /polityka-prywatnosci musi zwracać HTTP 200');
+        const privHtml = await privRes.text();
+        assert.ok(
+            privHtml.includes('Real Moment Wojciech Wolnik') && privHtml.includes('Polityka prywatności'),
+            'Podstrona /polityka-prywatnosci musi zawierać dane administratora (Real Moment Wojciech Wolnik)'
+        );
+        console.log('✅ [2/6] Podstrony /warunki-badania oraz /polityka-prywatnosci (RODO): HTTP 200, pełna treść dostępna.');
     }
 
     // 3. Ikony Favicon (/favicon-realmoment.png oraz /icon.png)

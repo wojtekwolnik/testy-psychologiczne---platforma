@@ -4,6 +4,7 @@ import { fetchPublicTestForClient } from '@/app/actions/testActions';
 import { type Test } from './types';
 import {
   BrandingContext,
+  DEFAULT_PRIVACY_POLICY_TITLE,
   DEFAULT_TERMS_CONSENT_CHECKBOX_TEXT,
   DEFAULT_TERMS_OF_TESTING_SUMMARY,
   DEFAULT_TERMS_OF_TESTING_TITLE,
@@ -25,9 +26,11 @@ const ClientTestConfirmationPage: React.FC = () => {
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
   const [consentError, setConsentError] = useState(false);
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+  const [termsModalTab, setTermsModalTab] = useState<'terms' | 'privacy'>('terms');
 
   const requireConsent = branding.requireTermsConsent !== false;
   const termsTitle = branding.termsOfTestingTitle || DEFAULT_TERMS_OF_TESTING_TITLE;
+  const privacyTitle = branding.privacyPolicyTitle || DEFAULT_PRIVACY_POLICY_TITLE;
   const termsSummary = branding.termsOfTestingSummary || DEFAULT_TERMS_OF_TESTING_SUMMARY;
   const rawCheckboxText = branding.termsConsentCheckboxText || DEFAULT_TERMS_CONSENT_CHECKBOX_TEXT;
 
@@ -200,19 +203,34 @@ const ClientTestConfirmationPage: React.FC = () => {
         </div>
       </div>
 
-      <footer className="text-center text-xs text-text-muted space-y-1 pb-4">
+      <footer className="text-center text-xs text-text-muted flex flex-wrap items-center justify-center gap-3 pb-4">
         <button
           type="button"
-          onClick={() => setIsTermsModalOpen(true)}
+          onClick={() => {
+            setTermsModalTab('terms');
+            setIsTermsModalOpen(true);
+          }}
           className="text-primary hover:underline font-semibold"
         >
           {termsTitle}
+        </button>
+        <span className="opacity-40">&bull;</span>
+        <button
+          type="button"
+          onClick={() => {
+            setTermsModalTab('privacy');
+            setIsTermsModalOpen(true);
+          }}
+          className="text-primary hover:underline font-semibold"
+        >
+          {privacyTitle}
         </button>
       </footer>
 
       <TermsOfTestingModal
         isOpen={isTermsModalOpen}
         onClose={() => setIsTermsModalOpen(false)}
+        initialTab={termsModalTab}
       />
     </div>
   );

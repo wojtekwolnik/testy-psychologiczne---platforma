@@ -3,7 +3,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { validateAccessCode } from '@/app/actions/accessCodeActions';
-import { BrandingContext, DEFAULT_TERMS_OF_TESTING_TITLE } from '@/contexts/BrandingContext';
+import { BrandingContext, DEFAULT_PRIVACY_POLICY_TITLE, DEFAULT_TERMS_OF_TESTING_TITLE } from '@/contexts/BrandingContext';
 import { SpinnerIcon } from './common/Icons';
 import DOMPurify from 'isomorphic-dompurify';
 import TermsOfTestingModal from './TermsOfTestingModal';
@@ -13,6 +13,7 @@ const ClientCodeEntry: React.FC = () => {
     const [isClientLoading, setIsClientLoading] = useState(false);
     const [clientError, setClientError] = useState('');
     const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+    const [termsModalTab, setTermsModalTab] = useState<'terms' | 'privacy'>('terms');
 
     const router = useRouter();
     const { branding } = useContext(BrandingContext);
@@ -104,13 +105,27 @@ const ClientCodeEntry: React.FC = () => {
                 <p className="opacity-65">
                     <span className="font-bold">Bezpieczeństwo i Zgodność:</span> Wszystkie dane są szyfrowane i przetwarzane zgodnie z RODO.
                 </p>
-                <div className="flex items-center justify-center gap-4">
+                <div className="flex flex-wrap items-center justify-center gap-3">
                     <button
                         type="button"
-                        onClick={() => setIsTermsModalOpen(true)}
+                        onClick={() => {
+                            setTermsModalTab('terms');
+                            setIsTermsModalOpen(true);
+                        }}
                         className="text-primary hover:underline font-semibold opacity-90 hover:opacity-100 transition-opacity"
                     >
                         {branding.termsOfTestingTitle || DEFAULT_TERMS_OF_TESTING_TITLE}
+                    </button>
+                    <span className="opacity-40">&bull;</span>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setTermsModalTab('privacy');
+                            setIsTermsModalOpen(true);
+                        }}
+                        className="text-primary hover:underline font-semibold opacity-90 hover:opacity-100 transition-opacity"
+                    >
+                        {branding.privacyPolicyTitle || DEFAULT_PRIVACY_POLICY_TITLE}
                     </button>
                 </div>
             </footer>
@@ -118,6 +133,7 @@ const ClientCodeEntry: React.FC = () => {
             <TermsOfTestingModal
                 isOpen={isTermsModalOpen}
                 onClose={() => setIsTermsModalOpen(false)}
+                initialTab={termsModalTab}
             />
         </div>
     );
