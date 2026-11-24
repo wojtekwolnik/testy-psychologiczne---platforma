@@ -68,7 +68,7 @@ Część 2;Jak często odczuwasz zmęczenie?;multiple-choice;Napięcie;NIE;Nigdy
             <strong>„Wygeneruj równe progi”</strong> (od 0 do Max) albo <strong>„Od Min do Max”</strong> (np. 24–120 pkt), a także ręcznie dodawać i edytować opisy interpretacyjne każdego poziomu.
           </li>
           <li>
-            <strong>Wersjonowanie (v1, v2...):</strong> Przycisk <strong>„Zapisz jako nową wersję (v+1)”</strong> tworzy nową wersję testu z tym samym identyfikatorem kanonicznym, chroniąc historyczne wyniki powiązane ze starszą wersją.
+            <strong>Wersjonowanie (v1, v2...) oraz Duplikowanie:</strong> Przycisk <strong>„Zapisz jako nową wersję (v+1)”</strong> w edytorze tworzy nową wersję testu z tym samym identyfikatorem kanonicznym (chroniąc historyczne wyniki), natomiast przycisk <strong>„Duplikuj”</strong> na liście testów pozwala jednym kliknięciem sklonować cały test (wraz ze skalami, progami i pytaniami) jako nowy, niezależny <em>Szkic</em>. Analogiczny przycisk duplikowania dostępny jest również przy szablonach w <strong>Konfiguracji PDF</strong>.
           </li>
         </ul>
       </DocumentationSection>
@@ -98,19 +98,19 @@ Część 2;Jak często odczuwasz zmęczenie?;multiple-choice;Napięcie;NIE;Nigdy
         </ul>
       </DocumentationSection>
 
-      <DocumentationSection title="3. Analiza Raportów, Filtrowanie Odpowiedzi po Skali i Porównywanie Wyników (Pre / Post)">
+      <DocumentationSection title="3. Analiza Raportów, Wskaźniki Stylu Odpowiedzi, Dwa Tryby PDF i Porównywanie (Pre / Post)">
         <ul className="list-disc pl-5 space-y-2 text-sm">
+          <li>
+            <strong>Wskaźniki stylu i jakości odpowiedzi:</strong> W widoku raportu system automatycznie analizuje odpowiedzi osoby badanej pod kątem długich serii identycznych wyborów (<em>longstring</em>), tendencji centralnej (unikania deklaracji) oraz niespójności między pytaniami wprost a odwróconymi.
+          </li>
+          <li>
+            <strong>Dwa tryby eksportu PDF:</strong> Przycisk <strong>„PDF Gabinetowy (Pełny)”</strong> generuje pełny raport z notatkami roboczymi terapeuty i listą pytań, natomiast <strong>„PDF dla Klienta”</strong> tworzy bezpieczne podsumowanie profilu z neutralnymi opisami skal z klucza testu.
+          </li>
           <li>
             <strong>Filtrowanie i sortowanie odpowiedzi w raporcie:</strong> W widoku raportu kolumna <em>„Udzielone Odpowiedzi”</em> pozwala przefiltrować pytania po konkretnej skali psychometrycznej oraz posortować je według najwyżej punktowanych odpowiedzi (<code>↓ Najwyżej punktowane</code>).
           </li>
           <li>
-            <strong>Porównywanie dwóch badań (<code>⇄ Porównaj</code> — Pre-test / Post-test):</strong> W zakładce <strong>Wyniki</strong> oraz wewnątrz każdego raportu dostępny jest moduł porównawczy zestawiający dwa badania tego samego testu:
-            <ul className="list-disc pl-5 mt-1 space-y-1">
-              <li>podwójne wykresy słupkowe ze zmianą punktową i procentową (<code>Δ</code>) oraz oznaczeniem <strong>zmiany progu interpretacyjnego</strong>,</li>
-              <li>nakładany wykres radarowy dwóch pomiarów (Pre vs Post),</li>
-              <li>lista pytań, w których odpowiedź klienta zmieniła się między pierwszym a drugim badaniem,</li>
-              <li>przycisk <strong>„➕ Dołącz zestawienie Pre/Post do notatek raportu”</strong> wstawiający tabelę porównawczą wprost do interpretacji raportu i wydruku PDF.</li>
-            </ul>
+            <strong>Porównywanie dwóch badań (<code>⇄ Porównaj</code> — Pre-test / Post-test) i Raport Porównawczy PDF:</strong> W zakładce <strong>Wyniki</strong> oraz wewnątrz każdego raportu dostępny jest moduł porównawczy zestawiający dwa badania tego samego testu wraz z przyciskiem <strong>„📥 Pobierz Raport Porównawczy PDF”</strong> oraz <strong>„📥 Eksportuj do CSV”</strong> na liście wyników.
           </li>
         </ul>
       </DocumentationSection>

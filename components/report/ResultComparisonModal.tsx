@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
 import type { Test, TestResult, Scale } from '../types';
 import { resolveScaleLevel, isBigFiveFacetScale } from '@/lib/interpretationBuilder';
+import { BrandingContext } from '@/contexts/BrandingContext';
 import DOMPurify from 'isomorphic-dompurify';
 import { toast } from 'react-toastify';
 
@@ -171,12 +172,14 @@ export const ResultComparisonModal: React.FC<ResultComparisonModalProps> = ({
     test,
     onAppendComparisonToNotes,
 }) => {
+    const { branding } = useContext(BrandingContext);
     const [resultAId, setResultAId] = useState<string>('');
     const [resultBId, setResultBId] = useState<string>('');
     const [activeTab, setActiveTab] = useState<'scales' | 'radar' | 'questions'>('scales');
     const [scaleFilterMode, setScaleFilterMode] = useState<'all' | 'primary' | 'changed-level'>('all');
     const [onlyChangedAnswers, setOnlyChangedAnswers] = useState<boolean>(true);
     const [questionScaleFilter, setQuestionScaleFilter] = useState<string>('all');
+    const [isDownloadingPdf, setIsDownloadingPdf] = useState<boolean>(false);
 
     // Filter available results to same test (by testId or testTitle)
     const matchingResults = useMemo(() => {
@@ -340,6 +343,30 @@ export const ResultComparisonModal: React.FC<ResultComparisonModalProps> = ({
         });
 
         return `<p><br></p><p><strong>PORÓWNANIE WYNIKÓW (PRE-TEST vs POST-TEST): ${test.title}</strong></p><p>Badanie 1 (Pre): <strong>${labelA}</strong> &bull; Badanie 2 (Post): <strong>${labelB}</strong></p><ul>${lines.join('')}</ul>`;
+    };
+
+    const handleDownloadComparisonPdf = async () => {
+        if (!resultA || !resultB || !test || !branding) return;
+        setIsDownloadingPdf(true);
+        try {
+            const { generateComparisonPdf } = await import('@/lib/pdf/pdfGenerator');
+            const pdfBytes = await generateComparisonPdf(resultA, resultB, test, branding);
+            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            const safeA = (resultA.clientIdentifier || 'Pre').replace(/[^a-zA-Z0-9\-_]/g, '_');
+            const safeB = (resultB.clientIdentifier || 'Post').replace(/[^a-zA-Z0-9\-_]/g, '_');
+            link.download = `Raport-Porownawczy-${safeA}-vs-${safeB}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success('Wygenerowano raport porównawczy PDF!');
+        } catch (err) {
+            console.error('Błąd generowania raportu porównawczego PDF:', err);
+            toast.error('Nie udało się wygenerować raportu porównawczego PDF.');
+        } finally {
+            setIsDownloadingPdf(false);
+        }
     };
 
     const handleCopySummary = async () => {
@@ -766,6 +793,14 @@ export const ResultComparisonModal: React.FC<ResultComparisonModalProps> = ({
                 {/* Footer */}
                 <div className="px-6 py-4 bg-background/80 border-t border-border flex flex-wrap justify-between items-center gap-3">
                     <div className="flex flex-wrap items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={handleDownloadComparisonPdf}
+                            disabled={isDownloadingPdf}
+                            className="px-4 py-2 bg-primary text-primary-contrast font-bold rounded-xl text-xs hover:opacity-90 disabled:opacity-50 transition-opacity shadow-sm"
+                        >
+                            {isDownloadingPdf ? 'Generowanie PDF...' : '📥 Pobierz Raport Porównawczy PDF'}
+                        </button>
                         <button
                             type="button"
                             onClick={handleCopySummary}

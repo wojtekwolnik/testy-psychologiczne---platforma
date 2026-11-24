@@ -17,6 +17,7 @@ import {
     getBigFiveFacetParentDomain,
     getBigFiveDomainCode,
 } from '@/lib/interpretationBuilder';
+import { analyzeResponseQuality } from '@/lib/scoring/responseQualityAnalyzer';
 import { OnlineRadarChart, formatAiTextToHtml } from './report/ReportCharts';
 
 interface ReportViewProps {
@@ -42,6 +43,7 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
     const [answerSortHighFirst, setAnswerSortHighFirst] = useState<boolean>(false);
     const [sameTestResults, setSameTestResults] = useState<TestResult[]>([]);
     const [isComparisonOpen, setIsComparisonOpen] = useState<boolean>(false);
+    const [isQualityExpanded, setIsQualityExpanded] = useState<boolean>(false);
 
     useEffect(() => {
         if (!resultId) {
@@ -104,23 +106,28 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
         }
     };
 
-    const handleGeneratePdf = async () => {
+    const handleGeneratePdf = async (audience: 'therapist' | 'client' = 'therapist') => {
         if (!result || !test || !branding) return;
         setIsGenerating(true);
         try {
             const { generatePdf } = await import('@/lib/pdf/pdfGenerator');
             const templateToUse = pdfTemplates.find(t => t.id === selectedTemplate);
-            const pdfBytes = await generatePdf(result, test, branding, templateToUse, customInterpretation);
+            const pdfBytes = await generatePdf(result, test, branding, templateToUse, customInterpretation, { audience });
 
             const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            const safeFilename = `Raport-${(result.clientIdentifier || 'wynik').replace(/[^a-zA-Z0-9\-_]/g, '_')}.pdf`;
+            const suffix = audience === 'client' ? '-Dla-Klienta' : '-Pelny';
+            const safeFilename = `Raport-${(result.clientIdentifier || 'wynik').replace(/[^a-zA-Z0-9\-_]/g, '_')}${suffix}.pdf`;
             link.download = safeFilename;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            toast.success("Raport wygenerowany.");
+            toast.success(
+                audience === 'client'
+                    ? 'Wygenerowano skrócony raport PDF dla klienta.'
+                    : 'Wygenerowano pełny raport gabinetowy PDF.'
+            );
         } catch (err) {
             console.error("Błąd generowania PDF:", err);
             toast.error("Nie udało się wygenerować raportu PDF.");
@@ -156,6 +163,11 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
         test.sections.forEach(sec => sec.questions.forEach(q => map.set(q.id, q)));
         return map;
     }, [test]);
+
+    const qualityReport = useMemo(() => {
+        if (!test || !result) return null;
+        return analyzeResponseQuality(test, result.answers);
+    }, [test, result]);
 
     if (isLoading) return <div className="flex justify-center items-center h-screen text-text"><div>Ładowanie danych raportu...</div></div>;
     if (error) return <div className="p-8 text-center text-error font-semibold">{error}</div>;
@@ -563,15 +575,28 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                     </div>
 
                     <div className="bg-surface/90 border border-[var(--border-color)] p-6 rounded-2xl shadow-xl self-start sticky top-24">
-                        <div className="flex justify-between items-center border-b border-border pb-3 mb-4">
-                            <h3 className="text-xl font-semibold text-text">Opcje Raportu</h3>
-                            <button
-                                onClick={handleGeneratePdf}
-                                disabled={isGenerating}
-                                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-contrast font-bold rounded-xl shadow-md hover:opacity-90 disabled:opacity-50 transition-all text-sm"
-                            >
-                                <DownloadIcon /> {isGenerating ? 'Generowanie...' : 'Pobierz PDF'}
-                            </button>
+                        <div className="border-b border-border pb-4 mb-4">
+                            <h3 className="text-xl font-semibold text-text mb-3">Opcje Eksportu PDF</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => handleGeneratePdf('therapist')}
+                                    disabled={isGenerating}
+                                    className="flex items-center justify-center gap-2 px-3.5 py-2.5 bg-primary text-primary-contrast font-bold rounded-xl shadow-md hover:opacity-90 disabled:opacity-50 transition-all text-xs"
+                                    title="Pełny raport zawierający Twoje notatki robocze, syntezę oraz konfigurację szablonu"
+                                >
+                                    <DownloadIcon /> {isGenerating ? 'Generowanie...' : 'PDF Gabinetowy (Pełny)'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleGeneratePdf('client')}
+                                    disabled={isGenerating}
+                                    className="flex items-center justify-center gap-2 px-3.5 py-2.5 bg-surface border border-primary/40 text-primary font-bold rounded-xl hover:bg-primary/15 disabled:opacity-50 transition-all text-xs"
+                                    title="Bezpieczny wydruk dla osoby badanej: zawiera wykres profilu i neutralne opisy skal z klucza, bez prywatnych notatek terapeuty i bez surowej listy pytań"
+                                >
+                                    <DownloadIcon /> PDF dla Klienta
+                                </button>
+                            </div>
                         </div>
                         <div className="mb-4">
                             <label htmlFor="template-select" className="block text-xs font-medium text-text-muted mb-2">Szablon PDF</label>
@@ -580,6 +605,91 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                                 {pdfTemplates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                             </select>
                         </div>
+
+                        {/* Response Quality & Style Diagnostic Card */}
+                        {qualityReport && qualityReport.answeredQuestions > 0 && (
+                            <div className="mb-4 rounded-xl border border-border bg-background/60 overflow-hidden">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsQualityExpanded(prev => !prev)}
+                                    className="w-full p-3.5 flex items-center justify-between gap-2 text-left hover:bg-background/90 transition-colors"
+                                >
+                                    <div>
+                                        <span className="text-xs font-bold uppercase tracking-wider text-text-muted block">
+                                            Wskaźniki stylu odpowiedzi
+                                        </span>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <span
+                                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold border ${
+                                                    qualityReport.overallStatus === 'attention'
+                                                        ? 'bg-amber-500/15 text-amber-300 border-amber-500/40'
+                                                        : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
+                                                }`}
+                                            >
+                                                {qualityReport.overallStatus === 'attention'
+                                                    ? `⚠ Wymaga uwagi (${qualityReport.warnings.length})`
+                                                    : '✓ Spójny profil odpowiedzi'}
+                                            </span>
+                                            <span className="text-[11px] text-text-muted font-mono">
+                                                Seria max: {qualityReport.maxLongstring}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <span className="text-xs font-bold text-primary">
+                                        {isQualityExpanded ? 'Ukryj ▲' : 'Szczegóły ▼'}
+                                    </span>
+                                </button>
+
+                                {isQualityExpanded && (
+                                    <div className="px-3.5 pb-3.5 pt-2 border-t border-border/60 space-y-3 text-xs">
+                                        <div className="grid grid-cols-3 gap-2 text-center">
+                                            <div className="p-2 rounded-lg bg-surface border border-border">
+                                                <span className="block text-[10px] text-text-muted">Skrajne</span>
+                                                <strong className="text-sm font-mono text-text">
+                                                    {qualityReport.extremePercent}%
+                                                </strong>
+                                            </div>
+                                            <div className="p-2 rounded-lg bg-surface border border-border">
+                                                <span className="block text-[10px] text-text-muted">Środkowe</span>
+                                                <strong className="text-sm font-mono text-text">
+                                                    {qualityReport.neutralMiddlePercent}%
+                                                </strong>
+                                            </div>
+                                            <div className="p-2 rounded-lg bg-surface border border-border">
+                                                <span className="block text-[10px] text-text-muted">Najdłuższa seria</span>
+                                                <strong className="text-sm font-mono text-text">
+                                                    {qualityReport.maxLongstring} pyt.
+                                                </strong>
+                                            </div>
+                                        </div>
+
+                                        {qualityReport.warnings.length > 0 ? (
+                                            <div className="space-y-2">
+                                                {qualityReport.warnings.map(w => (
+                                                    <div
+                                                        key={w.id}
+                                                        className={`p-2.5 rounded-lg border ${
+                                                            w.severity === 'warning'
+                                                                ? 'bg-amber-500/10 border-amber-500/30 text-amber-200'
+                                                                : 'bg-blue-500/10 border-blue-500/30 text-blue-200'
+                                                        }`}
+                                                    >
+                                                        <p className="font-bold mb-0.5">{w.title}</p>
+                                                        <p className="text-[11px] opacity-90 leading-relaxed">
+                                                            {w.description}
+                                                        </p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-[11px] text-text-muted leading-relaxed">
+                                                Nie wykryto długich serii klikania jednej odpowiedzi (longstring), nadmiernej tendencji centralnej ani sprzeczności w pytaniach odwróconych.
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         <div className="flex items-center justify-between border-b border-border pb-3 my-4 gap-2">
                             <h3 className="text-lg font-semibold text-text">Udzielone Odpowiedzi</h3>
                             <button

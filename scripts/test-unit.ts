@@ -11,6 +11,7 @@ import {
 } from '../lib/interpretationBuilder';
 import { calculateTestScores, evaluateFormula } from '../lib/scoring/scoreCalculator';
 import { auditTestIntegrity } from '../lib/scoring/testAuditor';
+import { analyzeResponseQuality } from '../lib/scoring/responseQualityAnalyzer';
 import { getBigFiveSeedScales, getBigFiveSeedSections } from '../lib/bigFiveSync';
 import {
     getDass42SeedScales,
@@ -269,7 +270,69 @@ console.log('=== [WARSTWA 1] Testy jednostkowe silnika liczącego, audytora i kl
             assert.ok(resolved.description && resolved.description.length > 10, `Brak opisu interpretacyjnego dla ${scale.id} przy wyniku ${score}`);
         }
     }
-    console.log('✅ [6/6] Ciągłość wszystkich 39 skal (Wielka Piątka + DASS-42) dla każdego możliwego wyniku całkowitego: 100% pokrycia.');
+    console.log('✅ [6/7] Ciągłość wszystkich 39 skal (Wielka Piątka + DASS-42) dla każdego możliwego wyniku całkowitego: 100% pokrycia.');
 }
 
-console.log('\n🎉 WSZYSTKIE TESTY JEDNOSTKOWE I AUDYTOWE ZALICZONE (6/6)!');
+// 7. Test analizatora stylu i spójności odpowiedzi (analyzeResponseQuality)
+{
+    const dassCreate = getDass42TestCreateData();
+    const dassScalesRaw = getDass42SeedScales();
+    const dassSectionsRaw = getDass42SeedSections();
+
+    const dassTest: Test = {
+        id: 'test-dass-42',
+        canonicalId: dassCreate.canonicalId,
+        version: 1,
+        title: dassCreate.title,
+        description: dassCreate.description,
+        instructions: dassCreate.instructions,
+        status: 'PUBLISHED',
+        questionsPerPage: 14,
+        defaultTemplateId: null,
+        createdAt: new Date().toISOString(),
+        scales: dassScalesRaw.map(s => ({
+            id: s.id,
+            name: s.name,
+            type: 'standard',
+            maxScore: s.maxScore,
+            description: s.description,
+            levels: JSON.parse(s.levels),
+        })),
+        sections: dassSectionsRaw.map((sec, idx) => ({
+            id: `dass-sec-${idx}`,
+            title: sec.title,
+            questions: sec.questions.create.map((q, qIdx) => ({
+                id: `dass-q-${idx}-${qIdx}`,
+                text: q.text,
+                type: q.type as any,
+                isReversed: q.isReversed,
+                options: JSON.parse(q.options),
+                scoring: JSON.parse(q.scoring),
+            })),
+        })),
+    };
+
+    const allQ = dassTest.sections.flatMap(s => s.questions);
+    const straightLineAnswers: Record<string, string[]> = {};
+    allQ.forEach(q => {
+        straightLineAnswers[q.id] = [q.options[0].id];
+    });
+
+    const straightReport = analyzeResponseQuality(dassTest, straightLineAnswers);
+    assert.equal(straightReport.maxLongstring, 42);
+    assert.equal(straightReport.overallStatus, 'attention');
+    assert.ok(straightReport.warnings.some(w => w.id === 'longstring'));
+
+    const variedAnswers: Record<string, string[]> = {};
+    allQ.forEach((q, idx) => {
+        const optIdx = idx % 3 === 0 ? 1 : idx % 3 === 1 ? 2 : 0;
+        variedAnswers[q.id] = [q.options[optIdx].id];
+    });
+    const variedReport = analyzeResponseQuality(dassTest, variedAnswers);
+    assert.equal(variedReport.overallStatus, 'optimal');
+    assert.ok(variedReport.maxLongstring <= 2);
+
+    console.log('✅ [7/7] Analizator stylu i jakości odpowiedzi (analyzeResponseQuality): wykrywanie longstring i profilu spójnego działa bezbłędnie.');
+}
+
+console.log('\n🎉 WSZYSTKIE TESTY JEDNOSTKOWE I AUDYTOWE ZALICZONE (7/7)!');

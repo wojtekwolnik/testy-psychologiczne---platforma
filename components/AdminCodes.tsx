@@ -7,6 +7,7 @@ import { getUsers, UserData } from '@/app/actions/userActions';
 import { AccessCode, Test } from './types';
 import { ClipboardCopyIcon, TrashIcon, LinkIcon, PlusIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
+import AccessCodeQrModal from './common/AccessCodeQrModal';
 
 const AdminCodes = () => {
     const [codes, setCodes] = useState<(AccessCode & { therapistName?: string; therapistEmail?: string })[]>([]);
@@ -19,6 +20,7 @@ const AdminCodes = () => {
     const [reassignSuccess, setReassignSuccess] = useState<string>('');
     const [reassigningCode, setReassigningCode] = useState<string | null>(null);
     const [codeToDelete, setCodeToDelete] = useState<string | null>(null);
+    const [qrCodeTarget, setQrCodeTarget] = useState<AccessCode | null>(null);
 
     // Batch generator state
     const [selectedTestId, setSelectedTestId] = useState<string>('');
@@ -370,6 +372,13 @@ const AdminCodes = () => {
                                                         {copyLinkSuccess === code.code ? <span>Skopiowano link!</span> : <><LinkIcon className="w-4 h-4" /> Kopiuj link</>}
                                                     </button>
                                                     <button
+                                                        onClick={() => setQrCodeTarget(code)}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-surface hover:bg-border/30 text-text font-semibold rounded-lg transition-colors text-xs border border-border"
+                                                        title="Wyświetl kod QR na ekranie, aby klient mógł zeskanować go telefonem w gabinecie"
+                                                    >
+                                                        📱 Kod QR
+                                                    </button>
+                                                    <button
                                                         onClick={() => setCodeToDelete(code.code)}
                                                         className="flex items-center gap-1.5 px-3 py-1.5 bg-error/10 hover:bg-error/20 text-error font-semibold rounded-lg transition-colors text-xs border border-error/20"
                                                         title="Unieważnij ten kod"
@@ -397,6 +406,15 @@ const AdminCodes = () => {
                 title="Unieważnienie kodu"
                 message="Czy na pewno chcesz unieważnić ten kod dostępu? Zostanie on trwale usunięty z bazy."
                 confirmText="Unieważnij"
+            />
+            <AccessCodeQrModal
+                codeObj={qrCodeTarget}
+                testTitle={
+                    qrCodeTarget
+                        ? tests.find(t => t.id === qrCodeTarget.testId)?.title
+                        : undefined
+                }
+                onClose={() => setQrCodeTarget(null)}
             />
         </div>
     );

@@ -9,6 +9,7 @@ import { getUsers, UserData } from '@/app/actions/userActions';
 import { TestResult, Test, AccessCode } from './types';
 import { ChartBarIcon, TrashIcon, PlusIcon, ClipboardCopyIcon, LinkIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
+import AccessCodeQrModal from './common/AccessCodeQrModal';
 import ResultComparisonModal from './report/ResultComparisonModal';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -57,6 +58,7 @@ const TherapistDashboard = () => {
   const [codeToDelete, setCodeToDelete] = useState<string | null>(null);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [comparisonTarget, setComparisonTarget] = useState<TestResult | null>(null);
+  const [qrCodeTarget, setQrCodeTarget] = useState<AccessCode | null>(null);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -210,6 +212,63 @@ const TherapistDashboard = () => {
     setFilterTest('all');
     setFilterStartDate('');
     setFilterEndDate('');
+  };
+
+  const handleExportCsv = () => {
+    if (filteredResults.length === 0) return;
+
+    // Zbierz wszystkie klucze skal występujące w wyfiltrowanych wynikach
+    const scaleIds: string[] = [];
+    const scaleNamesMap = new Map<string, string>();
+    tests.forEach(t => {
+      (t.scales || []).forEach(s => {
+        if (!scaleNamesMap.has(s.id)) {
+          scaleNamesMap.set(s.id, `${s.name} (${s.id})`);
+        }
+      });
+    });
+
+    filteredResults.forEach(r => {
+      Object.keys(r.scores || {}).forEach(sid => {
+        if (!scaleIds.includes(sid)) {
+          scaleIds.push(sid);
+        }
+      });
+    });
+
+    const escapeCsvCell = (val: unknown): string => {
+      const str = val === null || val === undefined ? '' : String(val);
+      return `"${str.replace(/"/g, '""')}"`;
+    };
+
+    const headers = [
+      'Identyfikator Klienta (Kod)',
+      'Tytuł Testu',
+      'Wersja Testu',
+      'Data Ukończenia',
+      ...scaleIds.map(sid => scaleNamesMap.get(sid) || sid),
+    ];
+
+    const rows = filteredResults.map(r => {
+      const completedStr = new Date(r.completedAt).toLocaleString('pl-PL');
+      return [
+        escapeCsvCell(r.clientIdentifier),
+        escapeCsvCell(r.testTitle),
+        escapeCsvCell(`v${r.testVersion}`),
+        escapeCsvCell(completedStr),
+        ...scaleIds.map(sid => escapeCsvCell(r.scores?.[sid] ?? '')),
+      ].join(';');
+    });
+
+    const csvContent = '\uFEFF' + [headers.map(escapeCsvCell).join(';'), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    const dateStamp = new Date().toISOString().split('T')[0];
+    link.download = `Wyniki-Testow-RealMoment-${dateStamp}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const filteredResults = useMemo(() => {
@@ -399,6 +458,13 @@ const TherapistDashboard = () => {
                               {copyLinkSuccess === code.code ? <span>Skopiowano link!</span> : <><LinkIcon className="w-4 h-4" /> Kopiuj link</>}
                             </button>
                             <button
+                              onClick={() => setQrCodeTarget(code)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-surface hover:bg-border/30 text-text font-semibold rounded-lg transition-colors shadow-sm text-xs border border-border"
+                              title="Wyświetl kod QR na ekranie, aby klient mógł zeskanować go telefonem w gabinecie"
+                            >
+                              📱 Kod QR
+                            </button>
+                            <button
                               onClick={() => setCodeToDelete(code.code)}
                               className="flex items-center gap-1.5 px-3 py-1.5 bg-error/10 hover:bg-error/20 text-error font-semibold rounded-lg transition-colors shadow-sm text-xs border border-error/20"
                               title="Unieważnij ten kod"
@@ -418,9 +484,21 @@ const TherapistDashboard = () => {
 
         <div className="bg-surface/60 backdrop-blur-md rounded-2xl shadow-xl border border-border/50">
           <div className="p-6 bg-background/50 border-b border-border flex flex-col gap-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap justify-between items-center gap-3">
               <h2 className="text-xl font-semibold self-center">Ukończone testy</h2>
-              <button onClick={clearFilters} className="text-sm text-[var(--primary-color)] font-semibold hover:underline">Wyczyść filtry</button>
+              <div className="flex flex-wrap items-center gap-3">
+                {filteredResults.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleExportCsv}
+                    className="px-3.5 py-1.5 bg-primary/15 hover:bg-primary/25 text-primary border border-primary/30 rounded-xl text-xs font-bold transition-colors"
+                    title="Pobierz aktualnie wyfiltrowane, zanonimizowane wyniki jako arkusz CSV (kompatybilny z programem Excel)"
+                  >
+                    📥 Eksportuj do CSV ({filteredResults.length})
+                  </button>
+                )}
+                <button onClick={clearFilters} className="text-sm text-[var(--primary-color)] font-semibold hover:underline">Wyczyść filtry</button>
+              </div>
             </div>
             <p className="text-xs text-text-muted max-w-2xl -mt-2">Skorzystaj z poniższych filtrów, aby szybko wyszukać określone wyniki testów według identyfikatora klienta (kodu), rodzaju testu lub przedziału czasowego ukończenia.</p>
             <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end w-full">
@@ -588,6 +666,15 @@ const TherapistDashboard = () => {
               null
             : null
         }
+      />
+      <AccessCodeQrModal
+        codeObj={qrCodeTarget}
+        testTitle={
+          qrCodeTarget
+            ? tests.find(t => t.id === qrCodeTarget.testId)?.title
+            : undefined
+        }
+        onClose={() => setQrCodeTarget(null)}
       />
     </>
   );

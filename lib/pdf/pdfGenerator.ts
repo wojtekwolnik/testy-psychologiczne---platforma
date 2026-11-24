@@ -567,13 +567,20 @@ async function drawAiInterpretation(ctx: PdfContext, component: ReportComponent,
     await drawRichText(ctx, { id: 'temp-ai', type: 'RichText', options: { content } });
 }
 
+export interface GeneratePdfOptions {
+    audience?: 'therapist' | 'client';
+}
+
 export async function generatePdf(
     result: TestResult,
     test: Test,
     branding: BrandingSettings,
     template: PdfTemplate | undefined,
-    customInterpretation: string
+    customInterpretation: string,
+    options?: GeneratePdfOptions
 ): Promise<Uint8Array> {
+    const audience = options?.audience || 'therapist';
+    const isClientAudience = audience === 'client';
 
     const pdfDoc = await PDFDocument.create();
     pdfDoc.registerFontkit(fontkit);
@@ -606,16 +613,39 @@ export async function generatePdf(
     const font = regularFont;
 
     const hasCustomTemplate = Boolean(template && template.components && template.components.length > 0);
-    const hasCustomText = Boolean(customInterpretation && customInterpretation.replace(/<[^>]+>/g, '').trim().length > 0);
+    const effectiveCustomInterpretation = isClientAudience ? '' : customInterpretation;
+    const hasCustomText = Boolean(
+        effectiveCustomInterpretation && effectiveCustomInterpretation.replace(/<[^>]+>/g, '').trim().length > 0
+    );
 
-    const componentsToRender: ReportComponent[] = hasCustomTemplate ? template!.components : [
-        { id: 'def-h1', type: 'Header', options: { text: `Raport: ${test.title}` } },
-        { id: 'def-st', type: 'ScoresTable', title: 'Wyniki surowe', options: {} },
-        { id: 'def-barchart', type: 'BarChart', title: 'Profil podstawowy', options: { scaleIds: test.scales.filter(s => s.type === 'standard').map(s => s.id) } },
+    const baseComponents: ReportComponent[] = hasCustomTemplate ? template!.components : [
+        {
+            id: 'def-h1',
+            type: 'Header',
+            options: {
+                text: isClientAudience
+                    ? `Podsumowanie wyników dla Badanej Osoby: ${test.title}`
+                    : `Raport: ${test.title}`,
+            },
+        },
+        { id: 'def-st', type: 'ScoresTable', title: 'Zestawienie wyników skal', options: {} },
+        { id: 'def-barchart', type: 'BarChart', title: 'Profil wyników', options: { scaleIds: test.scales.filter(s => s.type === 'standard').map(s => s.id) } },
         hasCustomText
             ? { id: 'def-ai', type: 'AiInterpretation', title: 'Interpretacja wyników i zalecenia', options: {} }
-            : { id: 'def-interp', type: 'Interpretations', title: 'Szczegółowa interpretacja', options: {} },
+            : { id: 'def-interp', type: 'Interpretations', title: 'Opis wyników według klucza testu', options: {} },
     ];
+
+    // W wersji dla klienta ("client") pomijamy surowe odpowiedzi na pytania oraz prywatne notatki robocze,
+    // a w miejsce komponentu AiInterpretation podstawiamy neutralną interpretację z klucza testu.
+    const componentsToRender: ReportComponent[] = isClientAudience
+        ? baseComponents
+              .filter(c => c.type !== 'AnswersList')
+              .map(c =>
+                  c.type === 'AiInterpretation'
+                      ? { id: c.id, type: 'Interpretations', title: 'Opis wyników według klucza testu', options: {} }
+                      : c
+              )
+        : baseComponents;
 
     let customInterpretationRendered = false;
 
@@ -646,20 +676,20 @@ export async function generatePdf(
                 await drawAnswersList(ctx, component, result, test, branding);
                 break;
             case 'AiInterpretation':
-                await drawAiInterpretation(ctx, component, result, branding, customInterpretation);
+                await drawAiInterpretation(ctx, component, result, branding, effectiveCustomInterpretation);
                 customInterpretationRendered = true;
                 break;
         }
     }
 
-    // Add Custom Interpretation only if a custom template did not already render it via AiInterpretation
-    if (hasCustomText && !customInterpretationRendered) {
+    // Add Custom Interpretation only if a custom template did not already render it via AiInterpretation (and not client mode)
+    if (hasCustomText && !customInterpretationRendered && !isClientAudience) {
         ctx.checkNewPage(40);
         const headerFont = ctx.boldFont;
         const pColor = hexToRgb(branding.reportPrimaryColor || branding.primaryColor || '#314293');
         ctx.page.drawText(safeText('Interpretacja Terapeuty'), { x: 50, y: ctx.y, size: 14, font: headerFont, color: pColor });
         ctx.moveDown(25);
-        await drawRichText(ctx, { id: 'cust-int', type: 'RichText', options: { content: customInterpretation } }, result, test);
+        await drawRichText(ctx, { id: 'cust-int', type: 'RichText', options: { content: effectiveCustomInterpretation } }, result, test);
     }
 
     // Methodological Disclaimer at the end of the report
@@ -707,6 +737,217 @@ export async function generatePdf(
                 size: 9,
                 font: font,
                 color: rgb(0.5, 0.5, 0.5)
+            });
+        }
+    }
+
+    return pdfDoc.save();
+}
+
+export async function generateComparisonPdf(
+    resultA: TestResult,
+    resultB: TestResult,
+    test: Test,
+    branding: BrandingSettings
+): Promise<Uint8Array> {
+    const pdfDoc = await PDFDocument.create();
+    pdfDoc.registerFontkit(fontkit);
+
+    const fetchFont = async (filename: string) => {
+        const response = await fetch(`/fonts/${filename}`);
+        if (!response.ok) {
+            throw new Error(`Nie udało się załadować czcionki: ${filename}`);
+        }
+        return await response.arrayBuffer();
+    };
+
+    const [regularFontBytes, boldFontBytes, italicFontBytes, boldItalicFontBytes] = await Promise.all([
+        fetchFont('Roboto-Regular.ttf'),
+        fetchFont('Roboto-Bold.ttf'),
+        fetchFont('Roboto-Italic.ttf'),
+        fetchFont('Roboto-BoldItalic.ttf'),
+    ]);
+
+    const regularFont = await pdfDoc.embedFont(regularFontBytes);
+    const boldFont = await pdfDoc.embedFont(boldFontBytes);
+    const italicFont = await pdfDoc.embedFont(italicFontBytes);
+    const boldItalicFont = await pdfDoc.embedFont(boldItalicFontBytes);
+
+    const ctx = new PdfContext(pdfDoc);
+    ctx.regularFont = regularFont;
+    ctx.boldFont = boldFont;
+    ctx.italicFont = italicFont;
+    ctx.boldItalicFont = boldItalicFont;
+
+    const pColor = hexToRgb(branding.reportPrimaryColor || branding.primaryColor || '#314293');
+    const dateAStr = new Date(resultA.completedAt).toLocaleDateString('pl-PL');
+    const dateBStr = new Date(resultB.completedAt).toLocaleDateString('pl-PL');
+
+    // Header
+    ctx.page.drawText(safeText(`Raport Porównawczy (Pre-test / Post-test)`), {
+        x: 50,
+        y: ctx.y,
+        size: 18,
+        font: boldFont,
+        color: pColor,
+    });
+    ctx.moveDown(22);
+    ctx.page.drawText(safeText(test.title), {
+        x: 50,
+        y: ctx.y,
+        size: 13,
+        font: boldFont,
+        color: rgb(0.2, 0.2, 0.25),
+    });
+    ctx.moveDown(22);
+
+    ctx.page.drawText(
+        safeText(`Badanie 1 (Pre-test): Kod ${resultA.clientIdentifier} — Data: ${dateAStr}`),
+        { x: 50, y: ctx.y, size: 10, font: regularFont, color: rgb(0.25, 0.25, 0.3) }
+    );
+    ctx.moveDown(15);
+    ctx.page.drawText(
+        safeText(`Badanie 2 (Post-test): Kod ${resultB.clientIdentifier} — Data: ${dateBStr}`),
+        { x: 50, y: ctx.y, size: 10, font: boldFont, color: pColor }
+    );
+    ctx.moveDown(18);
+
+    ctx.page.drawLine({
+        start: { x: 50, y: ctx.y },
+        end: { x: ctx.page.getWidth() - 50, y: ctx.y },
+        thickness: 1,
+        color: pColor,
+    });
+    ctx.moveDown(22);
+
+    // Table header
+    const colX = {
+        scale: 50,
+        pre: 255,
+        post: 345,
+        delta: 435,
+        shift: 495,
+    };
+
+    ctx.page.drawText(safeText('Skala'), { x: colX.scale, y: ctx.y, size: 9.5, font: boldFont, color: pColor });
+    ctx.page.drawText(safeText('Pre-test'), { x: colX.pre, y: ctx.y, size: 9.5, font: boldFont, color: pColor });
+    ctx.page.drawText(safeText('Post-test'), { x: colX.post, y: ctx.y, size: 9.5, font: boldFont, color: pColor });
+    ctx.page.drawText(safeText('Zmiana (Δ)'), { x: colX.delta, y: ctx.y, size: 9.5, font: boldFont, color: pColor });
+    ctx.page.drawText(safeText('Próg'), { x: colX.shift, y: ctx.y, size: 9.5, font: boldFont, color: pColor });
+    ctx.moveDown(10);
+
+    ctx.page.drawLine({
+        start: { x: 50, y: ctx.y },
+        end: { x: ctx.page.getWidth() - 50, y: ctx.y },
+        thickness: 0.6,
+        color: rgb(0.7, 0.7, 0.75),
+    });
+    ctx.moveDown(14);
+
+    let levelShiftCount = 0;
+
+    for (const scale of test.scales) {
+        const scoreA = Number(resultA.scores?.[scale.id] ?? 0);
+        const scoreB = Number(resultB.scores?.[scale.id] ?? 0);
+        const max = scale.maxScore || 100;
+        const delta = Number((scoreB - scoreA).toFixed(2));
+        const deltaStr = delta > 0 ? `+${delta}` : `${delta}`;
+        const levelA = resolveScaleLevel(scoreA, scale);
+        const levelB = resolveScaleLevel(scoreB, scale);
+        const changed = levelA.label !== levelB.label;
+        if (changed) levelShiftCount++;
+
+        ctx.checkNewPage(32);
+
+        const scaleTitle = scale.name.length > 36 ? `${scale.name.slice(0, 34)}...` : scale.name;
+        ctx.page.drawText(safeText(scaleTitle), {
+            x: colX.scale,
+            y: ctx.y,
+            size: 9,
+            font: changed ? boldFont : regularFont,
+            color: rgb(0.15, 0.15, 0.18),
+        });
+        ctx.page.drawText(safeText(`${scoreA}/${max} (${levelA.label})`), {
+            x: colX.pre,
+            y: ctx.y,
+            size: 8.5,
+            font: regularFont,
+            color: rgb(0.3, 0.3, 0.35),
+        });
+        ctx.page.drawText(safeText(`${scoreB}/${max} (${levelB.label})`), {
+            x: colX.post,
+            y: ctx.y,
+            size: 8.5,
+            font: boldFont,
+            color: rgb(0.15, 0.15, 0.2),
+        });
+        ctx.page.drawText(safeText(`${deltaStr} pkt`), {
+            x: colX.delta,
+            y: ctx.y,
+            size: 9,
+            font: boldFont,
+            color: delta > 0 ? rgb(0.7, 0.4, 0.05) : delta < 0 ? rgb(0.1, 0.5, 0.25) : rgb(0.4, 0.4, 0.45),
+        });
+        ctx.page.drawText(safeText(changed ? 'ZMIANA' : 'Bez zmian'), {
+            x: colX.shift,
+            y: ctx.y,
+            size: 8.5,
+            font: changed ? boldFont : regularFont,
+            color: changed ? pColor : rgb(0.45, 0.45, 0.5),
+        });
+
+        ctx.moveDown(15);
+        ctx.page.drawLine({
+            start: { x: 50, y: ctx.y + 5 },
+            end: { x: ctx.page.getWidth() - 50, y: ctx.y + 5 },
+            thickness: 0.3,
+            color: rgb(0.86, 0.86, 0.9),
+        });
+    }
+
+    ctx.moveDown(12);
+    ctx.checkNewPage(40);
+    await drawRichText(ctx, {
+        id: 'comp-summary',
+        type: 'RichText',
+        options: {
+            content: `<b>Podsumowanie zmian:</b> Przeanalizowano ${test.scales.length} skal. Liczba skal ze zmianą progu interpretacyjnego: <b>${levelShiftCount}</b>.`,
+        },
+    });
+
+    if (branding.reportDisclaimerEnabled !== false) {
+        const disclaimerHtml =
+            branding.reportDisclaimerText ||
+            'Informacja metodologiczna: Wyniki niniejszego kwestionariusza mają charakter pomocniczy, przesiewowy i orientacyjny. Stanowią one materiał wspierający pracę ze specjalistą i nie zastępują pełnej diagnozy klinicznej ani lekarskiej.';
+        ctx.checkNewPage(55);
+        ctx.moveDown(10);
+        await drawRichText(ctx, {
+            id: 'comp-disclaimer',
+            type: 'RichText',
+            options: { content: `<em>${disclaimerHtml}</em>` },
+        });
+    }
+
+    const pages = pdfDoc.getPages();
+    const pageCount = pages.length;
+    const footerText = branding.reportFooterText || '';
+
+    for (let i = 0; i < pageCount; i++) {
+        const p = pages[i];
+        p.drawText(safeText(`Strona ${i + 1} z ${pageCount}`), {
+            x: p.getWidth() - 100,
+            y: 20,
+            size: 9,
+            font: regularFont,
+            color: rgb(0.5, 0.5, 0.5),
+        });
+        if (footerText) {
+            p.drawText(safeText(footerText), {
+                x: 50,
+                y: 20,
+                size: 9,
+                font: regularFont,
+                color: rgb(0.5, 0.5, 0.5),
             });
         }
     }

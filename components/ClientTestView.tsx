@@ -45,6 +45,9 @@ export default function ClientTestView(props: ClientTestViewProps) {
     const [restoredBannerVisible, setRestoredBannerVisible] = useState(false);
     const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
     const [termsModalTab, setTermsModalTab] = useState<'terms' | 'privacy'>('terms');
+    const [autoScrollEnabled, setAutoScrollEnabled] = useState<boolean>(true);
+    const [activeQuestionId, setActiveQuestionId] = useState<string>('');
+    const [submitRetryError, setSubmitRetryError] = useState<string | null>(null);
 
     const draftStorageKey = clientCode ? `rm_test_draft_${testId ? `${testId}_` : ''}${clientCode}` : '';
     const legacyDraftStorageKey = clientCode ? `rm_test_draft_${clientCode}` : '';
@@ -191,6 +194,8 @@ export default function ClientTestView(props: ClientTestViewProps) {
 
     const handleAnswerChange = (questionId: string, questionType: Question['type'], optionId: string) => {
         setValidationError(null);
+        setSubmitRetryError(null);
+        setActiveQuestionId(questionId);
         setHighlightedUnansweredIds(prev => prev.filter(id => id !== questionId));
         setAnswers(prev => {
             const newAnswers = { ...prev };
@@ -207,7 +212,50 @@ export default function ClientTestView(props: ClientTestViewProps) {
             }
             return newAnswers;
         });
+
+        // Płynne przewinięcie do następnego pytania na stronie (dla pytań jednokrotnego wyboru)
+        if (autoScrollEnabled && questionType !== 'multiple-select') {
+            const currentIdx = currentQuestions.findIndex(q => q.id === questionId);
+            if (currentIdx !== -1 && currentIdx < currentQuestions.length - 1) {
+                const nextQuestion = currentQuestions[currentIdx + 1];
+                setActiveQuestionId(nextQuestion.id);
+                setTimeout(() => {
+                    scrollToQuestion(nextQuestion.id);
+                }, 140);
+            }
+        }
     };
+
+    // Skróty klawiaturowe 1..9, 0 na komputerze dla aktualnie aktywnego lub pierwszego nieodpowiedzianego pytania na stronie
+    useEffect(() => {
+        if (typeof window === 'undefined' || isSubmitted || isTermsModalOpen || currentQuestions.length === 0) return;
+
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
+            const target = e.target as HTMLElement | null;
+            if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) && (target as HTMLInputElement).type !== 'radio') {
+                return;
+            }
+
+            if (!/^[0-9]$/.test(e.key)) return;
+            const pressedIndex = e.key === '0' ? 9 : parseInt(e.key, 10) - 1;
+
+            const targetQuestion =
+                currentQuestions.find(q => !isQuestionAnswered(q, answers[q.id])) ||
+                currentQuestions.find(q => q.id === activeQuestionId) ||
+                currentQuestions[0];
+
+            if (!targetQuestion || targetQuestion.type === 'multiple-select') return;
+            const chosenOption = targetQuestion.options?.[pressedIndex];
+            if (!chosenOption) return;
+
+            e.preventDefault();
+            handleAnswerChange(targetQuestion.id, targetQuestion.type, chosenOption.id);
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [currentQuestions, answers, activeQuestionId, autoScrollEnabled, isSubmitted, isTermsModalOpen]);
 
     const highlightAndScrollToMissingOnCurrentPage = () => {
         const missingIds = unansweredOnCurrentPage.map(q => q.id);
@@ -285,6 +333,7 @@ export default function ClientTestView(props: ClientTestViewProps) {
         }
 
         setIsSubmitting(true);
+        setSubmitRetryError(null);
         const clientAnswersRecord: Record<string, string[]> = {};
         Object.entries(answers).forEach(([questionId, answer]) => {
             if (answer.selectedOptionIds) {
@@ -300,7 +349,21 @@ export default function ClientTestView(props: ClientTestViewProps) {
             setIsSubmitted(true);
             setSubmissionResult(result);
         } catch (err: any) {
-            setError(err?.message || "Nie udało się przesłać odpowiedzi. Możliwe, że ten kod został już wykorzystany.");
+            const msg = String(err?.message || '');
+            const isPermanentCodeError =
+                msg.includes('wykorzystany') ||
+                msg.includes('wygasł') ||
+                msg.includes('Nieprawidłowy kod') ||
+                msg.includes('nie pasuje');
+
+            if (isPermanentCodeError) {
+                setError(msg);
+            } else {
+                setSubmitRetryError(
+                    msg ||
+                        'Wystąpił problem z połączeniem internetowym podczas wysyłania odpowiedzi. Twoje odpowiedzi są bezpiecznie zapisane na urządzeniu — sprawdź połączenie i kliknij „Ponów wysyłanie”.'
+                );
+            }
             setIsSubmitting(false);
         }
     };
@@ -375,6 +438,21 @@ export default function ClientTestView(props: ClientTestViewProps) {
                                 className="bg-gradient-to-r from-primary to-accent h-3 rounded-full"
                                 style={{ width: `${Math.max(4, progress)}%`, transition: 'width 0.4s ease-in-out' }}
                             />
+                        </div>
+
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-text-muted">
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                                <input
+                                    type="checkbox"
+                                    checked={autoScrollEnabled}
+                                    onChange={e => setAutoScrollEnabled(e.target.checked)}
+                                    className="h-3.5 w-3.5 accent-[var(--primary-color)] rounded"
+                                />
+                                <span>Automatycznie przewijaj do kolejnego pytania</span>
+                            </label>
+                            <span className="hidden sm:inline text-[11px] opacity-80">
+                                💡 Wskazówka: na komputerze możesz też wybierać odpowiedzi klawiszami <strong>1–5</strong>
+                            </span>
                         </div>
 
                         {restoredBannerVisible && totalAnsweredCount > 0 && (
@@ -516,6 +594,29 @@ export default function ClientTestView(props: ClientTestViewProps) {
                                         Przewiń do pominiętego pytania &uarr;
                                     </button>
                                 )}
+                            </div>
+                        )}
+
+                        {submitRetryError && (
+                            <div
+                                role="alert"
+                                className="mt-6 p-4 rounded-xl bg-warning/15 border border-warning/40 text-text flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm"
+                            >
+                                <div>
+                                    <p className="font-bold text-warning mb-0.5">
+                                        ⚠ Nie udało się wysłać odpowiedzi (problem z połączeniem)
+                                    </p>
+                                    <p className="text-xs text-text-muted leading-relaxed">
+                                        {submitRetryError}
+                                    </p>
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="shrink-0 px-4 py-2 rounded-xl bg-primary text-primary-contrast font-bold text-xs hover:opacity-90 disabled:opacity-50 transition-opacity shadow"
+                                >
+                                    {isSubmitting ? 'Ponawianie...' : '🔄 Ponów wysyłanie odpowiedzi'}
+                                </button>
                             </div>
                         )}
 
