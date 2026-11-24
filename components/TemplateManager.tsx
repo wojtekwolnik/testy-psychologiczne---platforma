@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchPdfTemplates, deletePdfTemplate, fetchTests, setDefaultTemplate, savePdfTemplate } from '@/app/actions/testActions';
+import { fetchPdfTemplates, deletePdfTemplate, fetchTests, setDefaultTemplate, savePdfTemplate, createDefaultTemplatesForExistingTests } from '@/app/actions/testActions';
 import { type PdfTemplate, type Test } from './types';
 import { PlusIcon, EditIcon, TrashIcon, StarIcon, ChevronDownIcon, ChevronRightIcon, QuestionMarkCircleIcon, ClipboardCopyIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
@@ -120,7 +120,26 @@ const TemplateManager: React.FC = () => {
 
     const renderTemplateTable = (testTemplates: PdfTemplate[], test: Test) => {
         if (testTemplates.length === 0) {
-            return <div className="p-4 text-center text-sm text-text-muted bg-background/60 border-t border-border">Brak zdefiniowanych szablonów dla tego testu.</div>;
+            return (
+                <div className="p-5 text-center text-sm text-text-muted bg-background/60 border-t border-border flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <span>Brak zdefiniowanych szablonów dla tego testu.</span>
+                    <button
+                        type="button"
+                        onClick={async () => {
+                            try {
+                                await createDefaultTemplatesForExistingTests();
+                                await loadData();
+                                toast.success('Wygenerowano domyślny szablon PDF dla tego testu.');
+                            } catch {
+                                toast.error('Nie udało się wygenerować szablonu domyślnego.');
+                            }
+                        }}
+                        className="px-3.5 py-1.5 bg-primary/15 hover:bg-primary/25 text-primary border border-primary/30 rounded-lg text-xs font-bold transition-colors"
+                    >
+                        + Wygeneruj szablon domyślny
+                    </button>
+                </div>
+            );
         }
 
         return (

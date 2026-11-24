@@ -451,7 +451,8 @@ export default function ClientTestView(props: ClientTestViewProps) {
                                 <span>Automatycznie przewijaj do kolejnego pytania</span>
                             </label>
                             <span className="hidden sm:inline text-[11px] opacity-80">
-                                💡 Wskazówka: na komputerze możesz też wybierać odpowiedzi klawiszami <strong>1–5</strong>
+                                💡 Wskazówka: na komputerze możesz też wybierać odpowiedzi klawiszami{' '}
+                                <strong>1–{Math.min(9, Math.max(2, currentQuestions[0]?.options?.length || 5))}</strong>
                             </span>
                         </div>
 

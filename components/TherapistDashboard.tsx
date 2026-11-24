@@ -439,34 +439,34 @@ const TherapistDashboard = () => {
                       const associatedTest = tests.find(t => t.id === code.testId);
                       return (
                         <tr key={code.code} className="border-b border-border/50 hover:bg-background/80 transition-colors">
-                          <td className="p-3 font-mono font-semibold text-[var(--primary-color)]">{code.code}</td>
+                          <td className="p-3 font-mono font-semibold text-[var(--primary-color)] whitespace-nowrap">{code.code}</td>
                           <td className="p-3">{associatedTest?.title} <span className="text-xs opacity-50">(v{associatedTest?.version})</span></td>
-                          <td className="p-3">{new Date(code.expiresAt).toLocaleDateString()}</td>
-                          <td className="p-3 flex items-center justify-end gap-2">
+                          <td className="p-3 whitespace-nowrap">{new Date(code.expiresAt).toLocaleDateString()}</td>
+                          <td className="p-3 flex items-center justify-end gap-2 whitespace-nowrap">
                             <button
                               onClick={() => handleCopyCode(code.code)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-background hover:bg-border/30 text-text font-semibold rounded-lg transition-colors shadow-sm text-xs border border-border"
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-background hover:bg-border/30 text-text font-semibold rounded-lg transition-colors shadow-sm text-xs border border-border whitespace-nowrap"
                               title="Kopiuj sam kod"
                             >
                               {copySuccess === code.code ? <span className="text-primary">Skopiowano kod!</span> : <><ClipboardCopyIcon className="w-4 h-4" /> Kopiuj kod</>}
                             </button>
                             <button
                               onClick={() => handleCopyLink(code)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/15 hover:bg-primary/25 text-primary font-semibold rounded-lg transition-colors shadow-sm text-xs border border-primary/30"
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/15 hover:bg-primary/25 text-primary font-semibold rounded-lg transition-colors shadow-sm text-xs border border-primary/30 whitespace-nowrap"
                               title="Kopiuj bezpośredni link do badania (bez konieczności wpisywania kodu przez klienta)"
                             >
                               {copyLinkSuccess === code.code ? <span>Skopiowano link!</span> : <><LinkIcon className="w-4 h-4" /> Kopiuj link</>}
                             </button>
                             <button
                               onClick={() => setQrCodeTarget(code)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-surface hover:bg-border/30 text-text font-semibold rounded-lg transition-colors shadow-sm text-xs border border-border"
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-surface hover:bg-border/30 text-text font-semibold rounded-lg transition-colors shadow-sm text-xs border border-border whitespace-nowrap"
                               title="Wyświetl kod QR na ekranie, aby klient mógł zeskanować go telefonem w gabinecie"
                             >
                               📱 Kod QR
                             </button>
                             <button
                               onClick={() => setCodeToDelete(code.code)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-error/10 hover:bg-error/20 text-error font-semibold rounded-lg transition-colors shadow-sm text-xs border border-error/20"
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-error/10 hover:bg-error/20 text-error font-semibold rounded-lg transition-colors shadow-sm text-xs border border-error/20 whitespace-nowrap"
                               title="Unieważnij ten kod"
                             >
                               <TrashIcon className="w-4 h-4" /> Unieważnij
