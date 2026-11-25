@@ -12,13 +12,14 @@ import {
 import { calculateTestScores, evaluateFormula } from '../lib/scoring/scoreCalculator';
 import { auditTestIntegrity } from '../lib/scoring/testAuditor';
 import { analyzeResponseQuality } from '../lib/scoring/responseQualityAnalyzer';
+import { generatePdf, generateComparisonPdf, normalizeRichTextMarkdownToHtml } from '../lib/pdf/pdfGenerator';
 import { getBigFiveSeedScales, getBigFiveSeedSections } from '../lib/bigFiveSync';
 import {
     getDass42SeedScales,
     getDass42SeedSections,
     getDass42TestCreateData,
 } from '../lib/dass42Sync';
-import type { Scale, Section, Test } from '../components/types';
+import type { Scale, Section, Test, TestResult, PdfTemplate, BrandingSettings } from '../components/types';
 
 console.log('=== [WARSTWA 1] Testy jednostkowe silnika liczącego, audytora i kluczy testów ===\n');
 
@@ -332,7 +333,132 @@ console.log('=== [WARSTWA 1] Testy jednostkowe silnika liczącego, audytora i kl
     assert.equal(variedReport.overallStatus, 'optimal');
     assert.ok(variedReport.maxLongstring <= 2);
 
-    console.log('✅ [7/7] Analizator stylu i jakości odpowiedzi (analyzeResponseQuality): wykrywanie longstring i profilu spójnego działa bezbłędnie.');
+    console.log('✅ [7/8] Analizator stylu i jakości odpowiedzi (analyzeResponseQuality): wykrywanie longstring i profilu spójnego działa bezbłędnie.');
 }
 
-console.log('\n🎉 WSZYSTKIE TESTY JEDNOSTKOWE I AUDYTOWE ZALICZONE (7/7)!');
+// 8. Test silnika PDF (generatePdf w trybach therapist/client + generateComparisonPdf + konwersja Markdown i tablicowych odpowiedzi)
+async function testPdfEngine() {
+    assert.equal(
+        normalizeRichTextMarkdownToHtml('## Dane Klienta\n\nIdentyfikator: **123**\n---'),
+        '<b>Dane Klienta</b><br><br>Identyfikator: <b>123</b><br>'
+    );
+
+    const dassCreate = getDass42TestCreateData();
+    const dassScalesRaw = getDass42SeedScales();
+    const dassSectionsRaw = getDass42SeedSections();
+
+    const dassTest: Test = {
+        id: 'test-dass-42',
+        canonicalId: dassCreate.canonicalId,
+        version: 1,
+        title: dassCreate.title,
+        description: dassCreate.description,
+        instructions: dassCreate.instructions,
+        status: 'PUBLISHED',
+        questionsPerPage: 14,
+        defaultTemplateId: 'tpl-dass',
+        createdAt: new Date().toISOString(),
+        scales: dassScalesRaw.map(s => ({
+            id: s.id,
+            name: s.name,
+            type: 'standard',
+            maxScore: s.maxScore,
+            description: s.description,
+            levels: JSON.parse(s.levels),
+        })),
+        sections: dassSectionsRaw.map((sec, idx) => ({
+            id: `dass-sec-${idx}`,
+            title: sec.title,
+            questions: sec.questions.create.map((q, qIdx) => ({
+                id: `dass-q-${idx}-${qIdx}`,
+                text: q.text,
+                type: q.type as any,
+                isReversed: q.isReversed,
+                options: JSON.parse(q.options),
+                scoring: JSON.parse(q.scoring),
+            })),
+        })),
+    };
+
+    const allQ = dassTest.sections.flatMap(s => s.questions);
+    const answersA: Record<string, string[]> = {};
+    const answersB: Record<string, string[]> = {};
+    allQ.forEach((q, idx) => {
+        answersA[q.id] = [q.options[idx % 4].id];
+        answersB[q.id] = [q.options[(idx + 1) % 4].id];
+    });
+
+    const scoresA = calculateTestScores(dassTest, answersA);
+    const scoresB = calculateTestScores(dassTest, answersB);
+
+    const mockResultA: TestResult = {
+        id: 'res-a',
+        testId: dassTest.id,
+        testTitle: dassTest.title,
+        testVersion: 1,
+        therapistId: 'therapist-1',
+        clientIdentifier: 'KOD-PRE-01',
+        completedAt: new Date().toISOString(),
+        answers: answersA as any,
+        scores: scoresA,
+        analysis: 'Notatka gabinetowa z polskimi znakami: ąęćłńóśźż ĄĘĆŁŃÓŚŹŻ.',
+    };
+
+    const mockResultB: TestResult = {
+        ...mockResultA,
+        id: 'res-b',
+        clientIdentifier: 'KOD-POST-02',
+        answers: answersB as any,
+        scores: scoresB,
+    };
+
+    const mockBranding: BrandingSettings = {
+        appName: 'Real Moment',
+        primaryColor: '#5c7cfa',
+        reportPrimaryColor: '#314293',
+        reportFooterText: 'Real Moment – Poufny raport diagnostyczny',
+        reportDisclaimerEnabled: true,
+    } as any;
+
+    const legacyCustomTemplate: PdfTemplate = {
+        id: 'tpl-dass',
+        name: 'Szablon testowy z dawnymi polami',
+        testCanonicalId: dassTest.canonicalId,
+        components: [
+            { id: 'c1', type: 'Header', options: { title: 'Raport Wyniku Testu', subtitle: dassTest.title } },
+            { id: 'c2', type: 'TestDescription', options: {} },
+            { id: 'c3', type: 'RichText', options: { content: '## Dane Klienta\n\nIdentyfikator: {{imie}}\nData badania: {{data}}' } },
+            { id: 'c4', type: 'ScoresTable', options: { scaleIds: [] } },
+            { id: 'c5', type: 'BarChart', options: { title: 'Profil Wyników', scaleIds: [] } },
+            { id: 'c6', type: 'RadarChart', options: { title: 'Wykres Radarowy', scaleIds: [] } },
+            { id: 'c7', type: 'Interpretations', options: { title: 'Szczegółowa interpretacja', scaleIds: [] } },
+            { id: 'c8', type: 'AiInterpretation', options: { title: 'Opis zindywidualizowany' } },
+            { id: 'c9', type: 'AnswersList', options: { title: 'Udzielone odpowiedzi' } },
+        ],
+    };
+
+    const fullPdfBytes = await generatePdf(mockResultA, dassTest, mockBranding, legacyCustomTemplate, mockResultA.analysis || '', {
+        audience: 'therapist',
+    });
+    const clientPdfBytes = await generatePdf(mockResultA, dassTest, mockBranding, legacyCustomTemplate, mockResultA.analysis || '', {
+        audience: 'client',
+    });
+    const compPdfBytes = await generateComparisonPdf(mockResultA, mockResultB, dassTest, mockBranding);
+
+    const headerStr = (bytes: Uint8Array) => Buffer.from(bytes.slice(0, 5)).toString('ascii');
+    assert.equal(headerStr(fullPdfBytes), '%PDF-');
+    assert.equal(headerStr(clientPdfBytes), '%PDF-');
+    assert.equal(headerStr(compPdfBytes), '%PDF-');
+    assert.ok(fullPdfBytes.byteLength > 20000, `Pełny PDF powinien mieć > 20 KB (otrzymano ${fullPdfBytes.byteLength} B)`);
+    assert.ok(clientPdfBytes.byteLength > 15000, `PDF dla klienta powinien mieć > 15 KB (otrzymano ${clientPdfBytes.byteLength} B)`);
+    assert.ok(fullPdfBytes.byteLength > clientPdfBytes.byteLength, 'Pełny PDF gabinetowy (z listą odpowiedzi) musi być większy niż PDF dla klienta');
+    assert.ok(compPdfBytes.byteLength > 15000, `PDF porównawczy powinien mieć > 15 KB (otrzymano ${compPdfBytes.byteLength} B)`);
+
+    console.log('✅ [8/8] Silnik PDF (generatePdf full/client + generateComparisonPdf + wsparcie szablonów legacy): działa bezbłędnie.');
+    console.log('\n🎉 WSZYSTKIE TESTY JEDNOSTKOWE I AUDYTOWE ZALICZONE (8/8)!');
+}
+
+testPdfEngine().catch(err => {
+    console.error('❌ Błąd testu silnika PDF:', err);
+    process.exit(1);
+});

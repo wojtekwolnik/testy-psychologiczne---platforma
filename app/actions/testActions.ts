@@ -342,15 +342,15 @@ const generateDefaultTemplate = (test: Test, testId: string): PdfTemplate => {
         name: `${test.title} - Widok Standardowy`,
         testCanonicalId: test.canonicalId,
         components: [
-            { id: crypto.randomUUID(), type: 'Header', options: { title: 'Raport Wyniku Testu', subtitle: test.title, showLogo: true } },
-            { id: crypto.randomUUID(), type: 'TestDescription', options: {} },
-            { id: crypto.randomUUID(), type: 'RichText', options: { content: '## Dane Klienta\n\nIdentyfikator: {{imie}}\nData badania: {{data}}' } },
-            { id: crypto.randomUUID(), type: 'ScoresTable', options: { showDescriptions: true } },
-            { id: crypto.randomUUID(), type: 'BarChart', options: { title: 'Profil Wyników' } },
-            { id: crypto.randomUUID(), type: 'Interpretations', options: { title: 'Szczegółowa interpretacja' } },
-            { id: crypto.randomUUID(), type: 'AiInterpretation', options: { title: 'Opis zindywidualizowany' } },
-            { id: crypto.randomUUID(), type: 'AnswersList', options: { title: 'Udzielone odpowiedzi' } },
-            { id: crypto.randomUUID(), type: 'RichText', options: { content: '---\n*Raport wygenerowany automatycznie przez Platformę Real Moment.*' } }
+            { id: crypto.randomUUID(), type: 'Header', title: 'Raport Wyniku Testu', options: { text: `Raport: ${test.title}`, showLogo: true } },
+            { id: crypto.randomUUID(), type: 'TestDescription', title: 'Opis testu', options: {} },
+            { id: crypto.randomUUID(), type: 'RichText', title: 'Dane Klienta', options: { content: '<b>Dane Klienta</b><br>Identyfikator: {{imie}}<br>Data badania: {{data}}' } },
+            { id: crypto.randomUUID(), type: 'ScoresTable', title: 'Zestawienie wyników skal', options: { showDescriptions: true, scaleIds: [] } },
+            { id: crypto.randomUUID(), type: 'BarChart', title: 'Profil Wyników', options: { scaleIds: [] } },
+            { id: crypto.randomUUID(), type: 'Interpretations', title: 'Szczegółowa interpretacja', options: { scaleIds: [] } },
+            { id: crypto.randomUUID(), type: 'AiInterpretation', title: 'Opis zindywidualizowany', options: {} },
+            { id: crypto.randomUUID(), type: 'AnswersList', title: 'Udzielone odpowiedzi', options: {} },
+            { id: crypto.randomUUID(), type: 'RichText', title: '', options: { content: '<i>Raport wygenerowany automatycznie przez Platformę Real Moment.</i>' } }
         ]
     };
 };

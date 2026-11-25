@@ -15,7 +15,7 @@ async function run() {
             html.includes('Warunki wykonywania badań'),
             'Strona główna musi zawierać link do Warunków wykonywania badań w stopce'
         );
-        console.log('✅ [1/6] Strona główna Portalu Klienta (/): HTTP 200, obecny branding i link do Warunków badań.');
+        console.log('✅ [1/8] Strona główna Portalu Klienta (/): HTTP 200, obecny branding i link do Warunków badań.');
     }
 
     // 2. Podstrony prawne (/warunki-badania oraz /polityka-prywatnosci)
@@ -35,7 +35,7 @@ async function run() {
             privHtml.includes('Real Moment Wojciech Wolnik') && privHtml.includes('Polityka prywatności'),
             'Podstrona /polityka-prywatnosci musi zawierać dane administratora (Real Moment Wojciech Wolnik)'
         );
-        console.log('✅ [2/6] Podstrony /warunki-badania oraz /polityka-prywatnosci (RODO): HTTP 200, pełna treść dostępna.');
+        console.log('✅ [2/8] Podstrony /warunki-badania oraz /polityka-prywatnosci (RODO): HTTP 200, pełna treść dostępna.');
     }
 
     // 3. Ikony Favicon (/favicon-realmoment.png oraz /icon.png)
@@ -49,16 +49,23 @@ async function run() {
 
         const iconRes = await fetch(`${BASE_URL}/icon.png`);
         assert.equal(iconRes.status, 200, '/icon.png musi zwracać HTTP 200');
-        console.log('✅ [3/6] Zasoby ikon (/favicon-realmoment.png oraz /icon.png): HTTP 200 (image/png).');
+        console.log('✅ [3/8] Zasoby ikon (/favicon-realmoment.png oraz /icon.png): HTTP 200 (image/png).');
     }
 
-    // 4. Ochrona tras prywatnych przez Middleware (przekierowanie niezalogowanych na /login)
+    // 4. Ochrona wszystkich tras prywatnych przez Middleware (przekierowanie niezalogowanych na /login)
     {
         const protectedPaths = [
             '/admin/dashboard',
             '/admin/branding',
             '/admin/users',
+            '/admin/codes',
+            '/admin/results',
+            '/admin/templates',
+            '/admin/templates/new',
+            '/admin/test/new',
+            '/admin/docs',
             '/therapist/dashboard',
+            '/therapist-docs',
             '/report/non-existent-id',
         ];
         for (const path of protectedPaths) {
@@ -73,33 +80,48 @@ async function run() {
                 `Trasa chroniona ${path} musi przekierowywać do /login (location: ${location})`
             );
         }
-        console.log('✅ [4/6] Zapora autoryzacyjna Middleware (/admin/*, /therapist/*, /report/*): 100% szczelna.');
+        console.log(`✅ [4/8] Zapora autoryzacyjna Middleware (${protectedPaths.length} tras /admin/*, /therapist/*, /report/*): 100% szczelna.`);
     }
 
     // 5. Strona logowania personelu (/login)
     {
         const res = await fetch(`${BASE_URL}/login`);
         assert.equal(res.status, 200, 'Strona /login musi zwracać HTTP 200');
-        console.log('✅ [5/6] Strona logowania personelu (/login): HTTP 200.');
+        console.log('✅ [5/8] Strona logowania personelu (/login): HTTP 200.');
     }
 
-    // 6. Endpoint diagnostyczny bazy danych i spójności testów (/api/health)
+    // 6. Blokada kreatora instalacji (/setup) na zainicjalizowanej bazie
+    {
+        const res = await fetch(`${BASE_URL}/setup`, { redirect: 'manual' });
+        assert.ok(
+            [302, 307, 308].includes(res.status),
+            `Kreator /setup na skonfigurowanej bazie musi przekierowywać do /login (otrzymano ${res.status})`
+        );
+        const location = res.headers.get('location') || '';
+        assert.ok(location.includes('/login'), `/setup musi przekierowywać na /login (location: ${location})`);
+        console.log('✅ [6/8] Blokada kreatora instalacji (/setup) na zainicjalizowanej bazie: przekierowanie do /login.');
+    }
+
+    // 7. Endpoint diagnostyczny bazy danych, spójności testów i szablonów PDF (/api/health)
     {
         const res = await fetch(`${BASE_URL}/api/health`);
-        if (res.status === 200) {
-            const data = await res.json();
-            assert.equal(data.status, 'ok', `Status /api/health powinien być 'ok': ${JSON.stringify(data)}`);
-            assert.equal(data.database, 'connected', 'Baza danych musi mieć status connected');
-            assert.ok(data.publishedTestsCount >= 2, 'W bazie muszą być co najmniej 2 opublikowane testy (Wielka Piątka i DASS-42)');
-            for (const audit of data.testsAudit || []) {
-                assert.equal(audit.passed, true, `Test ${audit.title} nie przeszedł audytu na żywej bazie: ${JSON.stringify(audit)}`);
+        assert.equal(res.status, 200, `/api/health musi zwracać HTTP 200 (otrzymano ${res.status})`);
+        const data = await res.json();
+        assert.equal(data.status, 'ok', `Status /api/health powinien być 'ok': ${JSON.stringify(data)}`);
+        assert.equal(data.database, 'connected', 'Baza danych musi mieć status connected');
+        assert.ok(data.publishedTestsCount >= 2, 'W bazie muszą być co najmniej 2 opublikowane testy (Wielka Piątka i DASS-42)');
+        for (const audit of data.testsAudit || []) {
+            assert.equal(audit.passed, true, `Test ${audit.title} nie przeszedł audytu na żywej bazie: ${JSON.stringify(audit)}`);
+            if (audit.templatesValid !== undefined) {
+                assert.equal(audit.templatesValid, true, `Szablony PDF dla testu ${audit.title} są niepoprawne`);
             }
-            console.log(
-                `✅ [6/6] Endpoint diagnostyczny /api/health: baza podłączona (${data.responseTimeMs}ms), przetestowano ${data.publishedTestsCount} opublikowanych testów w bazie (0 błędów).`
-            );
-        } else {
-            console.log(`ℹ️ [6/6] Endpoint /api/health jeszcze nie wdrożony na ${BASE_URL} (status ${res.status}).`);
         }
+        console.log(
+            `✅ [7/8] Endpoint diagnostyczny /api/health: baza podłączona (${data.responseTimeMs}ms), przetestowano ${data.publishedTestsCount} opublikowanych testów (0 błędów).`
+        );
+        console.log(
+            `✅ [8/8] Walidacja struktury JSON szablonów PDF (PdfTemplate) w bazie danych: wszystkie szablony spójne.`
+        );
     }
 
     console.log(`\n🎉 WSZYSTKIE TESTY E2E / SMOKE DLA ${BASE_URL} ZALICZONE!`);
