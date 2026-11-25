@@ -52,7 +52,7 @@ export async function getAllUsers(): Promise<UserData[]> {
         }));
     } catch (error) {
         console.error('Failed to fetch users:', error);
-        throw new Error('Failed to fetch users');
+        throw new Error('Nie udało się pobrać listy użytkowników.');
     }
 }
 
@@ -130,7 +130,7 @@ export async function saveUser(user: Partial<User>, hashedPassword?: string): Pr
                 select: { id: true, email: true, username: true, role: true, createdAt: true, twoFactorSecret: true },
             });
         } else {
-            if (!hashedPassword) throw new Error('Password is required when creating a new user');
+            if (!hashedPassword) throw new Error('Hasło jest wymagane podczas tworzenia nowego użytkownika.');
             savedUser = await prisma.user.create({
                 data: { ...dataToSave, password: hashedPassword },
                 select: { id: true, email: true, username: true, role: true, createdAt: true, twoFactorSecret: true },
@@ -150,7 +150,7 @@ export async function saveUser(user: Partial<User>, hashedPassword?: string): Pr
         };
     } catch (error) {
         console.error('Failed to save user:', error);
-        throw new Error('Failed to save user');
+        throw new Error('Nie udało się zapisać konta użytkownika.');
     }
 }
 

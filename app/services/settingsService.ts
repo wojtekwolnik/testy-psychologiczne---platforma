@@ -41,8 +41,9 @@ export function decryptSecret(cipherText: string): string {
             decipher.final(),
         ]);
         return decrypted.toString('utf8');
-    } catch (e) {
-        console.error('Failed to decrypt secret:', e);
+    } catch {
+        // Secret was encrypted with a different environment key (e.g. after cloning PROD DB to DEV).
+        // Return empty string silently so logs are not spammed on every request.
         return '';
     }
 }

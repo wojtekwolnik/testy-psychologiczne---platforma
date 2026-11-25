@@ -7,49 +7,6 @@ import { getDass42TestCreateData, DASS_42_CANONICAL_ID } from '@/lib/dass42Sync'
 
 async function seedDefaultTestsIfNeeded() {
     try {
-        const existingDemo = await prisma.test.findFirst({ where: { canonicalId: 'demo-personality-test' } });
-        if (!existingDemo) {
-            await prisma.test.create({
-                data: {
-                    title: 'Test Osobowości (Demo)',
-                    canonicalId: 'demo-personality-test',
-                    description: 'To jest przykładowy test osobowości w celach demonstracyjnych.',
-                    instructions: 'Proszę odpowiedzieć szczerze na wszystkie pytania.',
-                    questionsPerPage: 2,
-                    sections: {
-                        create: [
-                            {
-                                title: 'Sekcja 1: Podstawy',
-                                questions: {
-                                    create: [
-                                        {
-                                            text: 'Czy lubisz spotkania towarzyskie?',
-                                            type: 'single-select',
-                                            options: JSON.stringify([
-                                                { text: 'Tak', value: 1, id: 'opt1' },
-                                                { text: 'Nie', value: 0, id: 'opt2' },
-                                            ]),
-                                            scoring: '{}'
-                                        },
-                                        {
-                                            text: 'Jak często czujesz się zestresowany?',
-                                            type: 'single-select',
-                                            options: JSON.stringify([
-                                                { text: 'Rzadko', value: 1, id: 'opt3' },
-                                                { text: 'Często', value: 2, id: 'opt4' },
-                                                { text: 'Bardzo często', value: 3, id: 'opt5' },
-                                            ]),
-                                            scoring: '{}'
-                                        },
-                                    ],
-                                },
-                            },
-                        ],
-                    },
-                },
-            });
-        }
-
         const existingBigFive = await prisma.test.findFirst({ where: { canonicalId: 'big-five-johnson-120' } });
         if (!existingBigFive) {
             await prisma.test.create({

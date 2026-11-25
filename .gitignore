@@ -39,6 +39,13 @@ create_*.ts
 extract_sqlite.js
 query_sqlite.ts
 scratch_db.*
+_legacy_reference/
+.firebase/
+.firebaserc
+firebase.json
+.idx/
+build_errors.txt
+metadata.json
 
 # vercel
 .vercel

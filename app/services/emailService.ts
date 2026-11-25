@@ -19,9 +19,9 @@ export async function sendEmail({
 
         const { smtp, fromEmail, fromName } = settings.emailSettings;
 
-        if (!smtp.host || !smtp.username) {
-            console.error('Email sending failed: Incomplete SMTP settings.');
-            return { success: false, error: 'Incomplete SMTP settings' };
+        if (!smtp.host || !smtp.username || !smtp.password) {
+            console.log('Email sending skipped: Incomplete SMTP credentials (host, username or password missing).');
+            return { success: false, error: 'Niepełna konfiguracja SMTP (uzupełnij host, użytkownika i hasło w Ustawieniach Platformy).' };
         }
 
         const transporter = nodemailer.createTransport({

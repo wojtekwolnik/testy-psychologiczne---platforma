@@ -36,13 +36,13 @@ export default function SetupWizard() {
                 
                 {/* Header */}
                 <div className="text-center mb-8 transform transition-all duration-700 ease-out translate-y-0 opacity-100">
-                    <div className="mx-auto w-20 h-20 bg-gradient-to-tr from-blue-600 to-cyan-400 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500/30">
-                        <Settings className="w-10 h-10 text-white animate-[spin_4s_linear_infinite]" />
+                    <div className="mx-auto w-20 h-20 bg-primary rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-primary/30">
+                        <Settings className="w-10 h-10 text-primary-contrast animate-[spin_4s_linear_infinite]" />
                     </div>
-                    <h1 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
-                        Testy Psychologiczne
+                    <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-text">
+                        Real Moment – Przestrzeń Diagnostyczna
                     </h1>
-                    <p className="mt-3 text-slate-400 text-lg">
+                    <p className="mt-3 text-text-muted text-lg">
                         Kreator pierwszej konfiguracji
                     </p>
                 </div>

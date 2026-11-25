@@ -269,7 +269,7 @@ export async function saveTest(testData: Test, asNewVersion: boolean): Promise<T
         revalidatePath('/admin/dashboard');
         revalidatePath('/therapist/dashboard');
         const createdVersion = await fetchTestById(newTestId);
-        if (!createdVersion) throw new Error("Failed to save new version of test.");
+        if (!createdVersion) throw new Error("Nie udało się zapisać nowej wersji testu.");
         return createdVersion;
     }
 
@@ -332,7 +332,7 @@ export async function saveTest(testData: Test, asNewVersion: boolean): Promise<T
     revalidatePath(`/test/${id}`);
 
     const updated = await fetchTestById(id);
-    if (!updated) throw new Error("Failed to save and retrieve test.");
+    if (!updated) throw new Error("Nie udało się zapisać i pobrać zaktualizowanego testu.");
     return updated;
 }
 
@@ -428,7 +428,7 @@ export async function createNewTest(testData: Test): Promise<Test> {
     });
 
     const created = await fetchTestById(id);
-    if (!created) throw new Error("Failed to create test.");
+    if (!created) throw new Error("Nie udało się utworzyć testu.");
     return created;
 }
 
@@ -509,7 +509,7 @@ export async function savePdfTemplate(template: PdfTemplate): Promise<PdfTemplat
         orderBy: { version: 'desc' }
     });
 
-    if (!test) throw new Error("Linked test not found");
+    if (!test) throw new Error("Nie znaleziono powiązanego testu.");
 
     const saved = await prisma.pdfTemplate.upsert({
         where: { id },
@@ -567,7 +567,7 @@ export async function updateTestStatus(testId: string, newStatus: 'DRAFT' | 'PUB
     revalidatePath('/admin/dashboard');
     revalidatePath('/therapist/dashboard');
     const updated = await fetchTestById(testId);
-    if (!updated) throw new Error("Failed to update test status.");
+    if (!updated) throw new Error("Nie udało się zmienić statusu testu.");
     return updated;
 }
 
