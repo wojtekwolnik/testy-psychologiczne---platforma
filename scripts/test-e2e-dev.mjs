@@ -117,14 +117,31 @@ async function run() {
             }
         }
         console.log(
-            `✅ [7/8] Endpoint diagnostyczny /api/health: baza podłączona (${data.responseTimeMs}ms), przetestowano ${data.publishedTestsCount} opublikowanych testów (0 błędów).`
+            `✅ [7/9] Endpoint diagnostyczny /api/health: baza podłączona (${data.responseTimeMs}ms), przetestowano ${data.publishedTestsCount} opublikowanych testów (0 błędów).`
         );
         console.log(
-            `✅ [8/8] Walidacja struktury JSON szablonów PDF (PdfTemplate) w bazie danych: wszystkie szablony spójne.`
+            `✅ [8/9] Walidacja struktury JSON szablonów PDF (PdfTemplate) w bazie danych: wszystkie szablony spójne.`
         );
     }
 
-    console.log(`\n🎉 WSZYSTKIE TESTY E2E / SMOKE DLA ${BASE_URL} ZALICZONE!`);
+    // 9. Nagłówki bezpieczeństwa HTTP (X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy)
+    {
+        const res = await fetch(`${BASE_URL}/`);
+        assert.equal(res.headers.get('x-content-type-options'), 'nosniff', 'Brak nagłówka X-Content-Type-Options: nosniff');
+        assert.equal(res.headers.get('x-frame-options'), 'SAMEORIGIN', 'Brak nagłówka X-Frame-Options: SAMEORIGIN');
+        assert.equal(
+            res.headers.get('referrer-policy'),
+            'strict-origin-when-cross-origin',
+            'Brak nagłówka Referrer-Policy: strict-origin-when-cross-origin'
+        );
+        assert.ok(
+            (res.headers.get('permissions-policy') || '').includes('camera=()'),
+            'Brak nagłówka Permissions-Policy'
+        );
+        console.log('✅ [9/9] Nagłówki bezpieczeństwa HTTP (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy): aktywne.');
+    }
+
+    console.log(`\n🎉 WSZYSTKIE TESTY E2E / SMOKE I BEZPIECZEŃSTWA DLA ${BASE_URL} ZALICZONE (9/9)!`);
 }
 
 run().catch(err => {

@@ -25,6 +25,10 @@ import {
     buildCsvContent,
     createAccessCodeString,
     normalizeAccessCodeInput,
+    CLIENT_DRAFT_TTL_MS,
+    isClientDraftValid,
+    sanitizeCssToken,
+    escapeHtmlText,
 } from '../lib/testUtils';
 import { getBigFiveSeedScales, getBigFiveSeedSections } from '../lib/bigFiveSync';
 import {
@@ -34,7 +38,7 @@ import {
 } from '../lib/dass42Sync';
 import type { Scale, Section, Test, TestResult, PdfTemplate, BrandingSettings } from '../components/types';
 
-console.log('=== [WARSTWA 1] Testy jednostkowe silnika liczącego, audytora, PDF i narzędzi (21/21) ===\n');
+console.log('=== [WARSTWA 1] Testy jednostkowe silnika liczącego, audytora, PDF, bezpieczeństwa i narzędzi (23/23) ===\n');
 
 function buildBigFiveTestFixture(): Test {
     const bfScalesRaw = getBigFiveSeedScales();
@@ -733,9 +737,83 @@ async function testPdfEngineSuite() {
     const bfCompBytes = await generateComparisonPdf(bfResult, bfResult, bfTest, mockBranding);
     const bfCompDoc = await PDFDocument.load(bfCompBytes);
     assert.ok(bfCompDoc.getPageCount() >= 2, `Raport porównawczy 35 skal Wielkiej Piątki musi mieć >= 2 strony (ma ${bfCompDoc.getPageCount()})`);
-    console.log(`✅ [21/21] Wielostronicowy Raport Porównawczy PDF dla 35 skal Wielkiej Piątki (${bfCompDoc.getPageCount()} str.): działa bezbłędnie.`);
+    console.log(`✅ [21/23] Wielostronicowy Raport Porównawczy PDF dla 35 skal Wielkiej Piątki (${bfCompDoc.getPageCount()} str.): działa bezbłędnie.`);
 
-    console.log('\n🎉 WSZYSTKIE TESTY JEDNOSTKOWE I AUDYTOWE ZALICZONE (21/21)!');
+    // 22. Polityka 14-dniowego TTL szkiców w przeglądarce z nadrzędnością ważności kodu dostępu (codeExpiresAt)
+    {
+        const now = Date.now();
+        assert.equal(CLIENT_DRAFT_TTL_MS, 14 * 24 * 60 * 60 * 1000, 'Domyślny TTL szkicu badania musi wynosić dokładnie 14 dni');
+
+        // Świeży szkic (sprzed 3 dni) z kodem ważnym jeszcze 4 dni -> WAŻNY
+        const validDraft = {
+            answers: { q1: { selectedOptionId: 'o1' } },
+            currentPage: 1,
+            updatedAt: now - 3 * 24 * 60 * 60 * 1000,
+            codeExpiresAt: new Date(now + 4 * 24 * 60 * 60 * 1000).toISOString(),
+        };
+        assert.equal(isClientDraftValid(validDraft, now), true, 'Szkic sprzed 3 dni z aktywnym kodem musi być ważny');
+
+        // Szkic sprzed 13 dni (w granicach 14 dni), gdy kod ma jeszcze 5 dni ważności -> WAŻNY
+        const thirteenDayDraft = {
+            ...validDraft,
+            updatedAt: now - 13 * 24 * 60 * 60 * 1000,
+        };
+        assert.equal(isClientDraftValid(thirteenDayDraft, now), true, 'Szkic sprzed 13 dni z aktywnym kodem musi być ważny');
+
+        // Szkic sprzed 15 dni (>14 dni TTL), nawet jeśli kod ma jeszcze ważność -> NIEWAŻNY
+        const expiredByTtlDraft = {
+            ...validDraft,
+            updatedAt: now - 15 * 24 * 60 * 60 * 1000,
+        };
+        assert.equal(isClientDraftValid(expiredByTtlDraft, now), false, 'Szkic starszy niż 14 dni musi wygasnąć');
+
+        // NADRZĘDNOŚĆ KODU: Szkic sprzed zaledwie 1 godziny, ale ważność kodu dostępu minęła 1 minutę temu -> NIEWAŻNY
+        const expiredByCodeDraft = {
+            ...validDraft,
+            updatedAt: now - 60 * 60 * 1000,
+            codeExpiresAt: new Date(now - 60 * 1000).toISOString(),
+        };
+        assert.equal(
+            isClientDraftValid(expiredByCodeDraft, now),
+            false,
+            'Wygasły kod dostępu musi mieć nadrzędny priorytet nad 14-dniowym ciasteczkiem/localStorage'
+        );
+
+        // Live codeExpiresAt przekazany z serwera też unieważnia szkic, gdy kod wygasł
+        assert.equal(
+            isClientDraftValid(
+                { answers: {}, updatedAt: now - 1000 },
+                now,
+                new Date(now - 5000).toISOString()
+            ),
+            false,
+            'Aktualna data wygaśnięcia kodu z serwera musi natychmiast unieważnić lokalny szkic'
+        );
+
+        console.log('✅ [22/23] Polityka 14-dniowego TTL szkicu badania z nadrzędnością ważności kodu dostępu (codeExpiresAt): działa bezbłędnie.');
+    }
+
+    // 23. Sanityzacja tokenów CSS (ThemeInjector) oraz escapowanie HTML w powiadomieniach e-mail
+    {
+        assert.equal(
+            sanitizeCssToken('#5c7cfa</style><script>alert(1)</script>', '#000000'),
+            '#5c7cfa/stylescriptalert(1)/script',
+            'Sanityzator CSS musi usuwać nawiasy trójkątne, klamry i średniki'
+        );
+        assert.equal(
+            sanitizeCssToken('red; background: url(javascript:1)}', '#000000'),
+            'red background: url(javascript:1)',
+            'Sanityzator CSS musi usuwać średniki i nawiasy klamrowe'
+        );
+        assert.equal(
+            escapeHtmlText('<img src=x onerror="alert(1)"> & "Test"'),
+            '&lt;img src=x onerror=&quot;alert(1)&quot;&gt; &amp; &quot;Test&quot;',
+            'Escapowanie HTML w szablonach e-mail musi neutralizować znaczniki i cudzysłowy'
+        );
+        console.log('✅ [23/23] Sanityzacja zmiennych CSS (ThemeInjector) oraz escapowanie HTML w powiadomieniach e-mail: działa bezbłędnie.');
+    }
+
+    console.log('\n🎉 WSZYSTKIE TESTY JEDNOSTKOWE, AUDYTOWE I BEZPIECZEŃSTWA ZALICZONE (23/23)!');
 }
 
 testPdfEngineSuite().catch(err => {

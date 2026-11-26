@@ -9,6 +9,8 @@ import { getNormalizedBigFiveScaleData } from '@/lib/interpretationBuilder';
 import { ensureBigFiveTestUpgraded } from '@/lib/bigFiveSync';
 import { ensureDass42TestExists, isDass42EnsuredInMemory } from '@/lib/dass42Sync';
 import { remapTestEntityIds } from '@/lib/testUtils';
+import { auditTestIntegrity } from '@/lib/scoring/testAuditor';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 // Helper to parse JSON fields from Prisma to Frontend Types
 const serializeTest = (prismaTest: any): Test => {
@@ -67,11 +69,13 @@ const serializeTest = (prismaTest: any): Test => {
 };
 
 export async function fetchTests(): Promise<Test[]> {
-    await requireAuth();
+    const user = await requireAuth();
     if (!isDass42EnsuredInMemory()) {
         await ensureDass42TestExists(prisma);
     }
+    const whereClause = user.role === 'admin' ? {} : { status: 'PUBLISHED' };
     const tests = await prisma.test.findMany({
+        where: whereClause,
         include: {
             scales: true,
             sections: {
@@ -93,7 +97,7 @@ export async function fetchTests(): Promise<Test[]> {
 }
 
 export async function fetchTestById(testId: string): Promise<Test | null> {
-    await requireAuth();
+    const user = await requireAuth();
     const test = await prisma.test.findUnique({
         where: { id: testId },
         include: {
@@ -107,6 +111,9 @@ export async function fetchTestById(testId: string): Promise<Test | null> {
     });
 
     if (!test) return null;
+    if (user.role !== 'admin' && test.status !== 'PUBLISHED') {
+        return null;
+    }
     const upgraded = await ensureBigFiveTestUpgraded(prisma, test);
     return serializeTest(upgraded);
 }
@@ -114,8 +121,14 @@ export async function fetchTestById(testId: string): Promise<Test | null> {
 /**
  * Public action for test-takers: validates access code and strips out all scoring keys & scale formulas
  * so answers cannot be reverse-engineered in browser DevTools.
+ * Also returns `codeExpiresAt` so client browser storage enforces code expiration over local 14-day draft TTL.
  */
 export async function fetchPublicTestForClient(testId: string, clientCode: string): Promise<Test | null> {
+    const rate = checkRateLimit('public-test-load', 25, 60_000);
+    if (!rate.allowed) {
+        return null;
+    }
+
     const trimmedCode = (clientCode || '').trim().toUpperCase();
     if (!trimmedCode) return null;
 
@@ -144,6 +157,7 @@ export async function fetchPublicTestForClient(testId: string, clientCode: strin
         ...test,
         status: (test.status as 'DRAFT' | 'PUBLISHED') || 'PUBLISHED',
         createdAt: test.createdAt.toISOString(),
+        codeExpiresAt: accessCode.expiresAt.toISOString(),
         scales: [],
         sections: test.sections.map((sec) => ({
             ...sec,
@@ -162,6 +176,12 @@ export async function fetchPublicTestForClient(testId: string, clientCode: strin
 
 export async function saveTest(testData: Test, asNewVersion: boolean): Promise<Test> {
     await requireAuth('admin');
+    if (testData.status === 'PUBLISHED') {
+        const audit = auditTestIntegrity(testData);
+        if (!audit.passed) {
+            throw new Error(`Nie można opublikować testu z błędami psychometrycznymi (${audit.errorCount}). Popraw konfigurację przed publikacją.`);
+        }
+    }
     const { id, scales, sections, ...basicInfo } = testData;
 
     if (asNewVersion) {
@@ -508,6 +528,14 @@ export async function fetchTestVersions(canonicalId: string): Promise<Test[]> {
 
 export async function updateTestStatus(testId: string, newStatus: 'DRAFT' | 'PUBLISHED'): Promise<Test> {
     await requireAuth('admin');
+    if (newStatus === 'PUBLISHED') {
+        const existing = await fetchTestById(testId);
+        if (!existing) throw new Error("Nie znaleziono testu.");
+        const audit = auditTestIntegrity(existing);
+        if (!audit.passed) {
+            throw new Error(`Nie można opublikować testu z błędami psychometrycznymi (${audit.errorCount}). Popraw konfigurację w edytorze przed publikacją.`);
+        }
+    }
     await prisma.test.update({
         where: { id: testId },
         data: { status: newStatus }

@@ -152,13 +152,6 @@ export async function validateAccessCode(code: string): Promise<{ isValid: boole
     return { isValid: true, testId: accessCode.testId };
 }
 
-export async function markAccessCodeAsUsed(code: string): Promise<void> {
-    await prisma.accessCode.update({
-        where: { code },
-        data: { isUsed: true }
-    });
-}
-
 export async function deleteAccessCode(code: string): Promise<void> {
     const user = await requireAuth();
 

@@ -10,6 +10,7 @@ import DOMPurify from 'isomorphic-dompurify';
 import { ClientThankYou } from './ClientThankYou';
 import { BrandingContext, DEFAULT_PRIVACY_POLICY_TITLE, DEFAULT_TERMS_OF_TESTING_TITLE } from '@/contexts/BrandingContext';
 import TermsOfTestingModal from './TermsOfTestingModal';
+import { isClientDraftValid } from '@/lib/testUtils';
 
 interface ClientTestViewProps {
     testId?: string;
@@ -66,7 +67,35 @@ export default function ClientTestView(props: ClientTestViewProps) {
     const draftStorageKey = clientCode ? `rm_test_draft_${testId ? `${testId}_` : ''}${clientCode}` : '';
     const legacyDraftStorageKey = clientCode ? `rm_test_draft_${clientCode}` : '';
 
-    // Restore draft answers from localStorage / sessionStorage if present
+    // Cleanup all expired drafts across browser storage (14-day max TTL or past codeExpiresAt)
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        try {
+            const nowMs = Date.now();
+            for (const storage of [localStorage, sessionStorage]) {
+                const keysToRemove: string[] = [];
+                for (let i = 0; i < storage.length; i++) {
+                    const key = storage.key(i);
+                    if (key && key.startsWith('rm_test_draft_')) {
+                        try {
+                            const rawItem = storage.getItem(key);
+                            const parsedItem = rawItem ? JSON.parse(rawItem) : null;
+                            if (!isClientDraftValid(parsedItem, nowMs)) {
+                                keysToRemove.push(key);
+                            }
+                        } catch {
+                            keysToRemove.push(key);
+                        }
+                    }
+                }
+                keysToRemove.forEach(k => storage.removeItem(k));
+            }
+        } catch {
+            // Ignore storage errors
+        }
+    }, []);
+
+    // Restore draft answers from localStorage / sessionStorage if present and within 14-day TTL & code validity
     useEffect(() => {
         if (!draftStorageKey || typeof window === 'undefined') return;
         try {
@@ -76,6 +105,10 @@ export default function ClientTestView(props: ClientTestViewProps) {
                 (legacyDraftStorageKey ? sessionStorage.getItem(legacyDraftStorageKey) : null);
             if (raw) {
                 const parsed = JSON.parse(raw);
+                if (!isClientDraftValid(parsed, Date.now(), test?.codeExpiresAt)) {
+                    clearSavedDraft();
+                    return;
+                }
                 if (parsed.answers && typeof parsed.answers === 'object' && Object.keys(parsed.answers).length > 0) {
                     setAnswers(parsed.answers);
                     setRestoredBannerVisible(true);
@@ -87,9 +120,9 @@ export default function ClientTestView(props: ClientTestViewProps) {
         } catch {
             // Ignore storage errors
         }
-    }, [draftStorageKey, legacyDraftStorageKey]);
+    }, [draftStorageKey, legacyDraftStorageKey, test?.codeExpiresAt]);
 
-    // Save draft answers to localStorage + sessionStorage on change
+    // Save draft answers to localStorage + sessionStorage on change (bound to codeExpiresAt)
     useEffect(() => {
         if (!draftStorageKey || typeof window === 'undefined' || isSubmitted) return;
         try {
@@ -98,6 +131,7 @@ export default function ClientTestView(props: ClientTestViewProps) {
                     answers,
                     currentPage,
                     updatedAt: Date.now(),
+                    codeExpiresAt: test?.codeExpiresAt,
                 });
                 localStorage.setItem(draftStorageKey, serialized);
                 sessionStorage.setItem(draftStorageKey, serialized);
@@ -105,7 +139,7 @@ export default function ClientTestView(props: ClientTestViewProps) {
         } catch {
             // Ignore storage errors
         }
-    }, [answers, currentPage, draftStorageKey, isSubmitted]);
+    }, [answers, currentPage, draftStorageKey, isSubmitted, test?.codeExpiresAt]);
 
     const clearSavedDraft = () => {
         if (typeof window === 'undefined') return;
@@ -148,6 +182,11 @@ export default function ClientTestView(props: ClientTestViewProps) {
                     setTest(publicTest);
                     return;
                 }
+
+                // Access code is invalid, expired, or already used — code validity is paramount over local draft storage!
+                clearSavedDraft();
+                setAnswers({});
+                setRestoredBannerVisible(false);
 
                 // If publicTest returned null, check reason via validateAccessCode for a friendly Polish error message
                 const validation = await validateAccessCode(clientCode);
@@ -394,6 +433,7 @@ export default function ClientTestView(props: ClientTestViewProps) {
                 msg.includes('nie pasuje');
 
             if (isPermanentCodeError) {
+                clearSavedDraft();
                 setError(msg);
             } else {
                 setSubmitRetryError(

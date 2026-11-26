@@ -7,6 +7,7 @@ import { BrandingContext, DEFAULT_PRIVACY_POLICY_TITLE, DEFAULT_TERMS_OF_TESTING
 import { SpinnerIcon } from './common/Icons';
 import DOMPurify from 'isomorphic-dompurify';
 import TermsOfTestingModal from './TermsOfTestingModal';
+import { isClientDraftValid } from '@/lib/testUtils';
 
 const ClientCodeEntry: React.FC = () => {
     const [clientCode, setClientCode] = useState('');
@@ -25,6 +26,31 @@ const ClientCodeEntry: React.FC = () => {
             if (urlCode) {
                 setClientCode(urlCode.trim().toUpperCase());
             }
+
+            // Purge any expired client test drafts (>14 days or past codeExpiresAt) on shared browser startup
+            try {
+                const nowMs = Date.now();
+                for (const storage of [localStorage, sessionStorage]) {
+                    const keysToRemove: string[] = [];
+                    for (let i = 0; i < storage.length; i++) {
+                        const key = storage.key(i);
+                        if (key && key.startsWith('rm_test_draft_')) {
+                            try {
+                                const rawItem = storage.getItem(key);
+                                const parsedItem = rawItem ? JSON.parse(rawItem) : null;
+                                if (!isClientDraftValid(parsedItem, nowMs)) {
+                                    keysToRemove.push(key);
+                                }
+                            } catch {
+                                keysToRemove.push(key);
+                            }
+                        }
+                    }
+                    keysToRemove.forEach(k => storage.removeItem(k));
+                }
+            } catch {
+                // Ignore storage errors
+            }
         }
     }, []);
 
@@ -41,6 +67,22 @@ const ClientCodeEntry: React.FC = () => {
             if (result.isValid && result.testId) {
                 router.push(`/test-confirmation?testId=${result.testId}&clientCode=${clientCode}`);
             } else {
+                // Code expired or was used: immediately purge any local draft for this code
+                try {
+                    const normalized = clientCode.trim().toUpperCase();
+                    for (const storage of [localStorage, sessionStorage]) {
+                        const keysToRemove: string[] = [];
+                        for (let i = 0; i < storage.length; i++) {
+                            const key = storage.key(i);
+                            if (key && key.startsWith('rm_test_draft_') && key.endsWith(normalized)) {
+                                keysToRemove.push(key);
+                            }
+                        }
+                        keysToRemove.forEach(k => storage.removeItem(k));
+                    }
+                } catch {
+                    // Ignore storage errors
+                }
                 setClientError(result.error || 'Nieprawidłowy lub wygasły kod.');
             }
         } catch (err) {

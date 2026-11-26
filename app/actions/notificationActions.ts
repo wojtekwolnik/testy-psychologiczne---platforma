@@ -33,13 +33,3 @@ export async function getNotificationsForUser(userId: string): Promise<Notificat
         context: n.context ? JSON.parse(n.context) : undefined,
     }));
 }
-
-export async function createNotification(userId: string, message: string, context?: { view: string; params: any }): Promise<void> {
-    await prisma.notification.create({
-        data: {
-            userId,
-            message,
-            context: context ? JSON.stringify(context) : undefined,
-        },
-    });
-}

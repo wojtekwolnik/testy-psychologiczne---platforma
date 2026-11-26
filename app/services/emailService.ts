@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { getInternalBrandingSettings } from './settingsService';
+import { escapeHtmlText } from '@/lib/testUtils';
 
 export async function sendEmail({
     to,
@@ -68,12 +69,12 @@ export async function sendTherapistNotification(
     const completionDate = new Date().toLocaleDateString('pl-PL');
 
     const htmlBody = therapistNotificationBody
-        .replace(/{therapistName}/g, therapistName)
-        .replace(/{clientIdentifier}/g, clientIdentifier)
-        .replace(/{testTitle}/g, testTitle)
-        .replace(/{completionDate}/g, completionDate)
-        .replace(/{reportLink}/g, `<a href="${reportLink}">Zobacz Raport</a>`)
-        .replace(/{appName}/g, settings.appName);
+        .replace(/{therapistName}/g, escapeHtmlText(therapistName))
+        .replace(/{clientIdentifier}/g, escapeHtmlText(clientIdentifier))
+        .replace(/{testTitle}/g, escapeHtmlText(testTitle))
+        .replace(/{completionDate}/g, escapeHtmlText(completionDate))
+        .replace(/{reportLink}/g, `<a href="${encodeURI(reportLink)}">Zobacz Raport</a>`)
+        .replace(/{appName}/g, escapeHtmlText(settings.appName));
 
     await sendEmail({
         to: therapistEmail,

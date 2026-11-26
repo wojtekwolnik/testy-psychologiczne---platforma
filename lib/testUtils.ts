@@ -108,3 +108,71 @@ export function createAccessCodeString(): string {
 export function normalizeAccessCodeInput(raw: string | undefined | null): string {
     return (raw || '').trim().toUpperCase();
 }
+
+/**
+ * Maximum time-to-live (TTL) for unfinished client test drafts in browser storage: 14 days.
+ * Note: The access code's own expiration (`codeExpiresAt` / `isUsed`) ALWAYS takes precedence over this local TTL.
+ */
+export const CLIENT_DRAFT_TTL_MS = 14 * 24 * 60 * 60 * 1000;
+
+export interface ClientDraftPayload {
+    answers?: Record<string, any>;
+    currentPage?: number;
+    updatedAt?: number;
+    codeExpiresAt?: string;
+}
+
+/**
+ * Evaluates whether a saved client test draft in browser storage is still valid.
+ * Rules:
+ * 1. If the access code itself has expired (`codeExpiresAt <= now`), the draft is immediately expired (code validity is paramount).
+ * 2. If `updatedAt` is missing or older than 14 days (`now - updatedAt > CLIENT_DRAFT_TTL_MS`), the draft is expired.
+ */
+export function isClientDraftValid(
+    draft: ClientDraftPayload | null | undefined,
+    nowMs: number = Date.now(),
+    liveCodeExpiresAt?: string
+): boolean {
+    if (!draft || typeof draft !== 'object') return false;
+
+    const effectiveCodeExpiresAt = liveCodeExpiresAt || draft.codeExpiresAt;
+    if (effectiveCodeExpiresAt) {
+        const codeExpMs = Date.parse(effectiveCodeExpiresAt);
+        if (!Number.isNaN(codeExpMs) && nowMs > codeExpMs) {
+            return false;
+        }
+    }
+
+    if (typeof draft.updatedAt !== 'number' || !Number.isFinite(draft.updatedAt)) {
+        return false;
+    }
+
+    if (nowMs - draft.updatedAt > CLIENT_DRAFT_TTL_MS) {
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Sanitizes a CSS value (color or font-family) before injecting into a <style> tag
+ * so it can never break out of CSS declarations or close the <style> element.
+ */
+export function sanitizeCssToken(val: string | undefined | null, fallback: string): string {
+    if (!val || typeof val !== 'string') return fallback;
+    const cleaned = val.replace(/[<>{};]/g, '').trim();
+    return cleaned || fallback;
+}
+
+/**
+ * Escapes HTML special characters in user/test strings before interpolating into HTML email templates.
+ */
+export function escapeHtmlText(val: string | undefined | null): string {
+    if (!val) return '';
+    return String(val)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
