@@ -453,7 +453,7 @@ export const TestSimulatorModal: React.FC<TestSimulatorModalProps> = ({
                                                                                     key={rIdx}
                                                                                     className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-background text-primary border border-border"
                                                                                 >
-                                                                                    {sc?.abbreviation || sc?.name || r.scaleId}: +{r.points}
+                                                                                    {sc?.abbreviation || sc?.name || r.scaleId}: {r.points >= 0 ? `+${r.points}` : r.points}
                                                                                 </span>
                                                                             );
                                                                         })}

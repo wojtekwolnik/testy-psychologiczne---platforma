@@ -32,9 +32,11 @@ const ComparisonRadarChart: React.FC<{
     colorA?: string;
     colorB?: string;
 }> = ({ items, labelA, labelB, colorA = '#60a5fa', colorB = '#2f7a3e' }) => {
-    const size = 440;
-    const center = size / 2;
-    const radius = 115;
+    const width = 500;
+    const height = 380;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = 112;
     const count = items.length;
 
     if (count < 3) {
@@ -49,8 +51,8 @@ const ComparisonRadarChart: React.FC<{
         const angle = (Math.PI * 2 * index) / count - Math.PI / 2;
         const r = radius * Math.max(0, Math.min(1, ratio));
         return {
-            x: center + r * Math.cos(angle),
-            y: center + r * Math.sin(angle),
+            x: centerX + r * Math.cos(angle),
+            y: centerY + r * Math.sin(angle),
         };
     };
 
@@ -70,7 +72,7 @@ const ComparisonRadarChart: React.FC<{
         .join(' ');
 
     return (
-        <div className="flex flex-col items-center justify-center py-4">
+        <div className="flex flex-col items-center justify-center py-4 px-2">
             <div className="flex flex-wrap items-center justify-center gap-6 mb-4 text-xs font-semibold">
                 <div className="flex items-center gap-2">
                     <span className="inline-block w-4 h-1.5 rounded-full" style={{ backgroundColor: colorA }} />
@@ -82,7 +84,7 @@ const ComparisonRadarChart: React.FC<{
                 </div>
             </div>
 
-            <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[400px] h-auto overflow-visible">
+            <svg viewBox={`0 0 ${width} ${height}`} className="w-full max-w-[480px] h-auto overflow-visible">
                 {rings.map(ring => {
                     const ringPts = items
                         .map((_, idx) => {
@@ -104,27 +106,33 @@ const ComparisonRadarChart: React.FC<{
 
                 {items.map((item, idx) => {
                     const end = getPoint(idx, 1);
-                    const labelPt = getPoint(idx, 1.24);
+                    const angle = (Math.PI * 2 * idx) / count - Math.PI / 2;
+                    const cosA = Math.cos(angle);
+                    const labelDist = radius + 22;
+                    const labelX = centerX + labelDist * Math.cos(angle);
+                    const labelY = centerY + labelDist * Math.sin(angle);
+                    const anchor = cosA > 0.35 ? 'start' : cosA < -0.35 ? 'end' : 'middle';
                     const delta = item.scoreB - item.scoreA;
                     const deltaStr = delta > 0 ? `+${Number.isInteger(delta) ? delta : delta.toFixed(1)}` : `${Number.isInteger(delta) ? delta : delta.toFixed(1)}`;
+                    const shortName = item.name.length > 18 ? item.name.slice(0, 16) + '…' : item.name;
                     return (
                         <g key={item.name + idx}>
                             <line
-                                x1={center}
-                                y1={center}
+                                x1={centerX}
+                                y1={centerY}
                                 x2={end.x}
                                 y2={end.y}
                                 stroke="var(--border-color)"
                                 strokeWidth="1"
                             />
                             <text
-                                x={labelPt.x}
-                                y={labelPt.y}
-                                textAnchor="middle"
+                                x={labelX}
+                                y={labelY}
+                                textAnchor={anchor}
                                 dominantBaseline="middle"
                                 className="fill-current text-text text-[10px] font-bold"
                             >
-                                {item.name} ({item.scoreA}→{item.scoreB}{delta !== 0 ? ` [${deltaStr}]` : ''})
+                                {shortName} ({item.scoreA}→{item.scoreB}{delta !== 0 ? ` [${deltaStr}]` : ''})
                             </text>
                         </g>
                     );

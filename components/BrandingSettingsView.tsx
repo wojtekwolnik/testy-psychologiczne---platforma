@@ -929,6 +929,21 @@ export default function BrandingPage() {
 
                     {/* Report Settings */}
                     <Tab.Panel className="bg-surface border border-border p-6 rounded-2xl shadow-lg space-y-6">
+                        <div className="p-4 rounded-xl bg-primary/10 border border-primary/30 flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <h4 className="text-sm font-bold text-text">Układ i komponenty raportów PDF (Szablony PDF)</h4>
+                                <p className="text-xs text-text-muted mt-0.5">
+                                    W tej zakładce ustawiasz globalne logo, kolor wiodący, stopkę i klauzulę dla wszystkich raportów PDF. Strukturę sekcji dla poszczególnych testów możesz edytować w Konfiguracji Raportów.
+                                </p>
+                            </div>
+                            <a
+                                href="/admin/templates"
+                                className="px-4 py-2 bg-primary text-primary-contrast font-bold rounded-lg text-xs hover:opacity-90 transition-opacity whitespace-nowrap"
+                            >
+                                Przejdź do Szablonów PDF &rarr;
+                            </a>
+                        </div>
+
                         {/* Logo */}
                         <div>
                             <h3 className="text-lg font-semibold flex items-center gap-2 mb-3"><FaImage className="text-primary" /> Logo na raportach</h3>

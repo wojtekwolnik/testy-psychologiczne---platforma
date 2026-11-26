@@ -237,6 +237,16 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
         return Array.from(map.values()).sort((a, b) => b.maxRelativeRank - a.maxRelativeRank);
     })();
 
+    const formatPolishScalesCount = (count: number) => {
+        if (count === 1) return '1 skala';
+        const mod10 = count % 10;
+        const mod100 = count % 100;
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+            return `${count} skale`;
+        }
+        return `${count} skal`;
+    };
+
     const chartItems = primaryScales
         .map(scale => {
             const value = result.scores[scale.id];
@@ -351,7 +361,7 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                                                     {group.label}
                                                 </span>
                                                 <span className="text-xs text-text-muted font-mono">
-                                                    {group.items.length} {group.items.length === 1 ? 'skala' : 'skale'}
+                                                    {formatPolishScalesCount(group.items.length)}
                                                 </span>
                                             </div>
                                             <ul className="space-y-1 text-xs text-text">

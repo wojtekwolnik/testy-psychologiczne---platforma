@@ -217,6 +217,15 @@ export function analyzeResponseQuality(
     }
 
     if (reversedInconsistencyScales.length > 0) {
+        const count = reversedInconsistencyScales.length;
+        const mod10 = count % 10;
+        const mod100 = count % 100;
+        const noun =
+            count === 1
+                ? 'skala'
+                : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+                  ? 'skale'
+                  : 'skal';
         const listedNames = reversedInconsistencyScales
             .slice(0, 4)
             .map(s => s.scaleName)
@@ -225,9 +234,7 @@ export function analyzeResponseQuality(
         warnings.push({
             id: 'reversed-inconsistency',
             severity: 'warning',
-            title: `Niespójność między pytaniami wprost a odwróconymi (${reversedInconsistencyScales.length} ${
-                reversedInconsistencyScales.length === 1 ? 'skala' : 'skale'
-            })`,
+            title: `Niespójność między pytaniami wprost a odwróconymi (${count} ${noun})`,
             description: `W skalach: ${listedNames}${
                 extraCount > 0 ? ` (+${extraCount} więcej)` : ''
             } badany zaznaczał ten sam kierunek odpowiedzi zarówno w twierdzeniach pozytywnych, jak i przeczących (odwróconych).`,
