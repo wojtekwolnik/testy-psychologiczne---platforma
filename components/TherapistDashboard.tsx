@@ -295,8 +295,8 @@ const TherapistDashboard = () => {
 
   return (
     <>
-      <div className="p-8 max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold mb-2">{user?.role === 'admin' ? 'Zarządzanie Wynikami' : 'Panel terapeuty'}</h1>
+      <div className="p-4 sm:p-8 max-w-7xl mx-auto">
+        <h1 className="text-3xl sm:text-4xl font-bold mb-2">{user?.role === 'admin' ? 'Zarządzanie Wynikami' : 'Panel terapeuty'}</h1>
         <p className="opacity-80 mb-8">Przeglądaj wyniki, generuj anonimowe kody dostępu i zarządzaj raportami.</p>
 
         {/* Code Generator */}
@@ -497,8 +497,8 @@ const TherapistDashboard = () => {
               </div>
             </div>
             <p className="text-xs text-text-muted max-w-2xl -mt-2">Skorzystaj z poniższych filtrów, aby szybko wyszukać określone wyniki testów według identyfikatora klienta (kodu), rodzaju testu lub przedziału czasowego ukończenia.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end w-full">
-              <div className="sm:col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 gap-4 items-end w-full">
+              <div className="sm:col-span-1 xl:col-span-3 min-w-0">
                 <label htmlFor="search-client-id" className="block text-xs font-medium text-text-muted mb-1">
                   Szukaj po ID klienta
                   <InfoTooltip id="filtClient" label="ID klienta" text="Filtruje listę ukończonych testów według unikalnego, jednorazowego kodu dostępu (ID klienta), który został wygenerowany w sekcji powyżej i przekazany klientowi przed rozpoczęciem testu." activeId={activeTooltip} setActiveId={setActiveTooltip} />
@@ -512,7 +512,7 @@ const TherapistDashboard = () => {
                   className="w-full h-[42px] px-3 py-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)] text-sm"
                 />
               </div>
-              <div className="sm:col-span-4">
+              <div className="sm:col-span-1 xl:col-span-3 min-w-0">
                 <label htmlFor="filter-test-select" className="block text-xs font-medium text-text-muted mb-1">
                   Filtruj po teście
                   <InfoTooltip id="filtTest" label="Filtruj po teście" text="Zawęża wyświetlane wyniki na liście wyłącznie do wybranego rodzaju testu psychologicznego." activeId={activeTooltip} setActiveId={setActiveTooltip} />
@@ -521,7 +521,7 @@ const TherapistDashboard = () => {
                   id="filter-test-select"
                   value={filterTest}
                   onChange={e => setFilterTest(e.target.value)}
-                  className="w-full h-[42px] px-3 py-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)] text-sm"
+                  className="w-full h-[42px] px-3 py-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)] text-sm truncate"
                 >
                   <option value="all">Wszystkie testy</option>
                   {Array.from(new Map(results.map(item => [item.testId, item])).values()).map((result: TestResult) => {
@@ -530,7 +530,7 @@ const TherapistDashboard = () => {
                   })}
                 </select>
               </div>
-              <div className="sm:col-span-3">
+              <div className="sm:col-span-1 xl:col-span-3 min-w-0">
                 <label htmlFor="filter-start-date" className="block text-xs font-medium text-text-muted mb-1">
                   Data początkowa
                   <InfoTooltip id="filtStart" label="Data początkowa" text="Filtruje wyniki testów, wyświetlając wyłącznie te ukończone od wskazanej daty włącznie." activeId={activeTooltip} setActiveId={setActiveTooltip} />
@@ -543,7 +543,7 @@ const TherapistDashboard = () => {
                   className="w-full h-[42px] px-3 py-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)] text-sm"
                 />
               </div>
-              <div className="sm:col-span-3">
+              <div className="sm:col-span-1 xl:col-span-3 min-w-0">
                 <label htmlFor="filter-end-date" className="block text-xs font-medium text-text-muted mb-1">
                   Data końcowa
                   <InfoTooltip id="filtEnd" label="Data końcowa" text="Filtruje wyniki testów, wyświetlając wyłącznie te ukończone do wskazanej daty włącznie." activeId={activeTooltip} setActiveId={setActiveTooltip} />

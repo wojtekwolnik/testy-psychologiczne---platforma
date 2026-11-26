@@ -12,11 +12,13 @@ interface SideNavProps {
     notifications: Notification[];
     setNotifications: React.Dispatch<React.SetStateAction<Notification[]>>;
     onLogout: () => void;
+    onCloseMobile?: () => void;
 }
 
-const NavLink: React.FC<{ icon: React.ReactNode, label: string, to: string, isActive: boolean, colors: any }> = ({ icon, label, to, isActive, colors }) => {
+const NavLink: React.FC<{ icon: React.ReactNode, label: string, to: string, isActive: boolean, colors: any, onClick?: () => void }> = ({ icon, label, to, isActive, colors, onClick }) => {
     return (
         <Link href={to}
+            onClick={onClick}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-md transition-all text-left group"
             style={{
                 backgroundColor: isActive ? colors.activeBg : 'transparent',
@@ -91,7 +93,7 @@ const NotificationBell: React.FC<Pick<SideNavProps, 'user' | 'notifications' | '
                 )}
             </button>
             {isOpen && (
-                <div className="fixed top-16 left-64 mt-1 w-80 bg-sidebar-bg border border-border/50 rounded-xl shadow-2xl z-50 text-sidebar-text overflow-hidden backdrop-blur-md animate-scale-in">
+                <div className="fixed top-16 left-4 right-4 sm:right-auto sm:left-4 md:left-64 mt-1 sm:w-80 bg-sidebar-bg border border-border/50 rounded-xl shadow-2xl z-50 text-sidebar-text overflow-hidden backdrop-blur-md animate-scale-in">
                     <div className="p-4 font-semibold bg-black/20 border-b border-white/10 flex items-center justify-between">
                         <span>Powiadomienia</span>
                         <button 
@@ -123,7 +125,7 @@ const NotificationBell: React.FC<Pick<SideNavProps, 'user' | 'notifications' | '
 };
 
 
-const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications, onLogout }) => {
+const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications, onLogout, onCloseMobile }) => {
     const { branding } = useContext(BrandingContext);
     const router = useRouter();
     const pathname = usePathname();
@@ -210,17 +212,32 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
                     )}
                     <h1 className="text-base font-bold leading-tight tracking-tight break-words max-w-[180px]">{branding.appName}</h1>
                 </div>
-                <div className="flex-shrink-0 mt-1">
+                <div className="flex-shrink-0 mt-1 flex items-center gap-1">
                     <NotificationBell
                         user={user}
                         notifications={notifications}
                         setNotifications={setNotifications}
-                        onNavigate={(path) => router.push(path)}
+                        onNavigate={(path) => {
+                            onCloseMobile?.();
+                            router.push(path);
+                        }}
                     />
+                    {onCloseMobile && (
+                        <button
+                            type="button"
+                            onClick={onCloseMobile}
+                            aria-label="Zamknij menu"
+                            className="md:hidden p-2 text-slate-400 hover:text-white rounded-lg"
+                        >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    )}
                 </div>
             </div>
 
-            <div className="flex-grow space-y-1 relative">
+            <div className="flex-grow space-y-1 relative overflow-y-auto">
                 <p className="px-4 text-xs font-semibold opacity-50 uppercase tracking-wider mb-2">Menu</p>
                 {links.map(link => {
                     const isReportView = pathname?.startsWith('/report/');
@@ -237,6 +254,7 @@ const SideNav: React.FC<SideNavProps> = ({ user, notifications, setNotifications
                             to={link.to}
                             isActive={isActive}
                             colors={sidebarColors}
+                            onClick={onCloseMobile}
                         />
                     );
                 })}
