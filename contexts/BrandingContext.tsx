@@ -239,6 +239,12 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (!fullyMerged.inputTextColor) {
             fullyMerged.inputTextColor = unifiedPalette.inputTextColor;
           }
+          if (typeof fullyMerged.termsOfTestingContent === 'string' && fullyMerged.termsOfTestingContent.includes('ostatniego tygodnia')) {
+            fullyMerged.termsOfTestingContent = fullyMerged.termsOfTestingContent.replace(
+              /ostatniego tygodnia/g,
+              'okresu ostatnich 2 tygodni'
+            );
+          }
           
           setBrandingState(fullyMerged);
         } else {
