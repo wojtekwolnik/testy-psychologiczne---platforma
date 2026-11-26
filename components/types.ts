@@ -61,6 +61,7 @@ export interface Test {
   scales: Scale[];
   defaultTemplateId: string | null;
   createdAt: string;
+  codeExpiresAt?: string;
 }
 
 export interface TestResult {

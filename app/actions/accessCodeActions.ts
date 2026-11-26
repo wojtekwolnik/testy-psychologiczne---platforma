@@ -152,21 +152,14 @@ export async function validateAccessCode(code: string): Promise<{ isValid: boole
     return { isValid: true, testId: accessCode.testId };
 }
 
-export async function markAccessCodeAsUsed(code: string): Promise<void> {
-    await prisma.accessCode.update({
-        where: { code },
-        data: { isUsed: true }
-    });
-}
-
 export async function deleteAccessCode(code: string): Promise<void> {
     const user = await requireAuth();
 
     const accessCode = await prisma.accessCode.findUnique({ where: { code } });
-    if (!accessCode) throw new Error("Code not found");
+    if (!accessCode) throw new Error("Nie znaleziono kodu dostępu.");
 
     if (user.role !== 'admin' && accessCode.therapistId !== user.id) {
-        throw new Error("Forbidden");
+        throw new Error("Brak uprawnień do unieważnienia tego kodu.");
     }
 
     await prisma.accessCode.delete({

@@ -8,6 +8,9 @@ import { requireAuth } from './authActions';
 import { getNormalizedBigFiveScaleData } from '@/lib/interpretationBuilder';
 import { ensureBigFiveTestUpgraded } from '@/lib/bigFiveSync';
 import { ensureDass42TestExists, isDass42EnsuredInMemory } from '@/lib/dass42Sync';
+import { remapTestEntityIds } from '@/lib/testUtils';
+import { auditTestIntegrity } from '@/lib/scoring/testAuditor';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 // Helper to parse JSON fields from Prisma to Frontend Types
 const serializeTest = (prismaTest: any): Test => {
@@ -65,64 +68,14 @@ const serializeTest = (prismaTest: any): Test => {
     };
 };
 
-/**
- * Remaps scale, section, and question IDs so a cloned test version or imported JSON test
- * never collides with primary keys of existing Scale/Section/Question rows in PostgreSQL,
- * while preserving all formula and scoring references.
- */
-function remapTestEntityIds(scales: Scale[], sections: Section[]): { remappedScales: Scale[]; remappedSections: Section[] } {
-    const scaleIdMap = new Map<string, string>();
-    for (const s of scales) {
-        const suffix = crypto.randomBytes(4).toString('hex');
-        scaleIdMap.set(s.id, `s-${suffix}`);
-    }
-
-    const remappedScales: Scale[] = scales.map(s => {
-        const newId = scaleIdMap.get(s.id) || s.id;
-        let newFormula = s.formula;
-        if (newFormula) {
-            newFormula = newFormula.replace(/\{([a-zA-Z0-9_-]+)\}/g, (_m, refId) => {
-                const mapped = scaleIdMap.get(refId) || refId;
-                return `{${mapped}}`;
-            });
-        }
-        return {
-            ...s,
-            id: newId,
-            formula: newFormula,
-        };
-    });
-
-    const remappedSections: Section[] = sections.map(sec => ({
-        ...sec,
-        id: `sec-${crypto.randomBytes(4).toString('hex')}`,
-        questions: sec.questions.map(q => {
-            const newScoring: Record<string, any[]> = {};
-            for (const [optId, rules] of Object.entries(q.scoring || {})) {
-                if (Array.isArray(rules)) {
-                    newScoring[optId] = rules.map(r => ({
-                        ...r,
-                        scaleId: scaleIdMap.get(r.scaleId) || r.scaleId,
-                    }));
-                }
-            }
-            return {
-                ...q,
-                id: `q-${crypto.randomBytes(4).toString('hex')}`,
-                scoring: newScoring,
-            };
-        }),
-    }));
-
-    return { remappedScales, remappedSections };
-}
-
 export async function fetchTests(): Promise<Test[]> {
-    await requireAuth();
+    const user = await requireAuth();
     if (!isDass42EnsuredInMemory()) {
         await ensureDass42TestExists(prisma);
     }
+    const whereClause = user.role === 'admin' ? {} : { status: 'PUBLISHED' };
     const tests = await prisma.test.findMany({
+        where: whereClause,
         include: {
             scales: true,
             sections: {
@@ -144,7 +97,7 @@ export async function fetchTests(): Promise<Test[]> {
 }
 
 export async function fetchTestById(testId: string): Promise<Test | null> {
-    await requireAuth();
+    const user = await requireAuth();
     const test = await prisma.test.findUnique({
         where: { id: testId },
         include: {
@@ -158,6 +111,9 @@ export async function fetchTestById(testId: string): Promise<Test | null> {
     });
 
     if (!test) return null;
+    if (user.role !== 'admin' && test.status !== 'PUBLISHED') {
+        return null;
+    }
     const upgraded = await ensureBigFiveTestUpgraded(prisma, test);
     return serializeTest(upgraded);
 }
@@ -165,10 +121,20 @@ export async function fetchTestById(testId: string): Promise<Test | null> {
 /**
  * Public action for test-takers: validates access code and strips out all scoring keys & scale formulas
  * so answers cannot be reverse-engineered in browser DevTools.
+ * Also returns `codeExpiresAt` so client browser storage enforces code expiration over local 14-day draft TTL.
  */
 export async function fetchPublicTestForClient(testId: string, clientCode: string): Promise<Test | null> {
+    const rate = checkRateLimit('public-test-load', 25, 60_000);
+    if (!rate.allowed) {
+        return null;
+    }
+
     const trimmedCode = (clientCode || '').trim().toUpperCase();
     if (!trimmedCode) return null;
+
+    if (!isDass42EnsuredInMemory()) {
+        await ensureDass42TestExists(prisma);
+    }
 
     const accessCode = await prisma.accessCode.findUnique({
         where: { code: trimmedCode }
@@ -195,6 +161,7 @@ export async function fetchPublicTestForClient(testId: string, clientCode: strin
         ...test,
         status: (test.status as 'DRAFT' | 'PUBLISHED') || 'PUBLISHED',
         createdAt: test.createdAt.toISOString(),
+        codeExpiresAt: accessCode.expiresAt.toISOString(),
         scales: [],
         sections: test.sections.map((sec) => ({
             ...sec,
@@ -213,6 +180,12 @@ export async function fetchPublicTestForClient(testId: string, clientCode: strin
 
 export async function saveTest(testData: Test, asNewVersion: boolean): Promise<Test> {
     await requireAuth('admin');
+    if (testData.status === 'PUBLISHED') {
+        const audit = auditTestIntegrity(testData);
+        if (!audit.passed) {
+            throw new Error(`Nie można opublikować testu z błędami psychometrycznymi (${audit.errorCount}). Popraw konfigurację przed publikacją.`);
+        }
+    }
     const { id, scales, sections, ...basicInfo } = testData;
 
     if (asNewVersion) {
@@ -269,7 +242,7 @@ export async function saveTest(testData: Test, asNewVersion: boolean): Promise<T
         revalidatePath('/admin/dashboard');
         revalidatePath('/therapist/dashboard');
         const createdVersion = await fetchTestById(newTestId);
-        if (!createdVersion) throw new Error("Failed to save new version of test.");
+        if (!createdVersion) throw new Error("Nie udało się zapisać nowej wersji testu.");
         return createdVersion;
     }
 
@@ -332,7 +305,7 @@ export async function saveTest(testData: Test, asNewVersion: boolean): Promise<T
     revalidatePath(`/test/${id}`);
 
     const updated = await fetchTestById(id);
-    if (!updated) throw new Error("Failed to save and retrieve test.");
+    if (!updated) throw new Error("Nie udało się zapisać i pobrać zaktualizowanego testu.");
     return updated;
 }
 
@@ -342,15 +315,15 @@ const generateDefaultTemplate = (test: Test, testId: string): PdfTemplate => {
         name: `${test.title} - Widok Standardowy`,
         testCanonicalId: test.canonicalId,
         components: [
-            { id: crypto.randomUUID(), type: 'Header', options: { title: 'Raport Wyniku Testu', subtitle: test.title, showLogo: true } },
-            { id: crypto.randomUUID(), type: 'TestDescription', options: {} },
-            { id: crypto.randomUUID(), type: 'RichText', options: { content: '## Dane Klienta\n\nIdentyfikator: {{imie}}\nData badania: {{data}}' } },
-            { id: crypto.randomUUID(), type: 'ScoresTable', options: { showDescriptions: true } },
-            { id: crypto.randomUUID(), type: 'BarChart', options: { title: 'Profil Wyników' } },
-            { id: crypto.randomUUID(), type: 'Interpretations', options: { title: 'Szczegółowa interpretacja' } },
-            { id: crypto.randomUUID(), type: 'AiInterpretation', options: { title: 'Opis zindywidualizowany' } },
-            { id: crypto.randomUUID(), type: 'AnswersList', options: { title: 'Udzielone odpowiedzi' } },
-            { id: crypto.randomUUID(), type: 'RichText', options: { content: '---\n*Raport wygenerowany automatycznie przez Platformę Real Moment.*' } }
+            { id: crypto.randomUUID(), type: 'Header', title: 'Raport Wyniku Testu', options: { text: `Raport: ${test.title}`, showLogo: true } },
+            { id: crypto.randomUUID(), type: 'TestDescription', title: 'Opis testu', options: {} },
+            { id: crypto.randomUUID(), type: 'RichText', title: 'Dane Klienta', options: { content: '<b>Dane Klienta</b><br>Identyfikator: {{imie}}<br>Data badania: {{data}}' } },
+            { id: crypto.randomUUID(), type: 'ScoresTable', title: 'Zestawienie wyników skal', options: { showDescriptions: true, scaleIds: [] } },
+            { id: crypto.randomUUID(), type: 'BarChart', title: 'Profil Wyników', options: { scaleIds: [] } },
+            { id: crypto.randomUUID(), type: 'Interpretations', title: 'Szczegółowa interpretacja', options: { scaleIds: [] } },
+            { id: crypto.randomUUID(), type: 'AiInterpretation', title: 'Opis zindywidualizowany', options: {} },
+            { id: crypto.randomUUID(), type: 'AnswersList', title: 'Udzielone odpowiedzi', options: {} },
+            { id: crypto.randomUUID(), type: 'RichText', title: '', options: { content: '<i>Raport wygenerowany automatycznie przez Platformę Real Moment.</i>' } }
         ]
     };
 };
@@ -428,7 +401,7 @@ export async function createNewTest(testData: Test): Promise<Test> {
     });
 
     const created = await fetchTestById(id);
-    if (!created) throw new Error("Failed to create test.");
+    if (!created) throw new Error("Nie udało się utworzyć testu.");
     return created;
 }
 
@@ -509,7 +482,7 @@ export async function savePdfTemplate(template: PdfTemplate): Promise<PdfTemplat
         orderBy: { version: 'desc' }
     });
 
-    if (!test) throw new Error("Linked test not found");
+    if (!test) throw new Error("Nie znaleziono powiązanego testu.");
 
     const saved = await prisma.pdfTemplate.upsert({
         where: { id },
@@ -559,6 +532,14 @@ export async function fetchTestVersions(canonicalId: string): Promise<Test[]> {
 
 export async function updateTestStatus(testId: string, newStatus: 'DRAFT' | 'PUBLISHED'): Promise<Test> {
     await requireAuth('admin');
+    if (newStatus === 'PUBLISHED') {
+        const existing = await fetchTestById(testId);
+        if (!existing) throw new Error("Nie znaleziono testu.");
+        const audit = auditTestIntegrity(existing);
+        if (!audit.passed) {
+            throw new Error(`Nie można opublikować testu z błędami psychometrycznymi (${audit.errorCount}). Popraw konfigurację w edytorze przed publikacją.`);
+        }
+    }
     await prisma.test.update({
         where: { id: testId },
         data: { status: newStatus }
@@ -567,7 +548,7 @@ export async function updateTestStatus(testId: string, newStatus: 'DRAFT' | 'PUB
     revalidatePath('/admin/dashboard');
     revalidatePath('/therapist/dashboard');
     const updated = await fetchTestById(testId);
-    if (!updated) throw new Error("Failed to update test status.");
+    if (!updated) throw new Error("Nie udało się zmienić statusu testu.");
     return updated;
 }
 

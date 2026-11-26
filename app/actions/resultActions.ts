@@ -8,8 +8,14 @@ import { buildKeyInterpretation, getNormalizedBigFiveScaleData } from '@/lib/int
 import { calculateTestScores } from '@/lib/scoring/scoreCalculator';
 import { ensureBigFiveTestUpgraded } from '@/lib/bigFiveSync';
 import { cleanupExpiredData } from '@/app/services/retentionService';
+import { checkRateLimit } from '@/lib/rateLimit';
 
 export async function submitTest(testId: string, answers: Record<string, string[]>, clientIdentifier: string): Promise<TestResult> {
+    const rate = checkRateLimit('submit-test', 10, 60_000);
+    if (!rate.allowed) {
+        throw new Error(`Zbyt wiele prób wysłania badania. Odczekaj ${rate.retryAfterSeconds} s i spróbuj ponownie.`);
+    }
+
     const trimmedCode = (clientIdentifier || '').trim().toUpperCase();
     if (!trimmedCode) {
         throw new Error("Kod dostępu jest wymagany do zapisania wyniku testu.");
@@ -28,7 +34,7 @@ export async function submitTest(testId: string, answers: Record<string, string[
         }
     });
 
-    if (!rawTest) throw new Error("Test not found");
+    if (!rawTest) throw new Error("Nie znaleziono testu.");
     if (rawTest.status !== 'PUBLISHED') {
         throw new Error("Ten test nie jest obecnie opublikowany.");
     }
@@ -79,8 +85,9 @@ export async function submitTest(testId: string, answers: Record<string, string[
         finalScores
     );
 
-    // 3. Atomic verification of access code + creation of TestResult + in-app Notification
+    // 3. Atomic verification & row-level locking of access code + creation of TestResult + in-app Notification
     const { result, therapistId } = await prisma.$transaction(async (tx) => {
+        const now = new Date();
         const codeRecord = await tx.accessCode.findUnique({ where: { code: trimmedCode } });
         if (!codeRecord) {
             throw new Error("Nieprawidłowy kod dostępu.");
@@ -88,30 +95,28 @@ export async function submitTest(testId: string, answers: Record<string, string[
         if (codeRecord.isUsed) {
             throw new Error("Ten kod dostępu został już wykorzystany.");
         }
-        if (new Date() > codeRecord.expiresAt) {
+        if (now > codeRecord.expiresAt) {
             throw new Error("Ten kod dostępu wygasł.");
         }
         if (codeRecord.testId !== test.id) {
             throw new Error("Ten kod dostępu jest przypisany do innego testu.");
         }
 
-        const resolvedTherapistId = codeRecord.therapistId;
-        await tx.accessCode.update({
-            where: { code: trimmedCode },
+        // Atomic conditional update prevents race conditions (TOCTOU) on concurrent submissions
+        const claim = await tx.accessCode.updateMany({
+            where: {
+                code: trimmedCode,
+                isUsed: false,
+                expiresAt: { gt: now },
+                testId: test.id,
+            },
             data: { isUsed: true }
         });
-
-        const therapist = await tx.user.findUnique({ where: { id: resolvedTherapistId } });
-        if (!therapist) {
-            await tx.user.create({
-                data: {
-                    id: resolvedTherapistId,
-                    email: 'default@example.com',
-                    username: 'Default Therapist',
-                    role: 'therapist'
-                }
-            });
+        if (claim.count === 0) {
+            throw new Error("Ten kod dostępu został już wykorzystany.");
         }
+
+        const resolvedTherapistId = codeRecord.therapistId;
 
         const createdResult = await tx.testResult.create({
             data: {
@@ -173,7 +178,7 @@ export async function submitTest(testId: string, answers: Record<string, string[
 export async function saveAnalysis(resultId: string, analysis: string): Promise<void> {
     const user = await requireAuth();
     const existing = await prisma.testResult.findUnique({ where: { id: resultId } });
-    if (!existing) throw new Error('Result not found');
+    if (!existing) throw new Error('Nie znaleziono wyniku badania.');
     if (user.role !== 'admin' && existing.therapistId !== user.id) {
         throw new Error('Brak uprawnień do edycji tego raportu.');
     }
@@ -188,7 +193,7 @@ export async function saveAnalysis(resultId: string, analysis: string): Promise<
 export async function triggerAnalysis(resultId: string): Promise<string | null> {
     const user = await requireAuth();
     const existing = await prisma.testResult.findUnique({ where: { id: resultId } });
-    if (!existing) throw new Error('Result not found');
+    if (!existing) throw new Error('Nie znaleziono wyniku badania.');
     if (user.role !== 'admin' && existing.therapistId !== user.id) {
         throw new Error('Brak uprawnień.');
     }
@@ -228,7 +233,7 @@ export async function fetchResults(): Promise<TestResult[]> {
 export async function deleteResult(resultId: string): Promise<void> {
     const user = await requireAuth();
     const existing = await prisma.testResult.findUnique({ where: { id: resultId } });
-    if (!existing) throw new Error('Result not found');
+    if (!existing) throw new Error('Nie znaleziono wyniku badania.');
     if (user.role !== 'admin' && existing.therapistId !== user.id) {
         throw new Error('Brak uprawnień do usunięcia tego wyniku.');
     }

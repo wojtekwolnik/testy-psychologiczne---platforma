@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
 import type { Test, TestResult, Scale } from '../types';
 import { resolveScaleLevel, isBigFiveFacetScale } from '@/lib/interpretationBuilder';
+import { BrandingContext } from '@/contexts/BrandingContext';
 import DOMPurify from 'isomorphic-dompurify';
 import { toast } from 'react-toastify';
 
@@ -31,9 +32,11 @@ const ComparisonRadarChart: React.FC<{
     colorA?: string;
     colorB?: string;
 }> = ({ items, labelA, labelB, colorA = '#60a5fa', colorB = '#2f7a3e' }) => {
-    const size = 440;
-    const center = size / 2;
-    const radius = 115;
+    const width = 500;
+    const height = 380;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = 112;
     const count = items.length;
 
     if (count < 3) {
@@ -48,8 +51,8 @@ const ComparisonRadarChart: React.FC<{
         const angle = (Math.PI * 2 * index) / count - Math.PI / 2;
         const r = radius * Math.max(0, Math.min(1, ratio));
         return {
-            x: center + r * Math.cos(angle),
-            y: center + r * Math.sin(angle),
+            x: centerX + r * Math.cos(angle),
+            y: centerY + r * Math.sin(angle),
         };
     };
 
@@ -69,7 +72,7 @@ const ComparisonRadarChart: React.FC<{
         .join(' ');
 
     return (
-        <div className="flex flex-col items-center justify-center py-4">
+        <div className="flex flex-col items-center justify-center py-4 px-2">
             <div className="flex flex-wrap items-center justify-center gap-6 mb-4 text-xs font-semibold">
                 <div className="flex items-center gap-2">
                     <span className="inline-block w-4 h-1.5 rounded-full" style={{ backgroundColor: colorA }} />
@@ -81,7 +84,7 @@ const ComparisonRadarChart: React.FC<{
                 </div>
             </div>
 
-            <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[400px] h-auto overflow-visible">
+            <svg viewBox={`0 0 ${width} ${height}`} className="w-full max-w-[480px] h-auto overflow-visible">
                 {rings.map(ring => {
                     const ringPts = items
                         .map((_, idx) => {
@@ -103,27 +106,33 @@ const ComparisonRadarChart: React.FC<{
 
                 {items.map((item, idx) => {
                     const end = getPoint(idx, 1);
-                    const labelPt = getPoint(idx, 1.24);
+                    const angle = (Math.PI * 2 * idx) / count - Math.PI / 2;
+                    const cosA = Math.cos(angle);
+                    const labelDist = radius + 22;
+                    const labelX = centerX + labelDist * Math.cos(angle);
+                    const labelY = centerY + labelDist * Math.sin(angle);
+                    const anchor = cosA > 0.35 ? 'start' : cosA < -0.35 ? 'end' : 'middle';
                     const delta = item.scoreB - item.scoreA;
                     const deltaStr = delta > 0 ? `+${Number.isInteger(delta) ? delta : delta.toFixed(1)}` : `${Number.isInteger(delta) ? delta : delta.toFixed(1)}`;
+                    const shortName = item.name.length > 24 ? item.name.slice(0, 22) + '…' : item.name;
                     return (
                         <g key={item.name + idx}>
                             <line
-                                x1={center}
-                                y1={center}
+                                x1={centerX}
+                                y1={centerY}
                                 x2={end.x}
                                 y2={end.y}
                                 stroke="var(--border-color)"
                                 strokeWidth="1"
                             />
                             <text
-                                x={labelPt.x}
-                                y={labelPt.y}
-                                textAnchor="middle"
+                                x={labelX}
+                                y={labelY}
+                                textAnchor={anchor}
                                 dominantBaseline="middle"
                                 className="fill-current text-text text-[10px] font-bold"
                             >
-                                {item.name} ({item.scoreA}→{item.scoreB}{delta !== 0 ? ` [${deltaStr}]` : ''})
+                                {shortName} ({item.scoreA}→{item.scoreB}{delta !== 0 ? ` [${deltaStr}]` : ''})
                             </text>
                         </g>
                     );
@@ -171,12 +180,14 @@ export const ResultComparisonModal: React.FC<ResultComparisonModalProps> = ({
     test,
     onAppendComparisonToNotes,
 }) => {
+    const { branding } = useContext(BrandingContext);
     const [resultAId, setResultAId] = useState<string>('');
     const [resultBId, setResultBId] = useState<string>('');
     const [activeTab, setActiveTab] = useState<'scales' | 'radar' | 'questions'>('scales');
     const [scaleFilterMode, setScaleFilterMode] = useState<'all' | 'primary' | 'changed-level'>('all');
     const [onlyChangedAnswers, setOnlyChangedAnswers] = useState<boolean>(true);
     const [questionScaleFilter, setQuestionScaleFilter] = useState<string>('all');
+    const [isDownloadingPdf, setIsDownloadingPdf] = useState<boolean>(false);
 
     // Filter available results to same test (by testId or testTitle)
     const matchingResults = useMemo(() => {
@@ -342,6 +353,30 @@ export const ResultComparisonModal: React.FC<ResultComparisonModalProps> = ({
         return `<p><br></p><p><strong>PORÓWNANIE WYNIKÓW (PRE-TEST vs POST-TEST): ${test.title}</strong></p><p>Badanie 1 (Pre): <strong>${labelA}</strong> &bull; Badanie 2 (Post): <strong>${labelB}</strong></p><ul>${lines.join('')}</ul>`;
     };
 
+    const handleDownloadComparisonPdf = async () => {
+        if (!resultA || !resultB || !test || !branding) return;
+        setIsDownloadingPdf(true);
+        try {
+            const { generateComparisonPdf } = await import('@/lib/pdf/pdfGenerator');
+            const pdfBytes = await generateComparisonPdf(resultA, resultB, test, branding);
+            const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            const safeA = (resultA.clientIdentifier || 'Pre').replace(/[^a-zA-Z0-9\-_]/g, '_');
+            const safeB = (resultB.clientIdentifier || 'Post').replace(/[^a-zA-Z0-9\-_]/g, '_');
+            link.download = `Raport-Porownawczy-${safeA}-vs-${safeB}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success('Wygenerowano raport porównawczy PDF!');
+        } catch (err) {
+            console.error('Błąd generowania raportu porównawczego PDF:', err);
+            toast.error('Nie udało się wygenerować raportu porównawczego PDF.');
+        } finally {
+            setIsDownloadingPdf(false);
+        }
+    };
+
     const handleCopySummary = async () => {
         const labelA = formatResultLabel(resultA);
         const labelB = formatResultLabel(resultB);
@@ -440,10 +475,10 @@ export const ResultComparisonModal: React.FC<ResultComparisonModalProps> = ({
                 <div className="px-6 py-3 bg-background/30 border-b border-border flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2 text-xs">
                         <span className="px-2.5 py-1 rounded-lg bg-surface border border-border text-text">
-                            Wzrost wyniku: <strong className="text-amber-400">+{stats.increased}</strong>
+                            Wzrost w skalach: <strong className="text-amber-400">{stats.increased}</strong>
                         </span>
                         <span className="px-2.5 py-1 rounded-lg bg-surface border border-border text-text">
-                            Spadek wyniku: <strong className="text-emerald-400">-{stats.decreased}</strong>
+                            Spadek w skalach: <strong className="text-emerald-400">{stats.decreased}</strong>
                         </span>
                         <span className="px-2.5 py-1 rounded-lg bg-surface border border-border text-text">
                             Bez zmian: <strong>{stats.unchanged}</strong>
@@ -768,6 +803,14 @@ export const ResultComparisonModal: React.FC<ResultComparisonModalProps> = ({
                     <div className="flex flex-wrap items-center gap-2">
                         <button
                             type="button"
+                            onClick={handleDownloadComparisonPdf}
+                            disabled={isDownloadingPdf}
+                            className="px-4 py-2 bg-primary text-primary-contrast font-bold rounded-xl text-xs hover:opacity-90 disabled:opacity-50 transition-opacity shadow-sm"
+                        >
+                            {isDownloadingPdf ? 'Generowanie PDF...' : '📥 Pobierz Raport Porównawczy PDF'}
+                        </button>
+                        <button
+                            type="button"
                             onClick={handleCopySummary}
                             className="px-4 py-2 bg-surface border border-border hover:border-primary text-text font-semibold rounded-xl text-xs transition-colors"
                         >
@@ -781,7 +824,7 @@ export const ResultComparisonModal: React.FC<ResultComparisonModalProps> = ({
                                     toast.success('Dołączono zestawienie Pre/Post do notatek raportu!');
                                     onClose();
                                 }}
-                                className="px-4 py-2 bg-primary/20 border border-primary/40 hover:bg-primary/30 text-primary font-bold rounded-xl text-xs transition-colors"
+                                className="px-4 py-2 bg-primary/25 border border-primary text-white font-bold rounded-xl text-xs hover:bg-primary/35 transition-colors"
                             >
                                 ➕ Dołącz zestawienie Pre/Post do notatek raportu
                             </button>

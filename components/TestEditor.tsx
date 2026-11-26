@@ -31,6 +31,7 @@ const TestEditor: React.FC = () => {
     const [helpTopic, setHelpTopic] = useState<HelpTopic>(null);
     // Stores the ID of the currently expanded question. If null, all are collapsed.
     const [expandedQuestionId, setExpandedQuestionId] = useState<string | null>(null);
+    const [expandedScaleIds, setExpandedScaleIds] = useState<Record<string, boolean>>({});
     const [thresholdCounts, setThresholdCounts] = useState<Record<string, number>>({});
 
     useEffect(() => {
@@ -152,6 +153,7 @@ const TestEditor: React.FC = () => {
             newScale = { id: generateUniqueId('s'), type: 'calculated', name: 'Nowa Skala Obliczeniowa', description: '', formula: '' };
         }
         setTest(prev => prev ? ({ ...prev, scales: [...prev.scales, newScale] }) : null);
+        setExpandedScaleIds(prev => ({ ...prev, [newScale.id]: true }));
     };
 
     const updateScale = (index: number, updatedValues: Partial<Scale>) => {
@@ -540,7 +542,54 @@ const TestEditor: React.FC = () => {
 
     return (
         <div className="p-4 sm:p-8 max-w-5xl mx-auto">
-            <h1 className="text-4xl font-bold mb-6">Edytor Testu</h1>
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                <h1 className="text-3xl sm:text-4xl font-bold">Edytor Testu</h1>
+                <div className="flex flex-wrap items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => router.push('/admin/dashboard')}
+                        className="px-4 py-2 bg-surface border border-border text-text hover:bg-white/5 font-semibold rounded-lg transition-colors text-xs sm:text-sm"
+                    >
+                        Anuluj
+                    </button>
+                    {testId !== 'new' && (
+                        <button
+                            type="button"
+                            onClick={() => handleSave(test?.status === 'PUBLISHED', true)}
+                            disabled={isSaving}
+                            className="px-4 py-2 border border-primary bg-primary/25 text-white font-bold rounded-lg hover:bg-primary/35 transition-colors disabled:opacity-50 text-xs sm:text-sm"
+                            title="Tworzy nową wersję (v+1) z tym samym identyfikatorem kanonicznym"
+                        >
+                            {isSaving ? 'Zapisywanie...' : `Nowa wersja (v${(test?.version || 1) + 1})`}
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => handleSave(false)}
+                        disabled={isSaving}
+                        className="px-4 py-2 border font-bold rounded-lg transition-colors disabled:opacity-50 hover:brightness-105 text-xs sm:text-sm"
+                        style={{
+                            backgroundColor: 'var(--warning-color)',
+                            color: 'var(--warning-contrast)',
+                            borderColor: 'var(--warning-color)',
+                        }}
+                    >
+                        {isSaving ? 'Zapisywanie...' : 'Zapisz Szkic'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleSave(true)}
+                        disabled={isSaving}
+                        className="px-4 py-2 font-bold rounded-lg transition-colors disabled:opacity-50 hover:brightness-105 text-xs sm:text-sm"
+                        style={{
+                            backgroundColor: 'var(--success-color)',
+                            color: 'var(--success-contrast)',
+                        }}
+                    >
+                        {isSaving ? 'Zapisywanie...' : 'Opublikuj'}
+                    </button>
+                </div>
+            </div>
 
             {/* Metadata Section */}
             <div className="bg-surface border border-border p-6 rounded-xl shadow-lg mb-8">
@@ -606,29 +655,93 @@ const TestEditor: React.FC = () => {
             </div>
 
             <div className="bg-surface border border-border p-6 rounded-xl shadow-lg mb-8">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-2xl font-semibold text-text">Skale Oceny</h2>
-                    <div className="flex gap-2">
-                        <button onClick={() => addScale('standard')} className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-color)]/20 text-[var(--accent-color)] font-semibold rounded-lg hover:bg-[var(--accent-color)]/30 transition-colors">
+                <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+                    <div>
+                        <h2 className="text-2xl font-semibold text-text">Skale Oceny ({test.scales.length})</h2>
+                        <p className="text-xs text-text-muted mt-0.5">Kliknij nagłówek wybranej skali, aby rozwinąć lub zwinąć jej progi interpretacyjne.</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {test.scales.length > 1 && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const allOpen = test.scales.every(s => expandedScaleIds[s.id]);
+                                    const next: Record<string, boolean> = {};
+                                    test.scales.forEach(s => {
+                                        next[s.id] = !allOpen;
+                                    });
+                                    setExpandedScaleIds(next);
+                                }}
+                                className="px-3 py-2 bg-background border border-border text-text-muted hover:text-text text-xs font-semibold rounded-lg transition-colors"
+                            >
+                                {test.scales.every(s => expandedScaleIds[s.id]) ? 'Zwiń wszystkie skale' : 'Rozwiń wszystkie skale'}
+                            </button>
+                        )}
+                        <button onClick={() => addScale('standard')} className="flex items-center gap-2 px-4 py-2 bg-[var(--accent-color)]/20 text-[var(--accent-color)] font-semibold rounded-lg hover:bg-[var(--accent-color)]/30 transition-colors text-sm">
                             <PlusIcon /> Dodaj Skalę Standardową
                         </button>
-                        <button onClick={() => addScale('calculated')} className="flex items-center gap-2 px-4 py-2 bg-orange-400/20 text-orange-400 font-semibold rounded-lg hover:bg-orange-400/30 transition-colors">
+                        <button onClick={() => addScale('calculated')} className="flex items-center gap-2 px-4 py-2 bg-orange-400/20 text-orange-400 font-semibold rounded-lg hover:bg-orange-400/30 transition-colors text-sm">
                             <CalculatorIcon /> Dodaj Skalę Obliczeniową
                         </button>
                     </div>
                 </div>
-                <div className="space-y-4">
-                    {test.scales.map((scale, i) => (
-                        <div key={scale.id} className={`p-4 rounded-lg bg-background/60 border border-border border-l-4 ${scale.type === 'calculated' ? 'border-l-orange-500' : 'border-l-blue-500'}`}>
+                <div className="space-y-3">
+                    {test.scales.map((scale, i) => {
+                        const isScaleExpanded = expandedScaleIds[scale.id] ?? (test.scales.length <= 4 && i === 0);
+                        const bounds = calculateScaleScoreBounds(test.sections, scale.id);
+                        return (
+                        <div key={scale.id} className={`rounded-lg bg-background/60 border border-border border-l-4 overflow-hidden ${scale.type === 'calculated' ? 'border-l-orange-500' : 'border-l-blue-500'}`}>
+                            <div
+                                onClick={() => setExpandedScaleIds(prev => ({ ...prev, [scale.id]: !isScaleExpanded }))}
+                                className="p-3.5 bg-background/80 flex items-center justify-between gap-3 cursor-pointer hover:bg-white/5 transition-colors"
+                            >
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <span className="text-xs font-bold text-text-muted">{isScaleExpanded ? '▼' : '▶'}</span>
+                                    <span className="font-bold text-sm sm:text-base text-text truncate">{scale.name || `Skala #${i + 1}`}</span>
+                                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-surface border border-border text-text-muted">
+                                        ID: {scale.id}
+                                    </span>
+                                    {scale.maxScore ? (
+                                        <span className="text-xs font-mono text-primary font-semibold hidden sm:inline">
+                                            max: {scale.maxScore} pkt
+                                        </span>
+                                    ) : null}
+                                    <span className="text-xs text-text-muted hidden md:inline">
+                                        ({(scale.levels || []).length} {(scale.levels || []).length === 1 ? 'próg' : 'progów'}{bounds.questionCount > 0 ? `, ${bounds.questionCount} pyt.` : ''})
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <span className="text-xs text-primary font-semibold">{isScaleExpanded ? 'Zwiń' : 'Edytuj skalę'}</span>
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            removeScale(scale.id);
+                                        }}
+                                        className="p-1.5 text-[var(--error-color)] hover:bg-red-500/20 rounded-full"
+                                        title="Usuń skalę"
+                                    >
+                                        <TrashIcon className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {isScaleExpanded && (
+                            <div className="p-4 border-t border-border/60">
                             <div className="flex items-start gap-4">
                                 <div className="flex-grow space-y-2">
                                     <div className="flex gap-2">
                                         <input type="text" placeholder="Nazwa skali" value={scale.name} onChange={e => updateScale(i, { name: e.target.value })} className="w-full p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
-                                        <input type="text" placeholder="Skrót (max 3 znaki)" value={scale.abbreviation || ''} maxLength={3} onChange={e => updateScale(i, { abbreviation: e.target.value })} className="w-32 p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)] text-center font-bold" title="Krótka nazwa wyświetlana na wykresach" />
+                                        <input type="text" placeholder="Skrót (do 6 zn.)" value={scale.abbreviation || ''} maxLength={6} onChange={e => updateScale(i, { abbreviation: e.target.value })} className="w-40 p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)] text-center font-bold" title="Krótka nazwa wyświetlana na wykresach" />
                                     </div>
-                                    <input type="text" placeholder="Opis skali" value={scale.description} onChange={e => updateScale(i, { description: e.target.value })} className="w-full p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
+                                    <textarea
+                                        rows={2}
+                                        placeholder="Opis skali"
+                                        value={scale.description}
+                                        onChange={e => updateScale(i, { description: e.target.value })}
+                                        className="w-full p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)] text-sm resize-y"
+                                    />
                                 </div>
-                                <button onClick={() => removeScale(scale.id)} className="p-2 text-[var(--error-color)] hover:bg-red-500/20 rounded-full"><TrashIcon /></button>
                             </div>
                             {scale.type === 'standard' ? (
                                 <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -829,8 +942,11 @@ const TestEditor: React.FC = () => {
                                     )}
                                 </div>
                             </div>
+                            </div>
+                            )}
                         </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
 
@@ -1049,7 +1165,9 @@ const TestEditor: React.FC = () => {
                                                                     <div className="px-2 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 rounded text-xs font-mono">
                                                                         {test.scales.find(s => s.id === rule.scaleId)?.name || rule.scaleId}
                                                                     </div>
-                                                                    <div className="font-bold text-text">+{rule.points} pkt</div>
+                                                                    <div className="font-bold text-text">
+                                                                        {rule.points >= 0 ? `+${rule.points}` : rule.points} pkt
+                                                                    </div>
                                                                     <button onClick={() => removeScoringRule(section.id, question.id, option.id, rIndex)} className="text-red-400 hover:text-red-300 ml-auto">
                                                                         &times;
                                                                     </button>
@@ -1123,8 +1241,18 @@ const TestEditor: React.FC = () => {
 
             <TestEditorHelpModal helpTopic={helpTopic} onClose={() => setHelpTopic(null)} />
 
-            <div className="flex justify-end gap-4 mt-8">
-                <button onClick={() => router.push('/admin/dashboard')} className="px-6 py-2 bg-surface border border-border text-text hover:bg-white/5 font-semibold rounded-lg transition-colors">Anuluj</button>{testId !== 'new' && (<button onClick={() => handleSave(test?.status === 'PUBLISHED', true)} disabled={isSaving} className="px-6 py-2 border border-primary/50 bg-primary/15 text-primary font-bold rounded-lg hover:bg-primary/25 transition-colors disabled:opacity-50" title="Tworzy nową wersję (v+1) z tym samym identyfikatorem kanonicznym">{isSaving ? 'Zapisywanie...' : `Zapisz jako nową wersję (v${(test?.version || 1) + 1})`}</button>)}
+            <div className="flex flex-wrap justify-end gap-4 mt-8">
+                <button onClick={() => router.push('/admin/dashboard')} className="px-6 py-2 bg-surface border border-border text-text hover:bg-white/5 font-semibold rounded-lg transition-colors">Anuluj</button>
+                {testId !== 'new' && (
+                    <button
+                        onClick={() => handleSave(test?.status === 'PUBLISHED', true)}
+                        disabled={isSaving}
+                        className="px-6 py-2 border border-primary bg-primary/25 text-white font-bold rounded-lg hover:bg-primary/35 transition-colors disabled:opacity-50"
+                        title="Tworzy nową wersję (v+1) z tym samym identyfikatorem kanonicznym"
+                    >
+                        {isSaving ? 'Zapisywanie...' : `Zapisz jako nową wersję (v${(test?.version || 1) + 1})`}
+                    </button>
+                )}
                 <button
                     onClick={() => handleSave(false)}
                     disabled={isSaving}

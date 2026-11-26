@@ -38,7 +38,7 @@ class PdfContext {
     }
 
     checkNewPage(neededHeight: number) {
-        if (this.y - neededHeight < 50) {
+        if (this.y - neededHeight < 55) {
             this.page = this.pdfDoc.addPage();
             this.y = this.height - 50;
         }
@@ -50,7 +50,7 @@ class PdfContext {
 }
 
 
-async function drawHeader(ctx: PdfContext, component: ReportComponent, branding: BrandingSettings, result: TestResult) {
+async function drawHeader(ctx: PdfContext, component: ReportComponent, branding: BrandingSettings, result: TestResult, test?: Test) {
     ctx.checkNewPage(80);
     const font = ctx.boldFont;
     const normalFont = ctx.regularFont;
@@ -97,7 +97,7 @@ async function drawHeader(ctx: PdfContext, component: ReportComponent, branding:
         size: 10,
         font: font
     });
-    ctx.page.drawText(safeText(`Data badania: ${new Date(result.completedAt).toLocaleDateString()}`), {
+    ctx.page.drawText(safeText(`Data badania: ${new Date(result.completedAt).toLocaleDateString('pl-PL')}`), {
         x: ctx.page.getWidth() - 200,
         y: ctx.y - 15,
         size: 10,
@@ -107,14 +107,32 @@ async function drawHeader(ctx: PdfContext, component: ReportComponent, branding:
     const dropAmount = Math.max(maxLogoHeight - 10, 30) + 20;
     ctx.moveDown(dropAmount);
 
-    // Title
-    ctx.page.drawText(safeText(component.options.text || 'Nagłówek'), {
-        x: 50,
-        y: ctx.y,
-        size: component.options.fontSize || 18,
-        font,
-        color: pColor
-    });
+    // Title with full fallback for legacy options.subtitle / options.title / component.title
+    const headerTitle =
+        component.options?.text ||
+        (component.options?.title && component.options?.subtitle
+            ? `${component.options.title}: ${component.options.subtitle}`
+            : component.options?.subtitle || component.options?.title) ||
+        component.title ||
+        (test?.title ? `Raport: ${test.title}` : 'Raport z badania');
+
+    const fontSize = component.options?.fontSize || 16;
+    const maxWidth = ctx.page.getWidth() - 100;
+    const words = safeText(headerTitle).split(/\s+/);
+    let line = '';
+    for (const word of words) {
+        const testLine = line ? `${line} ${word}` : word;
+        if (font.widthOfTextAtSize(testLine, fontSize) > maxWidth && line) {
+            ctx.page.drawText(line, { x: 50, y: ctx.y, size: fontSize, font, color: pColor });
+            ctx.moveDown(fontSize + 4);
+            line = word;
+        } else {
+            line = testLine;
+        }
+    }
+    if (line) {
+        ctx.page.drawText(line, { x: 50, y: ctx.y, size: fontSize, font, color: pColor });
+    }
     
     // Primary Color line
     ctx.page.drawLine({
@@ -124,7 +142,7 @@ async function drawHeader(ctx: PdfContext, component: ReportComponent, branding:
         color: pColor
     });
 
-    ctx.moveDown((component.options.fontSize || 18) + (component.options.marginBottom || 15));
+    ctx.moveDown(fontSize + (component.options?.marginBottom || 15));
 }
 
 async function drawScoresTable(ctx: PdfContext, component: ReportComponent, result: TestResult, test: Test, branding: BrandingSettings) {
@@ -133,13 +151,14 @@ async function drawScoresTable(ctx: PdfContext, component: ReportComponent, resu
     const bodyFont = ctx.regularFont;
     const pColor = hexToRgb(branding.reportPrimaryColor || branding.primaryColor || '#314293');
 
-    // Title for the table
-    if (component.title) {
-        ctx.page.drawText(safeText(component.title), { x: 50, y: ctx.y, size: 14, font: headerFont, color: pColor });
+    const sectionTitle = component.title || component.options?.title;
+    if (sectionTitle) {
+        ctx.page.drawText(safeText(sectionTitle), { x: 50, y: ctx.y, size: 14, font: headerFont, color: pColor });
         ctx.moveDown(25);
     }
 
-    const scaleIds = component.options.scaleIds || Object.keys(result.scores);
+    const hasExplicitScaleIds = Array.isArray(component.options?.scaleIds) && component.options.scaleIds.length > 0;
+    const scaleIds = hasExplicitScaleIds ? component.options.scaleIds : Object.keys(result.scores);
 
     const getScoreLevel = (val: number, scale: any) => {
         return resolveScaleLevel(val, scale).label;
@@ -160,7 +179,8 @@ async function drawScoresTable(ctx: PdfContext, component: ReportComponent, resu
         const levelText = getScoreLevel(score, scaleInfo);
 
         ctx.checkNewPage(20);
-        ctx.page.drawText(safeText(scaleInfo.name), { x: 55, y: ctx.y, font: bodyFont, size: 10 });
+        const displayName = scaleInfo.name.length > 48 ? `${scaleInfo.name.slice(0, 46)}…` : scaleInfo.name;
+        ctx.page.drawText(safeText(displayName), { x: 55, y: ctx.y, font: bodyFont, size: 10 });
         ctx.page.drawText(safeText(`${score}${scaleInfo.maxScore ? ` / ${scaleInfo.maxScore}` : ''}`), { x: 320, y: ctx.y, font: bodyFont, size: 10 });
         ctx.page.drawText(safeText(levelText), { x: 420, y: ctx.y, font: bodyFont, size: 10 });
         ctx.moveDown(20);
@@ -169,52 +189,91 @@ async function drawScoresTable(ctx: PdfContext, component: ReportComponent, resu
 }
 
 async function drawBarChart(ctx: PdfContext, component: ReportComponent, result: TestResult, test: Test, branding: BrandingSettings) {
-    ctx.checkNewPage(150); // Reserve space for chart
+    ctx.checkNewPage(160); // Reserve space for chart
     const headerFont = ctx.boldFont;
+    const labelFont = ctx.regularFont;
     const pColor = branding.reportPrimaryColor ? hexToRgb(branding.reportPrimaryColor) : rgb(0.2, 0.4, 0.8);
 
-    if (component.title) {
-        ctx.page.drawText(safeText(component.title), { x: 50, y: ctx.y, size: 14, font: headerFont, color: pColor });
+    const sectionTitle = component.title || component.options?.title;
+    if (sectionTitle) {
+        ctx.page.drawText(safeText(sectionTitle), { x: 50, y: ctx.y, size: 14, font: headerFont, color: pColor });
         ctx.moveDown(25);
     }
 
-    const hasExplicitScaleIds = Array.isArray(component.options.scaleIds) && component.options.scaleIds.length > 0;
+    const hasExplicitScaleIds = Array.isArray(component.options?.scaleIds) && component.options.scaleIds.length > 0;
     const scaleIds = hasExplicitScaleIds
         ? component.options.scaleIds
         : Object.keys(result.scores).filter(id => {
               const s = test.scales.find(sc => sc.id === id);
               return s && !isBigFiveFacetScale(s);
           });
-    const barWidth = 30;
-    const barSpacing = 20;
-    let currentX = 60;
 
-    for (const scaleId of scaleIds) {
-        const score = result.scores[scaleId];
-        const scaleInfo = test.scales.find(s => s.id === scaleId);
-        if (score === undefined || !scaleInfo || scaleInfo.type !== 'standard') continue;
+    const validScales = scaleIds
+        .map((id: string) => test.scales.find(s => s.id === id))
+        .filter((s: any) => s && result.scores[s.id] !== undefined && s.type === 'standard') as typeof test.scales;
 
-        const maxScore = scaleInfo.maxScore && scaleInfo.maxScore > 0 ? scaleInfo.maxScore : 100; // Default to 100 if 0/missing
-        const barHeight = (score / maxScore) * 100; // Height capped at 100px relative
+    if (validScales.length === 0) return;
+
+    const chartMaxWidth = 490;
+    const count = validScales.length;
+    const slotWidth = Math.min(56, Math.floor(chartMaxWidth / Math.max(count, 1)));
+    const barWidth = Math.max(8, Math.min(32, Math.floor(slotWidth * 0.62)));
+    const barSpacing = Math.max(3, slotWidth - barWidth);
+    let currentX = 55;
+    const chartBottomY = ctx.y - 100;
+
+    // Baseline
+    ctx.page.drawLine({
+        start: { x: 50, y: chartBottomY },
+        end: { x: Math.min(545, 60 + count * (barWidth + barSpacing)), y: chartBottomY },
+        thickness: 0.75,
+        color: rgb(0.7, 0.7, 0.75),
+    });
+
+    for (const scaleInfo of validScales) {
+        const score = result.scores[scaleInfo.id];
+        const maxScore = scaleInfo.maxScore && scaleInfo.maxScore > 0 ? scaleInfo.maxScore : 100;
+        const barHeight = Math.max(2, Math.min(100, (score / maxScore) * 100));
 
         // Draw Bar
         ctx.page.drawRectangle({
             x: currentX,
-            y: ctx.y - barHeight,
+            y: chartBottomY,
             width: barWidth,
             height: barHeight,
             color: pColor
         });
-        // Draw Label
-        const label = safeText(scaleInfo.abbreviation || scaleInfo.name.substring(0, 1).toUpperCase());
-        ctx.page.drawText(label, {
-            x: currentX + 5,
-            y: ctx.y - barHeight - 15,
-            size: 8
+
+        // Score above bar
+        const scoreStr = String(score);
+        const scoreFontSize = count > 15 ? 6 : 8;
+        const scoreW = labelFont.widthOfTextAtSize(scoreStr, scoreFontSize);
+        ctx.page.drawText(scoreStr, {
+            x: currentX + Math.max(0, (barWidth - scoreW) / 2),
+            y: chartBottomY + barHeight + 3,
+            size: scoreFontSize,
+            font: labelFont,
+            color: rgb(0.25, 0.25, 0.3),
+        });
+
+        // Draw Label below bar (avoid single initial 'S' for "Skala Depresji")
+        const rawCleanName = scaleInfo.name.replace(/^Skala\s+/i, '').replace(/^Podskala\s+/i, '').trim();
+        const maxChars = count > 15 ? 3 : count > 8 ? 6 : 10;
+        const shortLabel = safeText(
+            scaleInfo.abbreviation ||
+            (rawCleanName.length > maxChars ? rawCleanName.slice(0, maxChars) : rawCleanName)
+        );
+        const labelFontSize = count > 15 ? 6 : 7.5;
+        const labelW = labelFont.widthOfTextAtSize(shortLabel, labelFontSize);
+        ctx.page.drawText(shortLabel, {
+            x: currentX + Math.max(-2, (barWidth - labelW) / 2),
+            y: chartBottomY - 12,
+            size: labelFontSize,
+            font: labelFont,
         });
         currentX += barWidth + barSpacing;
     }
-    ctx.moveDown(120 + 20); // Chart height + margin
+    ctx.moveDown(125 + 20); // Chart height + margin
 }
 
 async function drawRadarChart(ctx: PdfContext, component: ReportComponent, result: TestResult, test: Test, branding: BrandingSettings) {
@@ -224,12 +283,13 @@ async function drawRadarChart(ctx: PdfContext, component: ReportComponent, resul
     const labelFont = ctx.regularFont;
     const pColor = branding.reportPrimaryColor ? hexToRgb(branding.reportPrimaryColor) : rgb(0.2, 0.4, 0.8);
 
-    if (component.title) {
-        ctx.page.drawText(safeText(component.title), { x: 50, y: ctx.y, size: 14, font: headerFont, color: pColor });
+    const sectionTitle = component.title || component.options?.title;
+    if (sectionTitle) {
+        ctx.page.drawText(safeText(sectionTitle), { x: 50, y: ctx.y, size: 14, font: headerFont, color: pColor });
         ctx.moveDown(25);
     }
 
-    const hasExplicitScaleIds = Array.isArray(component.options.scaleIds) && component.options.scaleIds.length > 0;
+    const hasExplicitScaleIds = Array.isArray(component.options?.scaleIds) && component.options.scaleIds.length > 0;
     const scaleIds = hasExplicitScaleIds
         ? component.options.scaleIds
         : Object.keys(result.scores).filter(id => {
@@ -244,7 +304,7 @@ async function drawRadarChart(ctx: PdfContext, component: ReportComponent, resul
         return;
     }
 
-    const centerX = 200; // Shift it a bit from the left margin
+    const centerX = 240; // Center cleanly on A4 width
     const centerY = ctx.y - (size / 2);
     const radius = size / 2;
 
@@ -283,10 +343,11 @@ async function drawRadarChart(ctx: PdfContext, component: ReportComponent, resul
             color: rgb(0.6, 0.6, 0.6)
         });
 
-        const label = safeText(scalesToDraw[i].abbreviation || scalesToDraw[i].name.substring(0, 15));
+        const rawName = scalesToDraw[i].name.replace(/^Skala\s+/i, '');
+        const label = safeText(scalesToDraw[i].abbreviation || rawName.substring(0, 18));
         const labelWidth = labelFont.widthOfTextAtSize(label, 8);
-        const labelX = centerX + (radius + 15) * Math.cos(angle) - (labelWidth / 2);
-        const labelY = centerY - (radius + 15) * Math.sin(angle) - 3;
+        const labelX = centerX + (radius + 18) * Math.cos(angle) - (labelWidth / 2);
+        const labelY = centerY - (radius + 18) * Math.sin(angle) - 3;
         ctx.page.drawText(label, { x: labelX, y: labelY, size: 8, font: labelFont });
     }
 
@@ -320,7 +381,23 @@ async function drawRadarChart(ctx: PdfContext, component: ReportComponent, resul
         borderWidth: 2,
     });
 
-    ctx.moveDown(size + 20);
+    ctx.moveDown(size + 25);
+}
+
+export function normalizeRichTextMarkdownToHtml(raw: string): string {
+    if (!raw) return '';
+    // Convert legacy markdown headings, horizontal rules, bold/italic and newlines when no HTML block tags are used
+    let text = raw
+        .replace(/^###\s+(.+)$/gm, '<b>$1</b>')
+        .replace(/^##\s+(.+)$/gm, '<b>$1</b>')
+        .replace(/^#\s+(.+)$/gm, '<b>$1</b>')
+        .replace(/^---+$/gm, '')
+        .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+        .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<i>$2</i>');
+    if (!/<(br|p|div|ul|ol|li)\b/i.test(text) && text.includes('\n')) {
+        text = text.replace(/\n/g, '<br>');
+    }
+    return text.trim();
 }
 
 async function drawRichText(ctx: PdfContext, component: ReportComponent, result?: TestResult, test?: Test) {
@@ -330,12 +407,12 @@ async function drawRichText(ctx: PdfContext, component: ReportComponent, result?
     const italicFont = ctx.italicFont;
     const boldItalicFont = ctx.boldItalicFont;
 
-    let content = component.options.content || '';
+    let content = normalizeRichTextMarkdownToHtml(component.options?.content || '');
 
     // Replace variables if result and test are provided
     if (result && test) {
         content = content.replace(/\{\{imie\}\}/g, result.clientIdentifier || 'Brak danych');
-        content = content.replace(/\{\{data\}\}/g, new Date(result.completedAt).toLocaleDateString() || 'Brak danych');
+        content = content.replace(/\{\{data\}\}/g, new Date(result.completedAt).toLocaleDateString('pl-PL') || 'Brak danych');
         content = content.replace(/\{\{nazwa_testu\}\}/g, test.title || 'Brak danych');
         
         // Match {{wynik:ID}} and {{poziom:ID}}
@@ -351,8 +428,8 @@ async function drawRichText(ctx: PdfContext, component: ReportComponent, result?
         });
     }
 
-    const fontSize = component.options.fontSize || 10;
-    const maxWidth = 500;
+    const fontSize = component.options?.fontSize || 10;
+    const maxWidth = 495;
     const marginX = 50;
     
     const tokens = content.split(/(<[^>]+>)/).filter(Boolean);
@@ -450,12 +527,14 @@ async function drawInterpretations(ctx: PdfContext, component: ReportComponent, 
     const headerFont = ctx.boldFont;
     const pColor = hexToRgb(branding.reportPrimaryColor || branding.primaryColor || '#314293');
     
-    if (component.title) {
-        ctx.page.drawText(safeText(component.title), { x: 50, y: ctx.y, size: 14, font: headerFont, color: pColor });
+    const sectionTitle = component.title || component.options?.title;
+    if (sectionTitle) {
+        ctx.page.drawText(safeText(sectionTitle), { x: 50, y: ctx.y, size: 14, font: headerFont, color: pColor });
         ctx.moveDown(25);
     }
 
-    const scaleIds = component.options.scaleIds || Object.keys(result.scores);
+    const hasExplicitScaleIds = Array.isArray(component.options?.scaleIds) && component.options.scaleIds.length > 0;
+    const scaleIds = hasExplicitScaleIds ? component.options.scaleIds : Object.keys(result.scores);
 
     const getScoreLevel = (val: number, scale: any) => {
         if (!scale) return null;
@@ -488,7 +567,7 @@ async function drawTestDescription(ctx: PdfContext, component: ReportComponent, 
     const headerFont = ctx.boldFont;
     const pColor = hexToRgb(branding.reportPrimaryColor || branding.primaryColor || '#314293');
     
-    const title = component.title || 'Opis testu';
+    const title = component.title || component.options?.title || 'Opis testu';
     ctx.page.drawText(safeText(title), { x: 50, y: ctx.y, size: 14, font: headerFont, color: pColor });
     ctx.moveDown(25);
 
@@ -505,6 +584,27 @@ async function drawTestDescription(ctx: PdfContext, component: ReportComponent, 
     }
 }
 
+function drawWrappedLine(ctx: PdfContext, text: string, x: number, maxWidth: number, fontSize: number, font: any, lineHeight: number, color?: any) {
+    const words = safeText(text).split(/\s+/);
+    let currentLine = '';
+    for (const word of words) {
+        const candidate = currentLine ? `${currentLine} ${word}` : word;
+        if (font.widthOfTextAtSize(candidate, fontSize) > maxWidth && currentLine) {
+            ctx.checkNewPage(lineHeight);
+            ctx.page.drawText(currentLine, { x, y: ctx.y, size: fontSize, font, ...(color ? { color } : {}) });
+            ctx.moveDown(lineHeight);
+            currentLine = word;
+        } else {
+            currentLine = candidate;
+        }
+    }
+    if (currentLine) {
+        ctx.checkNewPage(lineHeight);
+        ctx.page.drawText(currentLine, { x, y: ctx.y, size: fontSize, font, ...(color ? { color } : {}) });
+        ctx.moveDown(lineHeight);
+    }
+}
+
 async function drawAnswersList(ctx: PdfContext, component: ReportComponent, result: TestResult, test: Test, branding: BrandingSettings) {
     ctx.checkNewPage(50);
     const headerFont = ctx.boldFont;
@@ -512,7 +612,7 @@ async function drawAnswersList(ctx: PdfContext, component: ReportComponent, resu
     const italicFont = ctx.italicFont;
     const pColor = hexToRgb(branding.reportPrimaryColor || branding.primaryColor || '#314293');
     
-    const title = component.title || 'Udzielone odpowiedzi';
+    const title = component.title || component.options?.title || 'Udzielone odpowiedzi';
     ctx.page.drawText(safeText(title), { x: 50, y: ctx.y, size: 14, font: headerFont, color: pColor });
     ctx.moveDown(25);
 
@@ -523,23 +623,23 @@ async function drawAnswersList(ctx: PdfContext, component: ReportComponent, resu
         ctx.moveDown(20);
 
         for (const question of section.questions) {
-            ctx.checkNewPage(30);
+            ctx.checkNewPage(35);
             
-            // Print question
-            const qText = safeText(`${questionIndex}. ${question.text}`);
-            ctx.page.drawText(qText, { x: 50, y: ctx.y, size: 10, font: bodyFont });
-            ctx.moveDown(15);
+            // Strip leading duplicate number like "1. " if question.text already has it
+            const cleanedQuestionText = (question.text || '').replace(/^\d+[\.\)]\s*/, '').trim();
+            const qText = `${questionIndex}. ${cleanedQuestionText}`;
+            drawWrappedLine(ctx, qText, 50, 495, 10, bodyFont, 14);
             
-            // Find answer
-            const answerId = result.answers[question.id];
-            let answerText = 'Brak odpowiedzi';
-            if (answerId) {
-                const option = question.options.find(o => o.id === answerId);
-                if (option) answerText = option.text;
-            }
+            // Find answer (supports both string and string[] as stored in TestResult.answers)
+            const rawAnswer = (result.answers as Record<string, string | string[]>)[question.id];
+            const answerIds = Array.isArray(rawAnswer) ? rawAnswer : rawAnswer ? [String(rawAnswer)] : [];
+            const matchedTexts = answerIds
+                .map(aId => question.options.find(o => String(o.id) === String(aId))?.text)
+                .filter(Boolean) as string[];
+            const answerText = matchedTexts.length > 0 ? matchedTexts.join(', ') : 'Brak odpowiedzi';
             
-            ctx.page.drawText(safeText(`➜ ${answerText}`), { x: 70, y: ctx.y, size: 10, font: italicFont });
-            ctx.moveDown(20);
+            drawWrappedLine(ctx, `➜ ${answerText}`, 70, 475, 10, italicFont, 14, rgb(0.25, 0.25, 0.3));
+            ctx.moveDown(6);
             questionIndex++;
         }
     }
@@ -553,7 +653,7 @@ async function drawAiInterpretation(ctx: PdfContext, component: ReportComponent,
     const headerFont = ctx.boldFont;
     const pColor = hexToRgb(branding.reportPrimaryColor || branding.primaryColor || '#314293');
     
-    const title = component.title || 'Opis zindywidualizowany';
+    const title = component.title || component.options?.title || 'Opis zindywidualizowany';
     ctx.page.drawText(safeText(title), { x: 50, y: ctx.y, size: 14, font: headerFont, color: pColor });
     ctx.moveDown(25);
 
@@ -567,30 +667,43 @@ async function drawAiInterpretation(ctx: PdfContext, component: ReportComponent,
     await drawRichText(ctx, { id: 'temp-ai', type: 'RichText', options: { content } });
 }
 
+export interface GeneratePdfOptions {
+    audience?: 'therapist' | 'client';
+}
+
+async function loadFontBytes(filename: string): Promise<ArrayBuffer | Uint8Array> {
+    if (typeof window === 'undefined') {
+        const fs = await import('fs/promises');
+        const path = await import('path');
+        const fontPath = path.join(process.cwd(), 'public', 'fonts', filename);
+        return await fs.readFile(fontPath);
+    }
+    const response = await fetch(`/fonts/${filename}`);
+    if (!response.ok) {
+        console.error(`Failed to load font: ${filename}`);
+        throw new Error(`Nie udało się załadować czcionki: ${filename}`);
+    }
+    return await response.arrayBuffer();
+}
+
 export async function generatePdf(
     result: TestResult,
     test: Test,
     branding: BrandingSettings,
     template: PdfTemplate | undefined,
-    customInterpretation: string
+    customInterpretation: string,
+    options?: GeneratePdfOptions
 ): Promise<Uint8Array> {
+    const audience = options?.audience || 'therapist';
+    const isClientAudience = audience === 'client';
 
     const pdfDoc = await PDFDocument.create();
     pdfDoc.registerFontkit(fontkit);
 
-    const fetchFont = async (filename: string) => {
-        const response = await fetch(`/fonts/${filename}`);
-        if (!response.ok) {
-            console.error(`Failed to load font: ${filename}`);
-            throw new Error(`Nie udało się załadować czcionki: ${filename}`);
-        }
-        return await response.arrayBuffer();
-    };
-
-    const regularFontBytes = await fetchFont('Roboto-Regular.ttf');
-    const boldFontBytes = await fetchFont('Roboto-Bold.ttf');
-    const italicFontBytes = await fetchFont('Roboto-Italic.ttf');
-    const boldItalicFontBytes = await fetchFont('Roboto-BoldItalic.ttf');
+    const regularFontBytes = await loadFontBytes('Roboto-Regular.ttf');
+    const boldFontBytes = await loadFontBytes('Roboto-Bold.ttf');
+    const italicFontBytes = await loadFontBytes('Roboto-Italic.ttf');
+    const boldItalicFontBytes = await loadFontBytes('Roboto-BoldItalic.ttf');
 
     const regularFont = await pdfDoc.embedFont(regularFontBytes);
     const boldFont = await pdfDoc.embedFont(boldFontBytes);
@@ -606,23 +719,48 @@ export async function generatePdf(
     const font = regularFont;
 
     const hasCustomTemplate = Boolean(template && template.components && template.components.length > 0);
-    const hasCustomText = Boolean(customInterpretation && customInterpretation.replace(/<[^>]+>/g, '').trim().length > 0);
+    const effectiveCustomInterpretation = isClientAudience ? '' : customInterpretation;
+    const hasCustomText = Boolean(
+        effectiveCustomInterpretation && effectiveCustomInterpretation.replace(/<[^>]+>/g, '').trim().length > 0
+    );
 
-    const componentsToRender: ReportComponent[] = hasCustomTemplate ? template!.components : [
-        { id: 'def-h1', type: 'Header', options: { text: `Raport: ${test.title}` } },
-        { id: 'def-st', type: 'ScoresTable', title: 'Wyniki surowe', options: {} },
-        { id: 'def-barchart', type: 'BarChart', title: 'Profil podstawowy', options: { scaleIds: test.scales.filter(s => s.type === 'standard').map(s => s.id) } },
+    const baseComponents: ReportComponent[] = hasCustomTemplate ? template!.components : [
+        {
+            id: 'def-h1',
+            type: 'Header',
+            options: {
+                text: isClientAudience
+                    ? `Podsumowanie wyników dla Badanej Osoby: ${test.title}`
+                    : `Raport: ${test.title}`,
+            },
+        },
+        { id: 'def-st', type: 'ScoresTable', title: 'Zestawienie wyników skal', options: {} },
+        { id: 'def-barchart', type: 'BarChart', title: 'Profil wyników', options: { scaleIds: test.scales.filter(s => s.type === 'standard').map(s => s.id) } },
         hasCustomText
             ? { id: 'def-ai', type: 'AiInterpretation', title: 'Interpretacja wyników i zalecenia', options: {} }
-            : { id: 'def-interp', type: 'Interpretations', title: 'Szczegółowa interpretacja', options: {} },
+            : { id: 'def-interp', type: 'Interpretations', title: 'Opis wyników według klucza testu', options: {} },
     ];
+
+    // W wersji dla klienta ("client") pomijamy surowe odpowiedzi na pytania oraz prywatne notatki robocze,
+    // a w miejsce komponentu AiInterpretation podstawiamy neutralną interpretację z klucza testu
+    // tylko wtedy, gdy szablon nie zawiera już osobnego bloku Interpretations.
+    const alreadyHasInterpretations = baseComponents.some(c => c.type === 'Interpretations');
+    const componentsToRender: ReportComponent[] = isClientAudience
+        ? baseComponents
+              .filter(c => c.type !== 'AnswersList' && !(c.type === 'AiInterpretation' && alreadyHasInterpretations))
+              .map(c =>
+                  c.type === 'AiInterpretation'
+                      ? { id: c.id, type: 'Interpretations', title: 'Opis wyników według klucza testu', options: {} }
+                      : c
+              )
+        : baseComponents;
 
     let customInterpretationRendered = false;
 
     for (const component of componentsToRender) {
         switch (component.type) {
             case 'Header':
-                await drawHeader(ctx, component, branding, result);
+                await drawHeader(ctx, component, branding, result, test);
                 break;
             case 'ScoresTable':
                 await drawScoresTable(ctx, component, result, test, branding);
@@ -646,20 +784,20 @@ export async function generatePdf(
                 await drawAnswersList(ctx, component, result, test, branding);
                 break;
             case 'AiInterpretation':
-                await drawAiInterpretation(ctx, component, result, branding, customInterpretation);
+                await drawAiInterpretation(ctx, component, result, branding, effectiveCustomInterpretation);
                 customInterpretationRendered = true;
                 break;
         }
     }
 
-    // Add Custom Interpretation only if a custom template did not already render it via AiInterpretation
-    if (hasCustomText && !customInterpretationRendered) {
+    // Add Custom Interpretation only if a custom template did not already render it via AiInterpretation (and not client mode)
+    if (hasCustomText && !customInterpretationRendered && !isClientAudience) {
         ctx.checkNewPage(40);
         const headerFont = ctx.boldFont;
         const pColor = hexToRgb(branding.reportPrimaryColor || branding.primaryColor || '#314293');
         ctx.page.drawText(safeText('Interpretacja Terapeuty'), { x: 50, y: ctx.y, size: 14, font: headerFont, color: pColor });
         ctx.moveDown(25);
-        await drawRichText(ctx, { id: 'cust-int', type: 'RichText', options: { content: customInterpretation } }, result, test);
+        await drawRichText(ctx, { id: 'cust-int', type: 'RichText', options: { content: effectiveCustomInterpretation } }, result, test);
     }
 
     // Methodological Disclaimer at the end of the report
@@ -707,6 +845,209 @@ export async function generatePdf(
                 size: 9,
                 font: font,
                 color: rgb(0.5, 0.5, 0.5)
+            });
+        }
+    }
+
+    return pdfDoc.save();
+}
+
+export async function generateComparisonPdf(
+    resultA: TestResult,
+    resultB: TestResult,
+    test: Test,
+    branding: BrandingSettings
+): Promise<Uint8Array> {
+    const pdfDoc = await PDFDocument.create();
+    pdfDoc.registerFontkit(fontkit);
+
+    const [regularFontBytes, boldFontBytes, italicFontBytes, boldItalicFontBytes] = await Promise.all([
+        loadFontBytes('Roboto-Regular.ttf'),
+        loadFontBytes('Roboto-Bold.ttf'),
+        loadFontBytes('Roboto-Italic.ttf'),
+        loadFontBytes('Roboto-BoldItalic.ttf'),
+    ]);
+
+    const regularFont = await pdfDoc.embedFont(regularFontBytes);
+    const boldFont = await pdfDoc.embedFont(boldFontBytes);
+    const italicFont = await pdfDoc.embedFont(italicFontBytes);
+    const boldItalicFont = await pdfDoc.embedFont(boldItalicFontBytes);
+
+    const ctx = new PdfContext(pdfDoc);
+    ctx.regularFont = regularFont;
+    ctx.boldFont = boldFont;
+    ctx.italicFont = italicFont;
+    ctx.boldItalicFont = boldItalicFont;
+
+    const pColor = hexToRgb(branding.reportPrimaryColor || branding.primaryColor || '#314293');
+    const dateAStr = new Date(resultA.completedAt).toLocaleDateString('pl-PL');
+    const dateBStr = new Date(resultB.completedAt).toLocaleDateString('pl-PL');
+
+    // Header
+    ctx.page.drawText(safeText(`Raport Porównawczy (Pre-test / Post-test)`), {
+        x: 50,
+        y: ctx.y,
+        size: 18,
+        font: boldFont,
+        color: pColor,
+    });
+    ctx.moveDown(22);
+    ctx.page.drawText(safeText(test.title), {
+        x: 50,
+        y: ctx.y,
+        size: 13,
+        font: boldFont,
+        color: rgb(0.2, 0.2, 0.25),
+    });
+    ctx.moveDown(22);
+
+    ctx.page.drawText(
+        safeText(`Badanie 1 (Pre-test): Kod ${resultA.clientIdentifier} — Data: ${dateAStr}`),
+        { x: 50, y: ctx.y, size: 10, font: regularFont, color: rgb(0.25, 0.25, 0.3) }
+    );
+    ctx.moveDown(15);
+    ctx.page.drawText(
+        safeText(`Badanie 2 (Post-test): Kod ${resultB.clientIdentifier} — Data: ${dateBStr}`),
+        { x: 50, y: ctx.y, size: 10, font: boldFont, color: pColor }
+    );
+    ctx.moveDown(18);
+
+    ctx.page.drawLine({
+        start: { x: 50, y: ctx.y },
+        end: { x: ctx.page.getWidth() - 50, y: ctx.y },
+        thickness: 1,
+        color: pColor,
+    });
+    ctx.moveDown(22);
+
+    // Table header
+    const colX = {
+        scale: 50,
+        pre: 255,
+        post: 345,
+        delta: 435,
+        shift: 495,
+    };
+
+    ctx.page.drawText(safeText('Skala'), { x: colX.scale, y: ctx.y, size: 9.5, font: boldFont, color: pColor });
+    ctx.page.drawText(safeText('Pre-test'), { x: colX.pre, y: ctx.y, size: 9.5, font: boldFont, color: pColor });
+    ctx.page.drawText(safeText('Post-test'), { x: colX.post, y: ctx.y, size: 9.5, font: boldFont, color: pColor });
+    ctx.page.drawText(safeText('Zmiana (Δ)'), { x: colX.delta, y: ctx.y, size: 9.5, font: boldFont, color: pColor });
+    ctx.page.drawText(safeText('Próg'), { x: colX.shift, y: ctx.y, size: 9.5, font: boldFont, color: pColor });
+    ctx.moveDown(10);
+
+    ctx.page.drawLine({
+        start: { x: 50, y: ctx.y },
+        end: { x: ctx.page.getWidth() - 50, y: ctx.y },
+        thickness: 0.6,
+        color: rgb(0.7, 0.7, 0.75),
+    });
+    ctx.moveDown(14);
+
+    let levelShiftCount = 0;
+
+    for (const scale of test.scales) {
+        const scoreA = Number(resultA.scores?.[scale.id] ?? 0);
+        const scoreB = Number(resultB.scores?.[scale.id] ?? 0);
+        const max = scale.maxScore || 100;
+        const delta = Number((scoreB - scoreA).toFixed(2));
+        const deltaStr = delta > 0 ? `+${delta}` : `${delta}`;
+        const levelA = resolveScaleLevel(scoreA, scale);
+        const levelB = resolveScaleLevel(scoreB, scale);
+        const changed = levelA.label !== levelB.label;
+        if (changed) levelShiftCount++;
+
+        ctx.checkNewPage(32);
+
+        const scaleTitle = scale.name.length > 36 ? `${scale.name.slice(0, 34)}...` : scale.name;
+        ctx.page.drawText(safeText(scaleTitle), {
+            x: colX.scale,
+            y: ctx.y,
+            size: 9,
+            font: changed ? boldFont : regularFont,
+            color: rgb(0.15, 0.15, 0.18),
+        });
+        ctx.page.drawText(safeText(`${scoreA}/${max} (${levelA.label})`), {
+            x: colX.pre,
+            y: ctx.y,
+            size: 8.5,
+            font: regularFont,
+            color: rgb(0.3, 0.3, 0.35),
+        });
+        ctx.page.drawText(safeText(`${scoreB}/${max} (${levelB.label})`), {
+            x: colX.post,
+            y: ctx.y,
+            size: 8.5,
+            font: boldFont,
+            color: rgb(0.15, 0.15, 0.2),
+        });
+        ctx.page.drawText(safeText(`${deltaStr} pkt`), {
+            x: colX.delta,
+            y: ctx.y,
+            size: 9,
+            font: boldFont,
+            color: delta > 0 ? rgb(0.7, 0.4, 0.05) : delta < 0 ? rgb(0.1, 0.5, 0.25) : rgb(0.4, 0.4, 0.45),
+        });
+        ctx.page.drawText(safeText(changed ? 'ZMIANA' : 'Bez zmian'), {
+            x: colX.shift,
+            y: ctx.y,
+            size: 8.5,
+            font: changed ? boldFont : regularFont,
+            color: changed ? pColor : rgb(0.45, 0.45, 0.5),
+        });
+
+        ctx.moveDown(15);
+        ctx.page.drawLine({
+            start: { x: 50, y: ctx.y + 5 },
+            end: { x: ctx.page.getWidth() - 50, y: ctx.y + 5 },
+            thickness: 0.3,
+            color: rgb(0.86, 0.86, 0.9),
+        });
+    }
+
+    ctx.moveDown(12);
+    ctx.checkNewPage(45);
+    await drawRichText(ctx, {
+        id: 'comp-summary',
+        type: 'RichText',
+        options: {
+            content: `<b>Podsumowanie zmian:</b> Przeanalizowano ${test.scales.length} skal. Liczba skal ze zmianą progu interpretacyjnego: <b>${levelShiftCount}</b>.`,
+        },
+    });
+
+    if (branding.reportDisclaimerEnabled !== false) {
+        const disclaimerHtml =
+            branding.reportDisclaimerText ||
+            'Informacja metodologiczna: Wyniki niniejszego kwestionariusza mają charakter pomocniczy, przesiewowy i orientacyjny. Stanowią one materiał wspierający pracę ze specjalistą i nie zastępują pełnej diagnozy klinicznej ani lekarskiej.';
+        ctx.checkNewPage(75);
+        ctx.moveDown(6);
+        await drawRichText(ctx, {
+            id: 'comp-disclaimer',
+            type: 'RichText',
+            options: { content: `<em>${disclaimerHtml}</em>` },
+        });
+    }
+
+    const pages = pdfDoc.getPages();
+    const pageCount = pages.length;
+    const footerText = branding.reportFooterText || '';
+
+    for (let i = 0; i < pageCount; i++) {
+        const p = pages[i];
+        p.drawText(safeText(`Strona ${i + 1} z ${pageCount}`), {
+            x: p.getWidth() - 100,
+            y: 20,
+            size: 9,
+            font: regularFont,
+            color: rgb(0.5, 0.5, 0.5),
+        });
+        if (footerText) {
+            p.drawText(safeText(footerText), {
+                x: 50,
+                y: 20,
+                size: 9,
+                font: regularFont,
+                color: rgb(0.5, 0.5, 0.5),
             });
         }
     }

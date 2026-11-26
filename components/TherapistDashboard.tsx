@@ -9,8 +9,10 @@ import { getUsers, UserData } from '@/app/actions/userActions';
 import { TestResult, Test, AccessCode } from './types';
 import { ChartBarIcon, TrashIcon, PlusIcon, ClipboardCopyIcon, LinkIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
+import AccessCodeQrModal from './common/AccessCodeQrModal';
 import ResultComparisonModal from './report/ResultComparisonModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { buildCsvContent } from '@/lib/testUtils';
 
 const InfoTooltip: React.FC<{ id: string, label: string, text: string, activeId: string | null, setActiveId: (id: string | null) => void }> = ({ id, label, text, activeId, setActiveId }) => {
   const isOpen = activeId === id;
@@ -57,6 +59,7 @@ const TherapistDashboard = () => {
   const [codeToDelete, setCodeToDelete] = useState<string | null>(null);
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [comparisonTarget, setComparisonTarget] = useState<TestResult | null>(null);
+  const [qrCodeTarget, setQrCodeTarget] = useState<AccessCode | null>(null);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -212,6 +215,58 @@ const TherapistDashboard = () => {
     setFilterEndDate('');
   };
 
+  const handleExportCsv = () => {
+    if (filteredResults.length === 0) return;
+
+    // Zbierz wszystkie klucze skal występujące w wyfiltrowanych wynikach
+    const scaleIds: string[] = [];
+    const scaleNamesMap = new Map<string, string>();
+    tests.forEach(t => {
+      (t.scales || []).forEach(s => {
+        if (!scaleNamesMap.has(s.id)) {
+          scaleNamesMap.set(s.id, `${s.name} (${s.id})`);
+        }
+      });
+    });
+
+    filteredResults.forEach(r => {
+      Object.keys(r.scores || {}).forEach(sid => {
+        if (!scaleIds.includes(sid)) {
+          scaleIds.push(sid);
+        }
+      });
+    });
+
+    const headers = [
+      'Identyfikator Klienta (Kod)',
+      'Tytuł Testu',
+      'Wersja Testu',
+      'Data Ukończenia',
+      ...scaleIds.map(sid => scaleNamesMap.get(sid) || sid),
+    ];
+
+    const rows = filteredResults.map(r => {
+      const completedStr = new Date(r.completedAt).toLocaleString('pl-PL');
+      return [
+        r.clientIdentifier,
+        r.testTitle,
+        `v${r.testVersion}`,
+        completedStr,
+        ...scaleIds.map(sid => r.scores?.[sid] ?? ''),
+      ];
+    });
+
+    const csvContent = buildCsvContent(headers, rows);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    const dateStamp = new Date().toISOString().split('T')[0];
+    link.download = `Wyniki-Testow-RealMoment-${dateStamp}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const filteredResults = useMemo(() => {
     return results.filter(result => {
       const matchesSearch = result.clientIdentifier.toLowerCase().includes(searchTerm.toLowerCase());
@@ -240,8 +295,8 @@ const TherapistDashboard = () => {
 
   return (
     <>
-      <div className="p-8 max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold mb-2">{user?.role === 'admin' ? 'Zarządzanie Wynikami' : 'Panel terapeuty'}</h1>
+      <div className="p-4 sm:p-8 max-w-7xl mx-auto">
+        <h1 className="text-3xl sm:text-4xl font-bold mb-2">{user?.role === 'admin' ? 'Zarządzanie Wynikami' : 'Panel terapeuty'}</h1>
         <p className="opacity-80 mb-8">Przeglądaj wyniki, generuj anonimowe kody dostępu i zarządzaj raportami.</p>
 
         {/* Code Generator */}
@@ -380,27 +435,34 @@ const TherapistDashboard = () => {
                       const associatedTest = tests.find(t => t.id === code.testId);
                       return (
                         <tr key={code.code} className="border-b border-border/50 hover:bg-background/80 transition-colors">
-                          <td className="p-3 font-mono font-semibold text-[var(--primary-color)]">{code.code}</td>
+                          <td className="p-3 font-mono font-semibold text-[var(--primary-color)] whitespace-nowrap">{code.code}</td>
                           <td className="p-3">{associatedTest?.title} <span className="text-xs opacity-50">(v{associatedTest?.version})</span></td>
-                          <td className="p-3">{new Date(code.expiresAt).toLocaleDateString()}</td>
-                          <td className="p-3 flex items-center justify-end gap-2">
+                          <td className="p-3 whitespace-nowrap">{new Date(code.expiresAt).toLocaleDateString()}</td>
+                          <td className="p-3 flex items-center justify-end gap-2 whitespace-nowrap">
                             <button
                               onClick={() => handleCopyCode(code.code)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-background hover:bg-border/30 text-text font-semibold rounded-lg transition-colors shadow-sm text-xs border border-border"
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-background hover:bg-border/30 text-text font-semibold rounded-lg transition-colors shadow-sm text-xs border border-border whitespace-nowrap"
                               title="Kopiuj sam kod"
                             >
                               {copySuccess === code.code ? <span className="text-primary">Skopiowano kod!</span> : <><ClipboardCopyIcon className="w-4 h-4" /> Kopiuj kod</>}
                             </button>
                             <button
                               onClick={() => handleCopyLink(code)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/15 hover:bg-primary/25 text-primary font-semibold rounded-lg transition-colors shadow-sm text-xs border border-primary/30"
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/15 hover:bg-primary/25 text-primary font-semibold rounded-lg transition-colors shadow-sm text-xs border border-primary/30 whitespace-nowrap"
                               title="Kopiuj bezpośredni link do badania (bez konieczności wpisywania kodu przez klienta)"
                             >
                               {copyLinkSuccess === code.code ? <span>Skopiowano link!</span> : <><LinkIcon className="w-4 h-4" /> Kopiuj link</>}
                             </button>
                             <button
+                              onClick={() => setQrCodeTarget(code)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-surface hover:bg-border/30 text-text font-semibold rounded-lg transition-colors shadow-sm text-xs border border-border whitespace-nowrap"
+                              title="Wyświetl kod QR na ekranie, aby klient mógł zeskanować go telefonem w gabinecie"
+                            >
+                              📱 Kod QR
+                            </button>
+                            <button
                               onClick={() => setCodeToDelete(code.code)}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-error/10 hover:bg-error/20 text-error font-semibold rounded-lg transition-colors shadow-sm text-xs border border-error/20"
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-error/10 hover:bg-error/20 text-error font-semibold rounded-lg transition-colors shadow-sm text-xs border border-error/20 whitespace-nowrap"
                               title="Unieważnij ten kod"
                             >
                               <TrashIcon className="w-4 h-4" /> Unieważnij
@@ -418,13 +480,25 @@ const TherapistDashboard = () => {
 
         <div className="bg-surface/60 backdrop-blur-md rounded-2xl shadow-xl border border-border/50">
           <div className="p-6 bg-background/50 border-b border-border flex flex-col gap-4">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap justify-between items-center gap-3">
               <h2 className="text-xl font-semibold self-center">Ukończone testy</h2>
-              <button onClick={clearFilters} className="text-sm text-[var(--primary-color)] font-semibold hover:underline">Wyczyść filtry</button>
+              <div className="flex flex-wrap items-center gap-3">
+                {filteredResults.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleExportCsv}
+                    className="px-3.5 py-1.5 bg-primary/15 hover:bg-primary/25 text-primary border border-primary/30 rounded-xl text-xs font-bold transition-colors"
+                    title="Pobierz aktualnie wyfiltrowane, zanonimizowane wyniki jako arkusz CSV (kompatybilny z programem Excel)"
+                  >
+                    📥 Eksportuj do CSV ({filteredResults.length})
+                  </button>
+                )}
+                <button onClick={clearFilters} className="text-sm text-[var(--primary-color)] font-semibold hover:underline">Wyczyść filtry</button>
+              </div>
             </div>
             <p className="text-xs text-text-muted max-w-2xl -mt-2">Skorzystaj z poniższych filtrów, aby szybko wyszukać określone wyniki testów według identyfikatora klienta (kodu), rodzaju testu lub przedziału czasowego ukończenia.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end w-full">
-              <div className="sm:col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 gap-4 items-end w-full">
+              <div className="sm:col-span-1 xl:col-span-3 min-w-0">
                 <label htmlFor="search-client-id" className="block text-xs font-medium text-text-muted mb-1">
                   Szukaj po ID klienta
                   <InfoTooltip id="filtClient" label="ID klienta" text="Filtruje listę ukończonych testów według unikalnego, jednorazowego kodu dostępu (ID klienta), który został wygenerowany w sekcji powyżej i przekazany klientowi przed rozpoczęciem testu." activeId={activeTooltip} setActiveId={setActiveTooltip} />
@@ -438,7 +512,7 @@ const TherapistDashboard = () => {
                   className="w-full h-[42px] px-3 py-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)] text-sm"
                 />
               </div>
-              <div className="sm:col-span-4">
+              <div className="sm:col-span-1 xl:col-span-3 min-w-0">
                 <label htmlFor="filter-test-select" className="block text-xs font-medium text-text-muted mb-1">
                   Filtruj po teście
                   <InfoTooltip id="filtTest" label="Filtruj po teście" text="Zawęża wyświetlane wyniki na liście wyłącznie do wybranego rodzaju testu psychologicznego." activeId={activeTooltip} setActiveId={setActiveTooltip} />
@@ -447,7 +521,7 @@ const TherapistDashboard = () => {
                   id="filter-test-select"
                   value={filterTest}
                   onChange={e => setFilterTest(e.target.value)}
-                  className="w-full h-[42px] px-3 py-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)] text-sm"
+                  className="w-full h-[42px] px-3 py-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)] text-sm truncate"
                 >
                   <option value="all">Wszystkie testy</option>
                   {Array.from(new Map(results.map(item => [item.testId, item])).values()).map((result: TestResult) => {
@@ -456,7 +530,7 @@ const TherapistDashboard = () => {
                   })}
                 </select>
               </div>
-              <div className="sm:col-span-3">
+              <div className="sm:col-span-1 xl:col-span-3 min-w-0">
                 <label htmlFor="filter-start-date" className="block text-xs font-medium text-text-muted mb-1">
                   Data początkowa
                   <InfoTooltip id="filtStart" label="Data początkowa" text="Filtruje wyniki testów, wyświetlając wyłącznie te ukończone od wskazanej daty włącznie." activeId={activeTooltip} setActiveId={setActiveTooltip} />
@@ -469,7 +543,7 @@ const TherapistDashboard = () => {
                   className="w-full h-[42px] px-3 py-2 border border-[var(--border-color)] rounded-md bg-[var(--input-background-color)] text-[var(--input-text-color)] text-sm"
                 />
               </div>
-              <div className="sm:col-span-3">
+              <div className="sm:col-span-1 xl:col-span-3 min-w-0">
                 <label htmlFor="filter-end-date" className="block text-xs font-medium text-text-muted mb-1">
                   Data końcowa
                   <InfoTooltip id="filtEnd" label="Data końcowa" text="Filtruje wyniki testów, wyświetlając wyłącznie te ukończone do wskazanej daty włącznie." activeId={activeTooltip} setActiveId={setActiveTooltip} />
@@ -516,7 +590,7 @@ const TherapistDashboard = () => {
 
                       return (
                         <tr key={result.id} className="border-b border-border/50 hover:bg-background/80 transition-colors">
-                          <td className="p-4 font-mono">{result.clientIdentifier}</td>
+                          <td className="p-4 font-mono whitespace-nowrap">{result.clientIdentifier}</td>
                           <td className="p-4">{result.testTitle} <span className="text-xs opacity-50">(v{result.testVersion})</span></td>
                           <td className="p-4">{new Date(result.completedAt).toLocaleDateString()}</td>
                           <td className="p-4 font-medium">{deletionDateStr}</td>
@@ -588,6 +662,15 @@ const TherapistDashboard = () => {
               null
             : null
         }
+      />
+      <AccessCodeQrModal
+        codeObj={qrCodeTarget}
+        testTitle={
+          qrCodeTarget
+            ? tests.find(t => t.id === qrCodeTarget.testId)?.title
+            : undefined
+        }
+        onClose={() => setQrCodeTarget(null)}
       />
     </>
   );

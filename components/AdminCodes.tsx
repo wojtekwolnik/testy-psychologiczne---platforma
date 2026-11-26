@@ -7,6 +7,7 @@ import { getUsers, UserData } from '@/app/actions/userActions';
 import { AccessCode, Test } from './types';
 import { ClipboardCopyIcon, TrashIcon, LinkIcon, PlusIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
+import AccessCodeQrModal from './common/AccessCodeQrModal';
 
 const AdminCodes = () => {
     const [codes, setCodes] = useState<(AccessCode & { therapistName?: string; therapistEmail?: string })[]>([]);
@@ -19,6 +20,7 @@ const AdminCodes = () => {
     const [reassignSuccess, setReassignSuccess] = useState<string>('');
     const [reassigningCode, setReassigningCode] = useState<string | null>(null);
     const [codeToDelete, setCodeToDelete] = useState<string | null>(null);
+    const [qrCodeTarget, setQrCodeTarget] = useState<AccessCode | null>(null);
 
     // Batch generator state
     const [selectedTestId, setSelectedTestId] = useState<string>('');
@@ -329,7 +331,7 @@ const AdminCodes = () => {
 
                                         return (
                                             <tr key={code.code} className="border-b border-[var(--border-color)]/50 hover:bg-[var(--background-color)]">
-                                                <td className="p-4 font-mono font-semibold text-[var(--primary-color)]">{code.code}</td>
+                                                <td className="p-4 font-mono font-semibold text-[var(--primary-color)] whitespace-nowrap">{code.code}</td>
                                                 <td className="p-4">{associatedTest?.title} <span className="text-xs opacity-50">(v{associatedTest?.version})</span></td>
                                                 <td className="p-4">
                                                     <div className="flex items-center gap-2">
@@ -351,27 +353,34 @@ const AdminCodes = () => {
                                                         )}
                                                     </div>
                                                 </td>
-                                                <td className={`p-4 ${isExpired ? 'text-red-500 font-bold' : ''}`}>
+                                                <td className={`p-4 whitespace-nowrap ${isExpired ? 'text-red-500 font-bold' : ''}`}>
                                                     {new Date(code.expiresAt).toLocaleDateString()} {isExpired && '(Wygasł)'}
                                                 </td>
-                                                <td className="p-4 flex items-center justify-end gap-2">
+                                                <td className="p-4 flex items-center justify-end gap-2 whitespace-nowrap">
                                                     <button
                                                         onClick={() => handleCopyCode(code.code)}
-                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-background hover:bg-border/30 text-text font-semibold rounded-lg transition-colors text-xs border border-border"
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-background hover:bg-border/30 text-text font-semibold rounded-lg transition-colors text-xs border border-border whitespace-nowrap"
                                                         title="Kopiuj sam kod"
                                                     >
                                                         {copySuccess === code.code ? <span className="text-primary">Skopiowano kod!</span> : <><ClipboardCopyIcon className="w-4 h-4" /> Kopiuj kod</>}
                                                     </button>
                                                     <button
                                                         onClick={() => handleCopyLink(code)}
-                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/15 hover:bg-primary/25 text-primary font-semibold rounded-lg transition-colors text-xs border border-primary/30"
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/15 hover:bg-primary/25 text-primary font-semibold rounded-lg transition-colors text-xs border border-primary/30 whitespace-nowrap"
                                                         title="Kopiuj bezpośredni link do badania (bez konieczności wpisywania kodu przez klienta)"
                                                     >
                                                         {copyLinkSuccess === code.code ? <span>Skopiowano link!</span> : <><LinkIcon className="w-4 h-4" /> Kopiuj link</>}
                                                     </button>
                                                     <button
+                                                        onClick={() => setQrCodeTarget(code)}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-surface hover:bg-border/30 text-text font-semibold rounded-lg transition-colors text-xs border border-border whitespace-nowrap"
+                                                        title="Wyświetl kod QR na ekranie, aby klient mógł zeskanować go telefonem w gabinecie"
+                                                    >
+                                                        📱 Kod QR
+                                                    </button>
+                                                    <button
                                                         onClick={() => setCodeToDelete(code.code)}
-                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-error/10 hover:bg-error/20 text-error font-semibold rounded-lg transition-colors text-xs border border-error/20"
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-error/10 hover:bg-error/20 text-error font-semibold rounded-lg transition-colors text-xs border border-error/20 whitespace-nowrap"
                                                         title="Unieważnij ten kod"
                                                     >
                                                         <TrashIcon className="w-4 h-4" /> Unieważnij
@@ -397,6 +406,15 @@ const AdminCodes = () => {
                 title="Unieważnienie kodu"
                 message="Czy na pewno chcesz unieważnić ten kod dostępu? Zostanie on trwale usunięty z bazy."
                 confirmText="Unieważnij"
+            />
+            <AccessCodeQrModal
+                codeObj={qrCodeTarget}
+                testTitle={
+                    qrCodeTarget
+                        ? tests.find(t => t.id === qrCodeTarget.testId)?.title
+                        : undefined
+                }
+                onClose={() => setQrCodeTarget(null)}
             />
         </div>
     );

@@ -25,3 +25,6 @@ Na serwerze produkcyjnym (`https://testy.realmoment.pl`, projekt Docker Compose 
 ## 3. Anonimowość Badanych i Język
 - Wszystkie interfejsy, komunikaty, skale, podskale i interpretacje muszą być w języku polskim.
 - System nigdy nie zbiera danych osobowych ani adresów e-mail od osób badanych (klientów wypełniających test).
+
+## 4. Obowiązkowa Weryfikacja Wizualna w Przeglądarce (UI / Layout QA)
+- Wszystkie zmiany, które wpływają na wygląd, kontrasty, formularze, tabele, modale lub układ strony (layout / CSS / JSX), **muszą być każdorazowo po wdrożeniu na środowisko `DEV` (`http://193.160.119.239:3001`) sprawdzone wizualnie w przeglądarce przy użyciu subagenta `browser`** przed uznaniem zadania za zakończone i przed jakimkolwiek wdrożeniem na `main`.

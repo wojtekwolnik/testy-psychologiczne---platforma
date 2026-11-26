@@ -21,7 +21,7 @@ const TherapistDocumentationPage: React.FC = () => {
 
       <DocSection title="Krok 1: Generowanie Kodów (Pojedynczo lub w Serii) oraz Bezpośrednich Linków">
         <ol className="list-decimal pl-5 space-y-2.5">
-          <li>Przejdź do zakładki <strong>Wyniki i Kody</strong> (Panel Główny).</li>
+          <li>Przejdź do zakładki <strong>Panel Główny</strong> (lub <strong>Kody dostępu</strong> / <strong>Wyniki Testów</strong>).</li>
           <li>W sekcji generatora wybierz z listy opublikowany test psychologiczny (np. <em>Wielka Piątka</em> lub <em>DASS-42</em>).</li>
           <li>Ustaw datę ważności kodu (domyślnie 7 dni) oraz wpisz w polu <strong>Liczba kodów</strong> dokładnie taką liczbę kodów, jakiej potrzebujesz (np. 1, 4, 7 — od <strong>1 do 50 kodów jednocześnie</strong>, bez tworzenia nadmiarowych kodów).</li>
           <li>Kliknij <strong>„Generuj kod”</strong> (lub <strong>„Generuj (N)”</strong> przy serii).</li>
@@ -30,13 +30,19 @@ const TherapistDocumentationPage: React.FC = () => {
             <strong>„Kopiuj wszystkie kody”</strong> lub <strong>„Kopiuj wszystkie linki”</strong>.
           </li>
           <li>
-            Na liście aktywnych kodów przy każdym kodzie masz do dyspozycji dwa przyciski:
+            Na liście aktywnych kodów przy każdym kodzie masz do dyspozycji cztery przyciski akcji:
             <ul className="list-disc pl-5 mt-1.5 space-y-1">
               <li>
                 <strong>„Kopiuj kod”</strong> — kopiuje sam jednorazowy kod dostępu, który klient może wpisać na stronie głównej.
               </li>
               <li>
                 <strong>„Kopiuj link” (Zalecane)</strong> — kopiuje bezpośredni link do badania z automatycznie podstawionym kodem, dzięki czemu klient po kliknięciu trafia od razu do ekranu powitalnego testu bez ręcznego przepisywania znaków.
+              </li>
+              <li>
+                <strong>„📱 Kod QR” (W gabinecie)</strong> — wyświetla na ekranie czytelny kod QR, który klient może zeskanować aparatem swojego telefonu bezpośrednio w gabinecie, aby natychmiast otworzyć badanie.
+              </li>
+              <li>
+                <strong>„Unieważnij”</strong> — trwale usuwa niewykorzystany kod dostępu z bazy danych, jeśli został wygenerowany omyłkowo lub nie ma być już użyty.
               </li>
             </ul>
           </li>
@@ -96,7 +102,19 @@ const TherapistDocumentationPage: React.FC = () => {
             </ul>
           </li>
           <li>
-            <strong>Eksport do PDF:</strong> Przycisk <strong>„Pobierz PDF”</strong> tworzy sformatowany dokument PDF zawierający wykresy, tabele wyników, zapisane notatki/interpretacje oraz klauzulę metodologiczną.
+            <strong>Wskaźniki stylu i spójności odpowiedzi:</strong> W prawej kolumnie raportu znajduje się rozwijana karta{' '}
+            <em>„Wskaźniki stylu odpowiedzi”</em>, która automatycznie analizuje profil pod kątem długich serii identycznych wyborów z rzędu (<em>longstring</em>), tendencji centralnej (unikania deklaracji) oraz rozbieżności między pytaniami wprost a pytaniami odwróconymi.
+          </li>
+          <li>
+            <strong>Dwa tryby eksportu do PDF (Gabinetowy vs dla Klienta):</strong> W sekcji <em>Opcje Eksportu PDF</em> możesz wygenerować:
+            <ul className="list-disc pl-5 mt-1.5 space-y-1">
+              <li>
+                <strong>„PDF Gabinetowy (Pełny)”</strong> — pełny raport zawierający wykresy, tabele wyników, Twoje notatki robocze, syntezę AI oraz listę odpowiedzi zgodnie z szablonem.
+              </li>
+              <li>
+                <strong>„PDF dla Klienta”</strong> — bezpieczna wersja do wydania osobie badanej: zawiera wykres profilu, tabelę wyników, neutralne opisy osiągniętych progów z klucza testu oraz klauzulę metodologiczną, z pominięciem prywatnych notatek roboczych terapeuty i surowej listy wszystkich pytań.
+              </li>
+            </ul>
           </li>
         </ul>
       </DocSection>
@@ -128,9 +146,15 @@ const TherapistDocumentationPage: React.FC = () => {
             </ul>
           </li>
           <li>
-            Klikając <strong>„➕ Dołącz zestawienie Pre/Post do notatek raportu”</strong> (gdy otwierasz porównanie z widoku raportu), możesz jednym kliknięciem dopisać podsumowanie zmian do notatek terapeuty, aby znalazło się również w wydruku PDF.
+            W dolnym pasku okna porównania możesz jednym kliknięciem wybrać{' '}
+            <strong>„📥 Pobierz Raport Porównawczy PDF”</strong> (aby wygenerować osobny dokument PDF zestawiający wyniki Pre-test i Post-test, różnice punktowe <code>Δ</code> oraz przesunięcia progów) albo{' '}
+            <strong>„➕ Dołącz zestawienie Pre/Post do notatek raportu”</strong>.
           </li>
         </ol>
+        <p className="mt-3 text-sm">
+          Dodatkowo w tabeli <em>Ukończone testy</em> w Panelu Terapeuty dostępny jest przycisk{' '}
+          <strong>„📥 Eksportuj do CSV”</strong>, który pozwala pobrać aktualnie wyfiltrowane, zanonimizowane wyniki (kody, daty i wyniki punktowe wszystkich skal) do pliku kompatybilnego z programem Microsoft Excel.
+        </p>
       </DocSection>
 
       <DocSection title="Krok 5: 100% Anonimowości Klienta i 60-dniowa Retencja Danych">

@@ -23,6 +23,7 @@ export async function GET() {
             where: { status: 'PUBLISHED' },
             include: {
                 scales: true,
+                pdfTemplates: true,
                 sections: {
                     include: { questions: true },
                 },
@@ -73,13 +74,24 @@ export async function GET() {
             };
 
             const report = auditTestIntegrity(serialized);
+            const templatesValid = (t.pdfTemplates || []).every(tpl => {
+                try {
+                    const comps = JSON.parse(tpl.components as string);
+                    return Array.isArray(comps) && comps.every((c: any) => typeof c.type === 'string');
+                } catch {
+                    return false;
+                }
+            });
+
             return {
                 canonicalId: t.canonicalId,
                 title: report.title,
                 version: report.version,
                 questionCount: report.questionCount,
                 scaleCount: report.scaleCount,
-                passed: report.passed,
+                passed: report.passed && templatesValid,
+                templatesCount: (t.pdfTemplates || []).length,
+                templatesValid,
                 errorCount: report.errorCount,
                 warningCount: report.warningCount,
             };

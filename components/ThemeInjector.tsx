@@ -3,6 +3,7 @@
 import React, { useContext, useEffect } from 'react';
 import { BrandingContext, unifiedPalette } from '@/contexts/BrandingContext';
 import { getContrastingTextColor, getContrastRatio } from '@/utils/colorUtils';
+import { sanitizeCssToken } from '@/lib/testUtils';
 
 export const ThemeInjector: React.FC = () => {
     const { branding } = useContext(BrandingContext);
@@ -49,36 +50,36 @@ export const ThemeInjector: React.FC = () => {
 
     const styleContent = `
     :root {
-        --font-family: ${fontFamily || "system-ui, sans-serif"};
-        --primary-color: ${primaryColor};
-        --primary-contrast: ${primaryContrast};
-        --primary-contrast-text-color: ${primaryContrast};
-        --secondary-color: ${branding.secondaryColor || unifiedPalette.secondaryColor};
-        --accent-color: ${accentColor};
-        --accent-contrast: ${accentContrast};
-        --background-color: ${branding.backgroundColor || unifiedPalette.backgroundColor};
-        --surface-color: ${branding.secondaryColor || unifiedPalette.secondaryColor};
-        --text-color: ${branding.textColor || unifiedPalette.textColor};
-        --text-muted: ${branding.textColor ? branding.textColor + 'b3' : '#94a3b8'};
-        --border-color: ${branding.borderColor || unifiedPalette.borderColor};
-        --input-background-color: ${rawInputBg};
-        --input-text-color: ${safeInputText};
-        --error-color: ${errorColor};
-        --error-contrast: ${errorContrast};
-        --warning-color: ${warningColor};
-        --warning-contrast: ${warningContrast};
-        --success-color: ${successColor};
-        --success-contrast: ${successContrast};
-        --admin-color: ${branding.adminColor || unifiedPalette.adminColor};
-        --admin-background-color: ${branding.adminBackgroundColor || unifiedPalette.adminBackgroundColor};
-        --therapist-color: ${branding.therapistColor || unifiedPalette.therapistColor};
-        --therapist-background-color: ${branding.therapistBackgroundColor || unifiedPalette.therapistBackgroundColor};
-        --sidebar-background: ${branding.sidebarBackground || unifiedPalette.sidebarBackground};
-        --sidebar-text-color: ${branding.sidebarTextColor || unifiedPalette.sidebarTextColor};
-        --sidebar-active-background: ${branding.sidebarActiveBackground || unifiedPalette.sidebarActiveBackground};
-        --sidebar-active-text: ${branding.sidebarActiveText || unifiedPalette.sidebarActiveText};
-        --sidebar-hover-background: ${branding.sidebarHoverBackground || unifiedPalette.sidebarHoverBackground};
-        --sidebar-hover-text: ${branding.sidebarHoverText || unifiedPalette.sidebarHoverText};
+        --font-family: ${sanitizeCssToken(fontFamily, 'system-ui, sans-serif')};
+        --primary-color: ${sanitizeCssToken(primaryColor, unifiedPalette.primaryColor)};
+        --primary-contrast: ${sanitizeCssToken(primaryContrast, '#ffffff')};
+        --primary-contrast-text-color: ${sanitizeCssToken(primaryContrast, '#ffffff')};
+        --secondary-color: ${sanitizeCssToken(branding.secondaryColor, unifiedPalette.secondaryColor)};
+        --accent-color: ${sanitizeCssToken(accentColor, unifiedPalette.accentColor)};
+        --accent-contrast: ${sanitizeCssToken(accentContrast, '#ffffff')};
+        --background-color: ${sanitizeCssToken(branding.backgroundColor, unifiedPalette.backgroundColor)};
+        --surface-color: ${sanitizeCssToken(branding.secondaryColor, unifiedPalette.secondaryColor)};
+        --text-color: ${sanitizeCssToken(branding.textColor, unifiedPalette.textColor)};
+        --text-muted: ${sanitizeCssToken(branding.textColor ? branding.textColor + 'b3' : '#94a3b8', '#94a3b8')};
+        --border-color: ${sanitizeCssToken(branding.borderColor, unifiedPalette.borderColor)};
+        --input-background-color: ${sanitizeCssToken(rawInputBg, unifiedPalette.inputBackgroundColor)};
+        --input-text-color: ${sanitizeCssToken(safeInputText, unifiedPalette.inputTextColor)};
+        --error-color: ${sanitizeCssToken(errorColor, unifiedPalette.errorColor)};
+        --error-contrast: ${sanitizeCssToken(errorContrast, '#ffffff')};
+        --warning-color: ${sanitizeCssToken(warningColor, unifiedPalette.warningColor)};
+        --warning-contrast: ${sanitizeCssToken(warningContrast, '#0f172a')};
+        --success-color: ${sanitizeCssToken(successColor, unifiedPalette.successColor)};
+        --success-contrast: ${sanitizeCssToken(successContrast, '#ffffff')};
+        --admin-color: ${sanitizeCssToken(branding.adminColor, unifiedPalette.adminColor)};
+        --admin-background-color: ${sanitizeCssToken(branding.adminBackgroundColor, unifiedPalette.adminBackgroundColor)};
+        --therapist-color: ${sanitizeCssToken(branding.therapistColor, unifiedPalette.therapistColor)};
+        --therapist-background-color: ${sanitizeCssToken(branding.therapistBackgroundColor, unifiedPalette.therapistBackgroundColor)};
+        --sidebar-background: ${sanitizeCssToken(branding.sidebarBackground, unifiedPalette.sidebarBackground)};
+        --sidebar-text-color: ${sanitizeCssToken(branding.sidebarTextColor, unifiedPalette.sidebarTextColor)};
+        --sidebar-active-background: ${sanitizeCssToken(branding.sidebarActiveBackground, unifiedPalette.sidebarActiveBackground)};
+        --sidebar-active-text: ${sanitizeCssToken(branding.sidebarActiveText, unifiedPalette.sidebarActiveText)};
+        --sidebar-hover-background: ${sanitizeCssToken(branding.sidebarHoverBackground, unifiedPalette.sidebarHoverBackground)};
+        --sidebar-hover-text: ${sanitizeCssToken(branding.sidebarHoverText, unifiedPalette.sidebarHoverText)};
     }
     `;
 

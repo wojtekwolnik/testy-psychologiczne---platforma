@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchPdfTemplates, deletePdfTemplate, fetchTests, setDefaultTemplate } from '@/app/actions/testActions';
+import { fetchPdfTemplates, deletePdfTemplate, fetchTests, setDefaultTemplate, savePdfTemplate, createDefaultTemplatesForExistingTests } from '@/app/actions/testActions';
 import { type PdfTemplate, type Test } from './types';
-import { PlusIcon, EditIcon, TrashIcon, StarIcon, ChevronDownIcon, ChevronRightIcon, QuestionMarkCircleIcon } from './common/Icons';
+import { PlusIcon, EditIcon, TrashIcon, StarIcon, ChevronDownIcon, ChevronRightIcon, QuestionMarkCircleIcon, ClipboardCopyIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
+import { generateUniqueId } from '../utils/idUtils';
 import { toast } from 'react-toastify';
 
 const componentTypeNames: { [key: string]: string } = {
@@ -93,13 +94,52 @@ const TemplateManager: React.FC = () => {
         }
     };
 
+    const handleDuplicateTemplate = async (template: PdfTemplate) => {
+        try {
+            const cloned: PdfTemplate = {
+                id: generateUniqueId('tpl'),
+                name: `${template.name} (Kopia)`,
+                testCanonicalId: template.testCanonicalId,
+                components: (template.components || []).map(comp => ({
+                    ...comp,
+                    id: generateUniqueId('comp'),
+                })),
+            };
+            const saved = await savePdfTemplate(cloned);
+            setTemplates(prev => [...prev, saved]);
+            toast.success(`Utworzono kopię szablonu: „${saved.name}”.`);
+        } catch (err) {
+            console.error('Błąd duplikowania szablonu PDF:', err);
+            toast.error('Nie udało się zduplikować szablonu PDF.');
+        }
+    };
+
     const toggleGroup = (testId: string) => {
         setExpandedGroups(prev => ({ ...prev, [testId]: !prev[testId] }));
     };
 
     const renderTemplateTable = (testTemplates: PdfTemplate[], test: Test) => {
         if (testTemplates.length === 0) {
-            return <div className="p-4 text-center text-sm text-text-muted bg-background/60 border-t border-border">Brak zdefiniowanych szablonów dla tego testu.</div>;
+            return (
+                <div className="p-5 text-center text-sm text-text-muted bg-background/60 border-t border-border flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <span>Brak zdefiniowanych szablonów dla tego testu.</span>
+                    <button
+                        type="button"
+                        onClick={async () => {
+                            try {
+                                await createDefaultTemplatesForExistingTests();
+                                await loadData();
+                                toast.success('Wygenerowano domyślny szablon PDF dla tego testu.');
+                            } catch {
+                                toast.error('Nie udało się wygenerować szablonu domyślnego.');
+                            }
+                        }}
+                        className="px-3.5 py-1.5 bg-primary/15 hover:bg-primary/25 text-primary border border-primary/30 rounded-lg text-xs font-bold transition-colors"
+                    >
+                        + Wygeneruj szablon domyślny
+                    </button>
+                </div>
+            );
         }
 
         return (
@@ -149,6 +189,13 @@ const TemplateManager: React.FC = () => {
                                         )}
                                     </td>
                                     <td className="px-6 py-4 flex justify-end gap-2">
+                                        <button
+                                            onClick={() => handleDuplicateTemplate(template)}
+                                            className="p-1.5 text-text-muted hover:text-primary hover:bg-primary/15 rounded transition-colors"
+                                            title="Duplikuj ten szablon PDF"
+                                        >
+                                            <ClipboardCopyIcon className="w-4 h-4" />
+                                        </button>
                                         <button
                                             onClick={() => router.push(`/admin/templates/edit/${template.id}`)}
                                             className="p-1.5 text-text-muted hover:text-primary hover:bg-primary/15 rounded transition-colors"

@@ -20,20 +20,20 @@ export default function TermsOfTestingPage() {
         <div className="min-h-screen bg-gradient-to-br from-background via-surface to-background py-10 px-4 text-text">
             <div className="max-w-3xl mx-auto">
                 <div className="bg-surface/95 backdrop-blur-xl border border-border rounded-3xl shadow-2xl overflow-hidden animate-fade-in-up">
-                    <header className="px-6 sm:px-10 py-8 bg-background/60 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div className="flex items-center gap-4">
+                    <header className="px-5 sm:px-10 py-6 sm:py-8 bg-background/60 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 min-w-0">
                             {branding.logoUrl && (
                                 <img
                                     src={branding.logoUrl}
                                     alt={branding.appName || 'Logo'}
-                                    className="h-12 w-auto object-contain"
+                                    className="h-10 sm:h-12 w-auto max-w-[160px] object-contain self-start sm:self-auto flex-shrink-0"
                                 />
                             )}
-                            <div>
-                                <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                            <div className="min-w-0">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-primary break-words">
                                     {branding.appName || 'Real Moment'} – Przestrzeń Diagnostyczna
                                 </p>
-                                <h1 className="text-2xl sm:text-3xl font-bold text-text mt-0.5">
+                                <h1 className="text-xl sm:text-3xl font-bold text-text mt-0.5 leading-snug break-words">
                                     {title}
                                 </h1>
                             </div>
@@ -41,7 +41,7 @@ export default function TermsOfTestingPage() {
                         <button
                             type="button"
                             onClick={() => router.push('/')}
-                            className="self-start sm:self-auto px-4 py-2 bg-surface border border-border hover:border-primary text-text text-sm font-semibold rounded-xl transition-colors"
+                            className="self-start sm:self-auto flex-shrink-0 px-4 py-2 bg-surface border border-border hover:border-primary text-text text-sm font-semibold rounded-xl transition-colors"
                         >
                             ← Powrót do strony głównej
                         </button>

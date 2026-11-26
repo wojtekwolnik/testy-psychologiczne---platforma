@@ -46,7 +46,7 @@ export const DEFAULT_TERMS_OF_TESTING_CONTENT = `<h3>1. Postanowienia ogólne i 
 <ul>
   <li>wypełnianie kwestionariusza <strong>samodzielnie</strong>, w spokojnym miejscu i w chwili wolnej od pośpiechu oraz czynników rozpraszających,</li>
   <li>odpowiadanie <strong>szczerze i spontanicznie</strong>, zgodnie z pierwszym odczuciem oraz stanem faktycznym (w kwestionariuszach psychologicznych nie ma odpowiedzi „dobrych” ani „złych”),</li>
-  <li>uważne przeczytanie instrukcji danego kwestionariusza (np. czy pytania dotyczą ostatniego tygodnia, czy ogólnego sposobu funkcjonowania).</li>
+  <li>uważne przeczytanie instrukcji danego kwestionariusza (np. czy pytania dotyczą okresu ostatnich 2 tygodni, czy ogólnego sposobu funkcjonowania).</li>
 </ul>
 
 <h3>5. Wyłączenie interwencji kryzysowej i bezpieczeństwo</h3>
@@ -65,7 +65,7 @@ export const DEFAULT_TERMS_CONSENT_CHECKBOX_TEXT =
   'Zapoznałem/am się z {termsLink} i rozumiem, że badanie ma charakter pomocniczy oraz nie zastępuje diagnozy medycznej ani konsultacji ze specjalistą.';
 
 export const DEFAULT_CLIENT_THANK_YOU_SAFETY_NOTE =
-  'Wyniki zostały bezpiecznie przekazane Twojemu specjaliście do omówienia podczas sesji. Pamiętaj, że platforma testowa nie służy do kontaktu w sytuacjach nagłych — w razie pilnej potrzeby wsparcia skontaktuj się bezpośrednio ze swoim specjalistą lub pod numerem 112 / 116 123.';
+  'Pamiętaj, że kwestionariusz ma charakter pomocniczy i orientacyjny, a platforma testowa nie służy do kontaktu w sytuacjach nagłych. W razie pilnej potrzeby wsparcia lub kryzysu skontaktuj się bezpośrednio ze swoim specjalistą bądź zadzwoń pod numer alarmowy 112 lub Telefon Zaufania 116 123 (bezpłatnie: 800 70 2222).';
 
 export const DEFAULT_REPORT_DISCLAIMER_TEXT =
   'Informacja metodologiczna: Wyniki niniejszego kwestionariusza mają charakter pomocniczy, przesiewowy i orientacyjny. Stanowią one materiał wspierający pracę ze specjalistą i nie zastępują pełnej diagnozy klinicznej ani lekarskiej.';
@@ -238,6 +238,12 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           }
           if (!fullyMerged.inputTextColor) {
             fullyMerged.inputTextColor = unifiedPalette.inputTextColor;
+          }
+          if (typeof fullyMerged.termsOfTestingContent === 'string' && fullyMerged.termsOfTestingContent.includes('ostatniego tygodnia')) {
+            fullyMerged.termsOfTestingContent = fullyMerged.termsOfTestingContent.replace(
+              /ostatniego tygodnia/g,
+              'okresu ostatnich 2 tygodni'
+            );
           }
           
           setBrandingState(fullyMerged);

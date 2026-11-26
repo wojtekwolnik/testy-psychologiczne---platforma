@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchTests, fetchTestById, fetchTestVersions, updateTestStatus, deleteTest } from '@/app/actions/testActions';
+import { fetchTests, fetchTestById, fetchTestVersions, updateTestStatus, deleteTest, createNewTest } from '@/app/actions/testActions';
 import { type Test, type Scale, type Section, type Question, type ScoringRule } from './types';
-import { EditIcon, PlusIcon, DownloadIcon, UploadIcon, ClockIcon, TrashIcon } from './common/Icons';
+import { EditIcon, PlusIcon, DownloadIcon, UploadIcon, ClockIcon, TrashIcon, ClipboardCopyIcon } from './common/Icons';
 import ActionConfirmModal from './common/ActionConfirmModal';
 import TestDiagnosticsModal from './admin/TestDiagnosticsModal';
 import TestSimulatorModal from './admin/TestSimulatorModal';
@@ -78,6 +78,7 @@ const AdminDashboard: React.FC = () => {
   const [testToDelete, setTestToDelete] = useState<Test | null>(null);
   const [isDiagnosticsOpen, setIsDiagnosticsOpen] = useState(false);
   const [simulatedTest, setSimulatedTest] = useState<Test | null>(null);
+  const [duplicatingTestId, setDuplicatingTestId] = useState<string | null>(null);
 
   // CSV Import Modal State
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
@@ -479,6 +480,31 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const handleDuplicateTest = async (testToClone: Test) => {
+    setDuplicatingTestId(testToClone.id);
+    try {
+      const fullTest = (await fetchTestById(testToClone.id)) || testToClone;
+      const clonedPayload: Test = {
+        ...fullTest,
+        id: generateUniqueId('test'),
+        canonicalId: generateUniqueId('tid'),
+        version: 1,
+        title: `${fullTest.title} (Kopia)`,
+        status: 'DRAFT',
+        defaultTemplateId: null,
+        createdAt: new Date().toISOString(),
+      };
+      const created = await createNewTest(clonedPayload);
+      setTests(prev => [created, ...prev]);
+      toast.success(`Utworzono kopię testu: „${created.title}” (jako Szkic).`);
+    } catch (err) {
+      console.error('Błąd duplikowania testu:', err);
+      toast.error('Nie udało się zduplikować testu.');
+    } finally {
+      setDuplicatingTestId(null);
+    }
+  };
+
   const confirmDeleteTest = async () => {
     if (!testToDelete) return;
     try {
@@ -638,6 +664,15 @@ const AdminDashboard: React.FC = () => {
                         className="flex items-center gap-2 px-3 py-2 bg-background border border-border/50 text-text font-semibold rounded-lg hover:bg-border/30 hover:shadow-sm text-sm transition-all" title="Historia wersji"
                       >
                         <ClockIcon />
+                      </button>
+                      <button
+                        onClick={() => handleDuplicateTest(test)}
+                        disabled={duplicatingTestId === test.id}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-background border border-border/50 text-text font-semibold rounded-lg hover:bg-border/30 hover:shadow-sm text-sm transition-all disabled:opacity-50"
+                        title="Utwórz pełną kopię tego testu (jako nowy Szkic) ze wszystkimi skalami, progami i pytaniami"
+                      >
+                        <ClipboardCopyIcon className="w-4 h-4" />
+                        {duplicatingTestId === test.id ? 'Kopiowanie...' : 'Duplikuj'}
                       </button>
                       <button
                         onClick={() => handleExport(test.id)}

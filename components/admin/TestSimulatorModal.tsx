@@ -131,7 +131,12 @@ export const TestSimulatorModal: React.FC<TestSimulatorModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-6 overflow-y-auto">
+        <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Symulator testu: ${test.title}`}
+            className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-6 overflow-y-auto"
+        >
             <div className="bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-5xl text-text max-h-[92vh] flex flex-col overflow-hidden">
                 {/* Header */}
                 <div className="p-5 sm:p-6 bg-background/80 border-b border-border flex flex-wrap justify-between items-center gap-4">
@@ -378,20 +383,27 @@ export const TestSimulatorModal: React.FC<TestSimulatorModalProps> = ({
 
                             <div className="flex flex-wrap items-center justify-between gap-3 bg-background/60 p-3.5 rounded-xl border border-border">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                    {test.sections.map((sec, idx) => (
-                                        <button
-                                            key={sec.id}
-                                            type="button"
-                                            onClick={() => setPreviewPageIndex(idx)}
-                                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                                                previewPageIndex === idx
-                                                    ? 'bg-primary text-primary-contrast border-primary'
-                                                    : 'bg-surface text-text-muted border-border hover:text-text'
-                                            }`}
-                                        >
-                                            Część {idx + 1}: {sec.title || `Sekcja ${idx + 1}`} ({sec.questions.length})
-                                        </button>
-                                    ))}
+                                    {test.sections.map((sec, idx) => {
+                                        const rawTitle = (sec.title || '').trim();
+                                        const startsWithPrefix = /^(część|czesc|sekcja)\s*\d+/i.test(rawTitle);
+                                        const btnLabel = startsWithPrefix
+                                            ? `${rawTitle} (${sec.questions.length})`
+                                            : `Część ${idx + 1}: ${rawTitle || `Sekcja ${idx + 1}`} (${sec.questions.length})`;
+                                        return (
+                                            <button
+                                                key={sec.id}
+                                                type="button"
+                                                onClick={() => setPreviewPageIndex(idx)}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                                                    previewPageIndex === idx
+                                                        ? 'bg-primary text-primary-contrast border-primary'
+                                                        : 'bg-surface text-text-muted border-border hover:text-text'
+                                                }`}
+                                            >
+                                                {btnLabel}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
 
                                 <label className="flex items-center gap-2 text-xs font-semibold text-text cursor-pointer">
@@ -453,7 +465,7 @@ export const TestSimulatorModal: React.FC<TestSimulatorModalProps> = ({
                                                                                     key={rIdx}
                                                                                     className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-background text-primary border border-border"
                                                                                 >
-                                                                                    {sc?.abbreviation || sc?.name || r.scaleId}: +{r.points}
+                                                                                    {sc?.abbreviation || sc?.name || r.scaleId}: {r.points >= 0 ? `+${r.points}` : r.points}
                                                                                 </span>
                                                                             );
                                                                         })}

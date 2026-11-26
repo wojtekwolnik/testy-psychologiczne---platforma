@@ -6,7 +6,26 @@ import { fetchPdfTemplateById, savePdfTemplate, fetchTests } from '@/app/actions
 import { type PdfTemplate, type ReportComponent, type Test, type Scale } from './types';
 import RichTextInput from './common/RichTextInput';
 import { PlusIcon, TrashIcon, GripVerticalIcon, QuestionMarkCircleIcon } from './common/Icons';
+import { normalizeRichTextMarkdownToHtml } from '@/lib/pdf/pdfGenerator';
 import { toast } from 'react-toastify';
+
+function normalizeLoadedComponents(components: ReportComponent[] = []): ReportComponent[] {
+    return components.map(c => {
+        const opts = { ...(c.options || {}) };
+        let title = c.title || opts.title || '';
+        if (c.type === 'Header' && !opts.text && (opts.subtitle || opts.title || c.title)) {
+            opts.text = opts.title && opts.subtitle ? `${opts.title}: ${opts.subtitle}` : opts.subtitle || opts.title || c.title;
+        }
+        if (c.type === 'RichText' && typeof opts.content === 'string') {
+            opts.content = normalizeRichTextMarkdownToHtml(opts.content);
+        }
+        return {
+            ...c,
+            title,
+            options: opts,
+        };
+    });
+}
 
 const componentTypeNames: { [key: string]: string } = {
     Header: 'Nagłówek',
@@ -68,6 +87,7 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ templateId }) => {
     const [selectedTestScales, setSelectedTestScales] = useState<Scale[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
     useEffect(() => {
         const loadInitialData = async () => {
@@ -78,7 +98,14 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ templateId }) => {
 
                 if (templateId) {
                     const fetchedTemplate = await fetchPdfTemplateById(templateId);
-                    setTemplate(fetchedTemplate || {});
+                    if (fetchedTemplate) {
+                        setTemplate({
+                            ...fetchedTemplate,
+                            components: normalizeLoadedComponents(fetchedTemplate.components),
+                        });
+                    } else {
+                        setTemplate({});
+                    }
                     if (fetchedTemplate?.testCanonicalId) {
                         const associatedTest = tests.find(t => t.canonicalId === fetchedTemplate.testCanonicalId);
                         if (associatedTest) setSelectedTestScales(associatedTest.scales);
@@ -131,6 +158,16 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ templateId }) => {
         setTemplate(prev => ({ ...prev, components: prev.components?.filter(c => c.id !== id) }));
     };
 
+    const moveComponent = (fromIdx: number, toIdx: number) => {
+        setTemplate(prev => {
+            const list = [...(prev.components || [])];
+            if (toIdx < 0 || toIdx >= list.length || fromIdx === toIdx) return prev;
+            const [item] = list.splice(fromIdx, 1);
+            list.splice(toIdx, 0, item);
+            return { ...prev, components: list };
+        });
+    };
+
     const updateComponent = (id: string, newConfig: Partial<ReportComponent>) => {
         setTemplate(prev => ({
             ...prev,
@@ -167,6 +204,21 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ templateId }) => {
 
     const renderComponentConfig = (comp: ReportComponent) => {
         switch (comp.type) {
+            case 'Header':
+                return (
+                    <div className="mt-2">
+                        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">
+                            Tekst głównego nagłówka PDF
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="Np. Raport: Skala Depresji, Lęku i Stresu (DASS-42)"
+                            value={comp.options?.text || ''}
+                            onChange={(e) => updateComponentOptions(comp.id, { text: e.target.value })}
+                            className="w-full p-2 border border-border rounded-md bg-input-bg text-input-text text-sm focus:ring-1 focus:ring-primary focus:border-primary"
+                        />
+                    </div>
+                );
             case 'BarChart':
             case 'RadarChart':
             case 'ScoresTable':
@@ -281,11 +333,29 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ templateId }) => {
                     </div>
 
                     <div className="space-y-4 min-h-[100px]">
-                        {template.components?.map((component) => (
-                            <div key={component.id} className="group relative p-4 border border-border rounded-lg bg-background/60 hover:bg-background/90 hover:shadow-md transition-all">
+                        {template.components?.map((component, idx) => (
+                            <div
+                                key={component.id}
+                                draggable
+                                onDragStart={() => setDraggedIndex(idx)}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={() => {
+                                    if (draggedIndex !== null && draggedIndex !== idx) {
+                                        moveComponent(draggedIndex, idx);
+                                    }
+                                    setDraggedIndex(null);
+                                }}
+                                onDragEnd={() => setDraggedIndex(null)}
+                                className={`group relative p-4 border border-border rounded-lg bg-background/60 hover:bg-background/90 hover:shadow-md transition-all ${
+                                    draggedIndex === idx ? 'opacity-50 border-primary' : ''
+                                }`}
+                            >
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className="p-1.5 bg-surface rounded shadow-sm border border-border cursor-grab active:cursor-grabbing text-text-muted hover:text-text">
+                                        <div
+                                            title="Przeciągnij, aby zmienić kolejność"
+                                            className="p-1.5 bg-surface rounded shadow-sm border border-border cursor-grab active:cursor-grabbing text-text-muted hover:text-text"
+                                        >
                                             <GripVerticalIcon className="w-5 h-5" />
                                         </div>
                                         <div>
@@ -293,13 +363,34 @@ const TemplateEditor: React.FC<TemplateEditorProps> = ({ templateId }) => {
                                             <p className="text-xs text-text-muted font-mono">{component.type}</p>
                                         </div>
                                     </div>
-                                    <button
-                                        onClick={() => removeComponent(component.id)}
-                                        className="text-text-muted hover:text-error p-2 rounded-md hover:bg-error/15 transition-colors"
-                                        title="Usuń element"
-                                    >
-                                        <TrashIcon className="w-5 h-5" />
-                                    </button>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            type="button"
+                                            onClick={() => moveComponent(idx, idx - 1)}
+                                            disabled={idx === 0}
+                                            className="text-text-muted hover:text-primary px-2 py-1 rounded-md hover:bg-primary/15 disabled:opacity-30 disabled:pointer-events-none transition-colors text-xs font-bold border border-border/60"
+                                            title="Przesuń w górę"
+                                        >
+                                            ↑
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => moveComponent(idx, idx + 1)}
+                                            disabled={idx === (template.components?.length || 1) - 1}
+                                            className="text-text-muted hover:text-primary px-2 py-1 rounded-md hover:bg-primary/15 disabled:opacity-30 disabled:pointer-events-none transition-colors text-xs font-bold border border-border/60"
+                                            title="Przesuń w dół"
+                                        >
+                                            ↓
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => removeComponent(component.id)}
+                                            className="text-text-muted hover:text-error p-2 rounded-md hover:bg-error/15 transition-colors"
+                                            title="Usuń element"
+                                        >
+                                            <TrashIcon className="w-5 h-5" />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="mt-4 pl-10 border-l-2 border-border ml-3.5">

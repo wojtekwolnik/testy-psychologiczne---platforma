@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useContext } from 'react';
+import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { fetchPublicTestForClient } from '@/app/actions/testActions';
 import { submitTest } from '@/app/actions/resultActions';
@@ -10,6 +10,7 @@ import DOMPurify from 'isomorphic-dompurify';
 import { ClientThankYou } from './ClientThankYou';
 import { BrandingContext, DEFAULT_PRIVACY_POLICY_TITLE, DEFAULT_TERMS_OF_TESTING_TITLE } from '@/contexts/BrandingContext';
 import TermsOfTestingModal from './TermsOfTestingModal';
+import { isClientDraftValid } from '@/lib/testUtils';
 
 interface ClientTestViewProps {
     testId?: string;
@@ -45,11 +46,56 @@ export default function ClientTestView(props: ClientTestViewProps) {
     const [restoredBannerVisible, setRestoredBannerVisible] = useState(false);
     const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
     const [termsModalTab, setTermsModalTab] = useState<'terms' | 'privacy'>('terms');
+    const [autoScrollEnabled, setAutoScrollEnabled] = useState<boolean>(true);
+    const [activeQuestionId, setActiveQuestionId] = useState<string>('');
+    const [submitRetryError, setSubmitRetryError] = useState<string | null>(null);
+    const autoScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        setValidationError(null);
+        setHighlightedUnansweredIds([]);
+    }, [currentPage]);
+
+    useEffect(() => {
+        return () => {
+            if (autoScrollTimerRef.current) {
+                clearTimeout(autoScrollTimerRef.current);
+            }
+        };
+    }, []);
 
     const draftStorageKey = clientCode ? `rm_test_draft_${testId ? `${testId}_` : ''}${clientCode}` : '';
     const legacyDraftStorageKey = clientCode ? `rm_test_draft_${clientCode}` : '';
 
-    // Restore draft answers from localStorage / sessionStorage if present
+    // Cleanup all expired drafts across browser storage (14-day max TTL or past codeExpiresAt)
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        try {
+            const nowMs = Date.now();
+            for (const storage of [localStorage, sessionStorage]) {
+                const keysToRemove: string[] = [];
+                for (let i = 0; i < storage.length; i++) {
+                    const key = storage.key(i);
+                    if (key && key.startsWith('rm_test_draft_')) {
+                        try {
+                            const rawItem = storage.getItem(key);
+                            const parsedItem = rawItem ? JSON.parse(rawItem) : null;
+                            if (!isClientDraftValid(parsedItem, nowMs)) {
+                                keysToRemove.push(key);
+                            }
+                        } catch {
+                            keysToRemove.push(key);
+                        }
+                    }
+                }
+                keysToRemove.forEach(k => storage.removeItem(k));
+            }
+        } catch {
+            // Ignore storage errors
+        }
+    }, []);
+
+    // Restore draft answers from localStorage / sessionStorage if present and within 14-day TTL & code validity
     useEffect(() => {
         if (!draftStorageKey || typeof window === 'undefined') return;
         try {
@@ -59,6 +105,10 @@ export default function ClientTestView(props: ClientTestViewProps) {
                 (legacyDraftStorageKey ? sessionStorage.getItem(legacyDraftStorageKey) : null);
             if (raw) {
                 const parsed = JSON.parse(raw);
+                if (!isClientDraftValid(parsed, Date.now(), test?.codeExpiresAt)) {
+                    clearSavedDraft();
+                    return;
+                }
                 if (parsed.answers && typeof parsed.answers === 'object' && Object.keys(parsed.answers).length > 0) {
                     setAnswers(parsed.answers);
                     setRestoredBannerVisible(true);
@@ -70,9 +120,9 @@ export default function ClientTestView(props: ClientTestViewProps) {
         } catch {
             // Ignore storage errors
         }
-    }, [draftStorageKey, legacyDraftStorageKey]);
+    }, [draftStorageKey, legacyDraftStorageKey, test?.codeExpiresAt]);
 
-    // Save draft answers to localStorage + sessionStorage on change
+    // Save draft answers to localStorage + sessionStorage on change (bound to codeExpiresAt)
     useEffect(() => {
         if (!draftStorageKey || typeof window === 'undefined' || isSubmitted) return;
         try {
@@ -81,6 +131,7 @@ export default function ClientTestView(props: ClientTestViewProps) {
                     answers,
                     currentPage,
                     updatedAt: Date.now(),
+                    codeExpiresAt: test?.codeExpiresAt,
                 });
                 localStorage.setItem(draftStorageKey, serialized);
                 sessionStorage.setItem(draftStorageKey, serialized);
@@ -88,7 +139,7 @@ export default function ClientTestView(props: ClientTestViewProps) {
         } catch {
             // Ignore storage errors
         }
-    }, [answers, currentPage, draftStorageKey, isSubmitted]);
+    }, [answers, currentPage, draftStorageKey, isSubmitted, test?.codeExpiresAt]);
 
     const clearSavedDraft = () => {
         if (typeof window === 'undefined') return;
@@ -131,6 +182,11 @@ export default function ClientTestView(props: ClientTestViewProps) {
                     setTest(publicTest);
                     return;
                 }
+
+                // Access code is invalid, expired, or already used — code validity is paramount over local draft storage!
+                clearSavedDraft();
+                setAnswers({});
+                setRestoredBannerVisible(false);
 
                 // If publicTest returned null, check reason via validateAccessCode for a friendly Polish error message
                 const validation = await validateAccessCode(clientCode);
@@ -191,6 +247,8 @@ export default function ClientTestView(props: ClientTestViewProps) {
 
     const handleAnswerChange = (questionId: string, questionType: Question['type'], optionId: string) => {
         setValidationError(null);
+        setSubmitRetryError(null);
+        setActiveQuestionId(questionId);
         setHighlightedUnansweredIds(prev => prev.filter(id => id !== questionId));
         setAnswers(prev => {
             const newAnswers = { ...prev };
@@ -207,18 +265,84 @@ export default function ClientTestView(props: ClientTestViewProps) {
             }
             return newAnswers;
         });
+
+        // Płynne przewinięcie do następnego pytania na stronie (dla pytań jednokrotnego wyboru) z debouncingiem
+        if (autoScrollEnabled && questionType !== 'multiple-select') {
+            if (autoScrollTimerRef.current) {
+                clearTimeout(autoScrollTimerRef.current);
+            }
+            const currentIdx = currentQuestions.findIndex(q => q.id === questionId);
+            if (currentIdx !== -1 && currentIdx < currentQuestions.length - 1) {
+                const nextQuestion = currentQuestions[currentIdx + 1];
+                setActiveQuestionId(nextQuestion.id);
+                autoScrollTimerRef.current = setTimeout(() => {
+                    if (typeof document !== 'undefined' && typeof window !== 'undefined') {
+                        const el = document.getElementById(`question-field-${nextQuestion.id}`);
+                        if (el) {
+                            const rect = el.getBoundingClientRect();
+                            const inCenterView =
+                                rect.top >= window.innerHeight * 0.18 &&
+                                rect.bottom <= window.innerHeight * 0.82;
+                            if (!inCenterView) {
+                                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        }
+                    }
+                }, 140);
+            }
+        }
     };
+
+    // Skróty klawiaturowe 1..9, 0 na komputerze dla aktualnie aktywnego lub pierwszego nieodpowiedzianego pytania na stronie
+    useEffect(() => {
+        if (typeof window === 'undefined' || isSubmitted || isTermsModalOpen || currentQuestions.length === 0) return;
+
+        const onKeyDown = (e: KeyboardEvent) => {
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
+            const target = e.target as HTMLElement | null;
+            if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) && (target as HTMLInputElement).type !== 'radio') {
+                return;
+            }
+
+            if (!/^[0-9]$/.test(e.key)) return;
+            const pressedIndex = e.key === '0' ? 9 : parseInt(e.key, 10) - 1;
+
+            const targetQuestion =
+                currentQuestions.find(q => !isQuestionAnswered(q, answers[q.id])) ||
+                currentQuestions.find(q => q.id === activeQuestionId) ||
+                currentQuestions[0];
+
+            if (!targetQuestion || targetQuestion.type === 'multiple-select') return;
+            const chosenOption = targetQuestion.options?.[pressedIndex];
+            if (!chosenOption) return;
+
+            e.preventDefault();
+            handleAnswerChange(targetQuestion.id, targetQuestion.type, chosenOption.id);
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [currentQuestions, answers, activeQuestionId, autoScrollEnabled, isSubmitted, isTermsModalOpen]);
 
     const highlightAndScrollToMissingOnCurrentPage = () => {
         const missingIds = unansweredOnCurrentPage.map(q => q.id);
         setHighlightedUnansweredIds(missingIds);
         if (unansweredOnCurrentPage.length > 0) {
+            const count = unansweredOnCurrentPage.length;
+            const mod10 = count % 10;
+            const mod100 = count % 100;
+            const noun =
+                count === 1
+                    ? 'pytanie'
+                    : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+                      ? 'pytania'
+                      : 'pytań';
             const firstMissing = unansweredOnCurrentPage[0];
             const firstMissingNumber = questionStartIndex + currentQuestions.findIndex(q => q.id === firstMissing.id) + 1;
             setValidationError(
-                unansweredOnCurrentPage.length === 1
+                count === 1
                     ? `Pominięto 1 pytanie na tej stronie (pytanie nr ${firstMissingNumber}). Zaznacz odpowiedź, aby przejść dalej.`
-                    : `Pozostało do zaznaczenia na tej stronie: ${unansweredOnCurrentPage.length} pytań (pierwsze pominięte: pytanie nr ${firstMissingNumber}).`
+                    : `Pozostało do zaznaczenia na tej stronie: ${count} ${noun} (pierwsze pominięte: pytanie nr ${firstMissingNumber}).`
             );
             scrollToQuestion(firstMissing.id);
         }
@@ -285,6 +409,7 @@ export default function ClientTestView(props: ClientTestViewProps) {
         }
 
         setIsSubmitting(true);
+        setSubmitRetryError(null);
         const clientAnswersRecord: Record<string, string[]> = {};
         Object.entries(answers).forEach(([questionId, answer]) => {
             if (answer.selectedOptionIds) {
@@ -300,7 +425,22 @@ export default function ClientTestView(props: ClientTestViewProps) {
             setIsSubmitted(true);
             setSubmissionResult(result);
         } catch (err: any) {
-            setError(err?.message || "Nie udało się przesłać odpowiedzi. Możliwe, że ten kod został już wykorzystany.");
+            const msg = String(err?.message || '');
+            const isPermanentCodeError =
+                msg.includes('wykorzystany') ||
+                msg.includes('wygasł') ||
+                msg.includes('Nieprawidłowy kod') ||
+                msg.includes('nie pasuje');
+
+            if (isPermanentCodeError) {
+                clearSavedDraft();
+                setError(msg);
+            } else {
+                setSubmitRetryError(
+                    msg ||
+                        'Wystąpił problem z połączeniem internetowym podczas wysyłania odpowiedzi. Twoje odpowiedzi są bezpiecznie zapisane na urządzeniu — sprawdź połączenie i kliknij „Ponów wysyłanie”.'
+                );
+            }
             setIsSubmitting(false);
         }
     };
@@ -377,6 +517,22 @@ export default function ClientTestView(props: ClientTestViewProps) {
                             />
                         </div>
 
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-text-muted">
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                                <input
+                                    type="checkbox"
+                                    checked={autoScrollEnabled}
+                                    onChange={e => setAutoScrollEnabled(e.target.checked)}
+                                    className="h-3.5 w-3.5 accent-[var(--primary-color)] rounded"
+                                />
+                                <span>Automatycznie przewijaj do kolejnego pytania</span>
+                            </label>
+                            <span className="hidden sm:inline text-[11px] opacity-80">
+                                💡 Wskazówka: na komputerze możesz też wybierać odpowiedzi klawiszami{' '}
+                                <strong>1–{Math.min(9, Math.max(2, currentQuestions[0]?.options?.length || 5))}</strong>
+                            </span>
+                        </div>
+
                         {restoredBannerVisible && totalAnsweredCount > 0 && (
                             <div className="mt-4 p-3 rounded-xl bg-primary/15 border border-primary/30 flex flex-wrap items-center justify-between gap-2 text-xs">
                                 <span className="text-text">
@@ -399,6 +555,20 @@ export default function ClientTestView(props: ClientTestViewProps) {
                                         ✕
                                     </button>
                                 </div>
+                            </div>
+                        )}
+
+                        {test.instructions && (
+                            <div className="mt-4 p-3.5 rounded-xl bg-surface/90 border border-primary/30 text-xs sm:text-sm text-text leading-relaxed">
+                                <span className="font-bold text-primary uppercase tracking-wider text-[11px] block mb-1">
+                                    📋 Instrukcja wypełniania badania:
+                                </span>
+                                <div
+                                    className="text-text-muted whitespace-pre-line"
+                                    dangerouslySetInnerHTML={{
+                                        __html: DOMPurify.sanitize(test.instructions.split('\n\n')[0]),
+                                    }}
+                                />
                             </div>
                         )}
                     </header>
@@ -516,6 +686,29 @@ export default function ClientTestView(props: ClientTestViewProps) {
                                         Przewiń do pominiętego pytania &uarr;
                                     </button>
                                 )}
+                            </div>
+                        )}
+
+                        {submitRetryError && (
+                            <div
+                                role="alert"
+                                className="mt-6 p-4 rounded-xl bg-warning/15 border border-warning/40 text-text flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-sm"
+                            >
+                                <div>
+                                    <p className="font-bold text-warning mb-0.5">
+                                        ⚠ Nie udało się wysłać odpowiedzi (problem z połączeniem)
+                                    </p>
+                                    <p className="text-xs text-text-muted leading-relaxed">
+                                        {submitRetryError}
+                                    </p>
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    className="shrink-0 px-4 py-2 rounded-xl bg-primary text-primary-contrast font-bold text-xs hover:opacity-90 disabled:opacity-50 transition-opacity shadow"
+                                >
+                                    {isSubmitting ? 'Ponawianie...' : '🔄 Ponów wysyłanie odpowiedzi'}
+                                </button>
                             </div>
                         )}
 

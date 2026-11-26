@@ -13,9 +13,11 @@ export const OnlineRadarChart: React.FC<{
     items: ReportChartItem[];
     primaryColor: string;
 }> = ({ items, primaryColor }) => {
-    const size = 340;
-    const center = size / 2;
-    const radius = 115;
+    const width = 460;
+    const height = 360;
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = 112;
     const count = items.length;
 
     if (count < 3) {
@@ -30,8 +32,8 @@ export const OnlineRadarChart: React.FC<{
         const angle = (Math.PI * 2 * index) / count - Math.PI / 2;
         const r = radius * Math.max(0, Math.min(1, ratio));
         return {
-            x: center + r * Math.cos(angle),
-            y: center + r * Math.sin(angle),
+            x: centerX + r * Math.cos(angle),
+            y: centerY + r * Math.sin(angle),
         };
     };
 
@@ -44,8 +46,8 @@ export const OnlineRadarChart: React.FC<{
         .join(' ');
 
     return (
-        <div className="flex flex-col items-center justify-center py-4">
-            <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[360px] h-auto overflow-visible">
+        <div className="flex flex-col items-center justify-center py-4 px-2">
+            <svg viewBox={`0 0 ${width} ${height}`} className="w-full max-w-[460px] h-auto overflow-visible">
                 {/* Grid rings */}
                 {rings.map((ring) => {
                     const ringPts = items
@@ -70,12 +72,18 @@ export const OnlineRadarChart: React.FC<{
                 {/* Axes */}
                 {items.map((item, idx) => {
                     const outer = getPoint(idx, 1);
-                    const labelPt = getPoint(idx, 1.24);
+                    const angle = (Math.PI * 2 * idx) / count - Math.PI / 2;
+                    const cosA = Math.cos(angle);
+                    const labelDist = radius + 22;
+                    const labelX = centerX + labelDist * Math.cos(angle);
+                    const labelY = centerY + labelDist * Math.sin(angle);
+                    const anchor = cosA > 0.35 ? 'start' : cosA < -0.35 ? 'end' : 'middle';
+                    const shortName = item.name.length > 20 ? item.name.slice(0, 18) + '…' : item.name;
                     return (
                         <g key={item.name}>
                             <line
-                                x1={center}
-                                y1={center}
+                                x1={centerX}
+                                y1={centerY}
                                 x2={outer.x}
                                 y2={outer.y}
                                 stroke="currentColor"
@@ -83,13 +91,13 @@ export const OnlineRadarChart: React.FC<{
                                 strokeWidth={1}
                             />
                             <text
-                                x={labelPt.x}
-                                y={labelPt.y}
-                                textAnchor="middle"
+                                x={labelX}
+                                y={labelY}
+                                textAnchor={anchor}
                                 dominantBaseline="middle"
                                 className="fill-current text-text text-[10px] font-semibold"
                             >
-                                {item.name.length > 18 ? item.name.slice(0, 16) + '…' : item.name} ({Math.round(item.percentage)}%)
+                                {shortName} ({Math.round(item.percentage)}%)
                             </text>
                         </g>
                     );
