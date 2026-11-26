@@ -588,7 +588,7 @@ export default function BrandingPage() {
 
                                 <div>
                                     <h3 className="font-bold text-lg mb-4 text-text border-b border-border pb-2">Główne Elementy</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Kolor Podstawowy (Primary)</label>
                                             <div className="flex gap-2">
@@ -654,7 +654,7 @@ export default function BrandingPage() {
                                 {/* Page & Text */}
                                 <div>
                                     <h3 className="font-bold text-lg mb-4 text-text border-b border-border pb-2">Tło i Tekst</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Tło Strony (Body)</label>
                                             <div className="flex gap-2">
@@ -703,7 +703,7 @@ export default function BrandingPage() {
                                 {/* Status Colors */}
                                 <div>
                                     <h3 className="font-bold text-lg mb-4 text-text border-b border-border pb-2">Statusy i Komunikaty</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                                         <div>
                                             <label className="block text-sm font-medium text-text mb-1">Sukces (Success)</label>
                                             <div className="flex gap-2">
@@ -859,7 +859,7 @@ export default function BrandingPage() {
                             />
                             <label htmlFor="aiEnabled" className="font-medium text-text">Włącz analizę AI</label>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
                             <div>
                                 <label className="block text-sm font-medium text-text mb-1">Dostawca</label>
                                 <select

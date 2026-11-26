@@ -265,7 +265,7 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
 
     return (
         <div className="min-h-screen text-[var(--text-color)]">
-            <header className="bg-surface/90 backdrop-blur-md shadow-sm sticky top-0 z-10 p-4 border-b border-[var(--border-color)]">
+            <header className="bg-surface/90 backdrop-blur-md shadow-sm sticky top-0 z-20 p-4 border-b border-[var(--border-color)]">
                 <button onClick={() => router.back()} className="flex items-center gap-2 text-sm font-semibold text-text-muted hover:text-text transition-colors">
                     <ChevronLeftIcon />
                     Powrót do listy wyników
@@ -360,7 +360,7 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                                                 >
                                                     {group.label}
                                                 </span>
-                                                <span className="text-xs text-text-muted font-mono">
+                                                <span className="text-xs text-text-muted font-mono whitespace-nowrap">
                                                     {formatPolishScalesCount(group.items.length)}
                                                 </span>
                                             </div>
@@ -584,7 +584,7 @@ const ReportView: React.FC<ReportViewProps> = ({ resultId }) => {
                         )}
                     </div>
 
-                    <div className="bg-surface/90 border border-[var(--border-color)] p-6 rounded-2xl shadow-xl self-start sticky top-24">
+                    <div className="bg-surface/90 border border-[var(--border-color)] p-6 rounded-2xl shadow-xl self-start lg:sticky lg:top-20">
                         <div className="border-b border-border pb-4 mb-4">
                             <h3 className="text-xl font-semibold text-text mb-3">Opcje Eksportu PDF</h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

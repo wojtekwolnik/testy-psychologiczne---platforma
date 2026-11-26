@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useContext } from 'react';
+import React, { useState, useEffect, useMemo, useContext, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { fetchPublicTestForClient } from '@/app/actions/testActions';
 import { submitTest } from '@/app/actions/resultActions';
@@ -48,6 +48,20 @@ export default function ClientTestView(props: ClientTestViewProps) {
     const [autoScrollEnabled, setAutoScrollEnabled] = useState<boolean>(true);
     const [activeQuestionId, setActiveQuestionId] = useState<string>('');
     const [submitRetryError, setSubmitRetryError] = useState<string | null>(null);
+    const autoScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    useEffect(() => {
+        setValidationError(null);
+        setHighlightedUnansweredIds([]);
+    }, [currentPage]);
+
+    useEffect(() => {
+        return () => {
+            if (autoScrollTimerRef.current) {
+                clearTimeout(autoScrollTimerRef.current);
+            }
+        };
+    }, []);
 
     const draftStorageKey = clientCode ? `rm_test_draft_${testId ? `${testId}_` : ''}${clientCode}` : '';
     const legacyDraftStorageKey = clientCode ? `rm_test_draft_${clientCode}` : '';
@@ -213,14 +227,28 @@ export default function ClientTestView(props: ClientTestViewProps) {
             return newAnswers;
         });
 
-        // Płynne przewinięcie do następnego pytania na stronie (dla pytań jednokrotnego wyboru)
+        // Płynne przewinięcie do następnego pytania na stronie (dla pytań jednokrotnego wyboru) z debouncingiem
         if (autoScrollEnabled && questionType !== 'multiple-select') {
+            if (autoScrollTimerRef.current) {
+                clearTimeout(autoScrollTimerRef.current);
+            }
             const currentIdx = currentQuestions.findIndex(q => q.id === questionId);
             if (currentIdx !== -1 && currentIdx < currentQuestions.length - 1) {
                 const nextQuestion = currentQuestions[currentIdx + 1];
                 setActiveQuestionId(nextQuestion.id);
-                setTimeout(() => {
-                    scrollToQuestion(nextQuestion.id);
+                autoScrollTimerRef.current = setTimeout(() => {
+                    if (typeof document !== 'undefined' && typeof window !== 'undefined') {
+                        const el = document.getElementById(`question-field-${nextQuestion.id}`);
+                        if (el) {
+                            const rect = el.getBoundingClientRect();
+                            const inCenterView =
+                                rect.top >= window.innerHeight * 0.18 &&
+                                rect.bottom <= window.innerHeight * 0.82;
+                            if (!inCenterView) {
+                                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        }
+                    }
                 }, 140);
             }
         }
@@ -261,12 +289,21 @@ export default function ClientTestView(props: ClientTestViewProps) {
         const missingIds = unansweredOnCurrentPage.map(q => q.id);
         setHighlightedUnansweredIds(missingIds);
         if (unansweredOnCurrentPage.length > 0) {
+            const count = unansweredOnCurrentPage.length;
+            const mod10 = count % 10;
+            const mod100 = count % 100;
+            const noun =
+                count === 1
+                    ? 'pytanie'
+                    : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+                      ? 'pytania'
+                      : 'pytań';
             const firstMissing = unansweredOnCurrentPage[0];
             const firstMissingNumber = questionStartIndex + currentQuestions.findIndex(q => q.id === firstMissing.id) + 1;
             setValidationError(
-                unansweredOnCurrentPage.length === 1
+                count === 1
                     ? `Pominięto 1 pytanie na tej stronie (pytanie nr ${firstMissingNumber}). Zaznacz odpowiedź, aby przejść dalej.`
-                    : `Pozostało do zaznaczenia na tej stronie: ${unansweredOnCurrentPage.length} pytań (pierwsze pominięte: pytanie nr ${firstMissingNumber}).`
+                    : `Pozostało do zaznaczenia na tej stronie: ${count} ${noun} (pierwsze pominięte: pytanie nr ${firstMissingNumber}).`
             );
             scrollToQuestion(firstMissing.id);
         }

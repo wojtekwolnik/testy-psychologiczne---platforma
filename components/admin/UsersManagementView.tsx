@@ -163,7 +163,7 @@ export default function UsersManagementView() {
                 </div>
                 <button
                     onClick={() => setIsCreateModalOpen(true)}
-                    className="bg-primary text-primary-contrast font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 hover:opacity-90 transition-opacity shadow-md"
+                    className="bg-primary text-primary-contrast font-bold px-5 py-2.5 rounded-xl flex items-center gap-2 hover:opacity-90 transition-opacity shadow-md whitespace-nowrap"
                 >
                     <FaPlus /> Dodaj Użytkownika
                 </button>
@@ -218,7 +218,7 @@ export default function UsersManagementView() {
                                         <div className="inline-flex items-center gap-2 justify-end">
                                             <button
                                                 onClick={() => openEditModal(user)}
-                                                className="text-primary hover:bg-primary/15 px-3 py-1.5 rounded-lg border border-primary/30 transition-colors inline-flex items-center gap-1.5 text-xs font-semibold"
+                                                className="text-primary hover:bg-primary/15 px-3 py-1.5 rounded-lg border border-primary/30 transition-colors inline-flex items-center gap-1.5 text-xs font-semibold whitespace-nowrap"
                                                 title="Zmień hasło lub dane użytkownika"
                                             >
                                                 <FaKey className="text-xs" />

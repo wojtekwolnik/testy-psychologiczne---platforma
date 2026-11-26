@@ -542,7 +542,54 @@ const TestEditor: React.FC = () => {
 
     return (
         <div className="p-4 sm:p-8 max-w-5xl mx-auto">
-            <h1 className="text-4xl font-bold mb-6">Edytor Testu</h1>
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                <h1 className="text-3xl sm:text-4xl font-bold">Edytor Testu</h1>
+                <div className="flex flex-wrap items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => router.push('/admin/dashboard')}
+                        className="px-4 py-2 bg-surface border border-border text-text hover:bg-white/5 font-semibold rounded-lg transition-colors text-xs sm:text-sm"
+                    >
+                        Anuluj
+                    </button>
+                    {testId !== 'new' && (
+                        <button
+                            type="button"
+                            onClick={() => handleSave(test?.status === 'PUBLISHED', true)}
+                            disabled={isSaving}
+                            className="px-4 py-2 border border-primary bg-primary/25 text-white font-bold rounded-lg hover:bg-primary/35 transition-colors disabled:opacity-50 text-xs sm:text-sm"
+                            title="Tworzy nową wersję (v+1) z tym samym identyfikatorem kanonicznym"
+                        >
+                            {isSaving ? 'Zapisywanie...' : `Nowa wersja (v${(test?.version || 1) + 1})`}
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => handleSave(false)}
+                        disabled={isSaving}
+                        className="px-4 py-2 border font-bold rounded-lg transition-colors disabled:opacity-50 hover:brightness-105 text-xs sm:text-sm"
+                        style={{
+                            backgroundColor: 'var(--warning-color)',
+                            color: 'var(--warning-contrast)',
+                            borderColor: 'var(--warning-color)',
+                        }}
+                    >
+                        {isSaving ? 'Zapisywanie...' : 'Zapisz Szkic'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => handleSave(true)}
+                        disabled={isSaving}
+                        className="px-4 py-2 font-bold rounded-lg transition-colors disabled:opacity-50 hover:brightness-105 text-xs sm:text-sm"
+                        style={{
+                            backgroundColor: 'var(--success-color)',
+                            color: 'var(--success-contrast)',
+                        }}
+                    >
+                        {isSaving ? 'Zapisywanie...' : 'Opublikuj'}
+                    </button>
+                </div>
+            </div>
 
             {/* Metadata Section */}
             <div className="bg-surface border border-border p-6 rounded-xl shadow-lg mb-8">
@@ -685,9 +732,15 @@ const TestEditor: React.FC = () => {
                                 <div className="flex-grow space-y-2">
                                     <div className="flex gap-2">
                                         <input type="text" placeholder="Nazwa skali" value={scale.name} onChange={e => updateScale(i, { name: e.target.value })} className="w-full p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
-                                        <input type="text" placeholder="Skrót (do 6 zn.)" value={scale.abbreviation || ''} maxLength={6} onChange={e => updateScale(i, { abbreviation: e.target.value })} className="w-36 p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)] text-center font-bold" title="Krótka nazwa wyświetlana na wykresach" />
+                                        <input type="text" placeholder="Skrót (do 6 zn.)" value={scale.abbreviation || ''} maxLength={6} onChange={e => updateScale(i, { abbreviation: e.target.value })} className="w-40 p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)] text-center font-bold" title="Krótka nazwa wyświetlana na wykresach" />
                                     </div>
-                                    <input type="text" placeholder="Opis skali" value={scale.description} onChange={e => updateScale(i, { description: e.target.value })} className="w-full p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)]" />
+                                    <textarea
+                                        rows={2}
+                                        placeholder="Opis skali"
+                                        value={scale.description}
+                                        onChange={e => updateScale(i, { description: e.target.value })}
+                                        className="w-full p-2 border border-[var(--border-color)] rounded-md text-[var(--input-text-color)] bg-[var(--input-background-color)] text-sm resize-y"
+                                    />
                                 </div>
                             </div>
                             {scale.type === 'standard' ? (
@@ -1188,8 +1241,18 @@ const TestEditor: React.FC = () => {
 
             <TestEditorHelpModal helpTopic={helpTopic} onClose={() => setHelpTopic(null)} />
 
-            <div className="flex justify-end gap-4 mt-8">
-                <button onClick={() => router.push('/admin/dashboard')} className="px-6 py-2 bg-surface border border-border text-text hover:bg-white/5 font-semibold rounded-lg transition-colors">Anuluj</button>{testId !== 'new' && (<button onClick={() => handleSave(test?.status === 'PUBLISHED', true)} disabled={isSaving} className="px-6 py-2 border border-primary/50 bg-primary/15 text-primary font-bold rounded-lg hover:bg-primary/25 transition-colors disabled:opacity-50" title="Tworzy nową wersję (v+1) z tym samym identyfikatorem kanonicznym">{isSaving ? 'Zapisywanie...' : `Zapisz jako nową wersję (v${(test?.version || 1) + 1})`}</button>)}
+            <div className="flex flex-wrap justify-end gap-4 mt-8">
+                <button onClick={() => router.push('/admin/dashboard')} className="px-6 py-2 bg-surface border border-border text-text hover:bg-white/5 font-semibold rounded-lg transition-colors">Anuluj</button>
+                {testId !== 'new' && (
+                    <button
+                        onClick={() => handleSave(test?.status === 'PUBLISHED', true)}
+                        disabled={isSaving}
+                        className="px-6 py-2 border border-primary bg-primary/25 text-white font-bold rounded-lg hover:bg-primary/35 transition-colors disabled:opacity-50"
+                        title="Tworzy nową wersję (v+1) z tym samym identyfikatorem kanonicznym"
+                    >
+                        {isSaving ? 'Zapisywanie...' : `Zapisz jako nową wersję (v${(test?.version || 1) + 1})`}
+                    </button>
+                )}
                 <button
                     onClick={() => handleSave(false)}
                     disabled={isSaving}

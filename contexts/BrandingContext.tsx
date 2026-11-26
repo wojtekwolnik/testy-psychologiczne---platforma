@@ -65,7 +65,7 @@ export const DEFAULT_TERMS_CONSENT_CHECKBOX_TEXT =
   'Zapoznałem/am się z {termsLink} i rozumiem, że badanie ma charakter pomocniczy oraz nie zastępuje diagnozy medycznej ani konsultacji ze specjalistą.';
 
 export const DEFAULT_CLIENT_THANK_YOU_SAFETY_NOTE =
-  'Wyniki zostały bezpiecznie przekazane Twojemu specjaliście do omówienia podczas sesji. Pamiętaj, że platforma testowa nie służy do kontaktu w sytuacjach nagłych — w razie pilnej potrzeby wsparcia skontaktuj się bezpośrednio ze swoim specjalistą lub pod numerem 112 / 116 123.';
+  'Pamiętaj, że kwestionariusz ma charakter pomocniczy i orientacyjny, a platforma testowa nie służy do kontaktu w sytuacjach nagłych. W razie pilnej potrzeby wsparcia lub kryzysu skontaktuj się bezpośrednio ze swoim specjalistą bądź zadzwoń pod numer alarmowy 112 lub Telefon Zaufania 116 123 (bezpłatnie: 800 70 2222).';
 
 export const DEFAULT_REPORT_DISCLAIMER_TEXT =
   'Informacja metodologiczna: Wyniki niniejszego kwestionariusza mają charakter pomocniczy, przesiewowy i orientacyjny. Stanowią one materiał wspierający pracę ze specjalistą i nie zastępują pełnej diagnozy klinicznej ani lekarskiej.';

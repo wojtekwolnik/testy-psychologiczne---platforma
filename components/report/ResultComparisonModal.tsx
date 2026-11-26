@@ -114,7 +114,7 @@ const ComparisonRadarChart: React.FC<{
                     const anchor = cosA > 0.35 ? 'start' : cosA < -0.35 ? 'end' : 'middle';
                     const delta = item.scoreB - item.scoreA;
                     const deltaStr = delta > 0 ? `+${Number.isInteger(delta) ? delta : delta.toFixed(1)}` : `${Number.isInteger(delta) ? delta : delta.toFixed(1)}`;
-                    const shortName = item.name.length > 18 ? item.name.slice(0, 16) + '…' : item.name;
+                    const shortName = item.name.length > 24 ? item.name.slice(0, 22) + '…' : item.name;
                     return (
                         <g key={item.name + idx}>
                             <line
@@ -475,10 +475,10 @@ export const ResultComparisonModal: React.FC<ResultComparisonModalProps> = ({
                 <div className="px-6 py-3 bg-background/30 border-b border-border flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2 text-xs">
                         <span className="px-2.5 py-1 rounded-lg bg-surface border border-border text-text">
-                            Wzrost wyniku: <strong className="text-amber-400">+{stats.increased}</strong>
+                            Wzrost w skalach: <strong className="text-amber-400">{stats.increased}</strong>
                         </span>
                         <span className="px-2.5 py-1 rounded-lg bg-surface border border-border text-text">
-                            Spadek wyniku: <strong className="text-emerald-400">-{stats.decreased}</strong>
+                            Spadek w skalach: <strong className="text-emerald-400">{stats.decreased}</strong>
                         </span>
                         <span className="px-2.5 py-1 rounded-lg bg-surface border border-border text-text">
                             Bez zmian: <strong>{stats.unchanged}</strong>
@@ -824,7 +824,7 @@ export const ResultComparisonModal: React.FC<ResultComparisonModalProps> = ({
                                     toast.success('Dołączono zestawienie Pre/Post do notatek raportu!');
                                     onClose();
                                 }}
-                                className="px-4 py-2 bg-primary/20 border border-primary/40 hover:bg-primary/30 text-primary font-bold rounded-xl text-xs transition-colors"
+                                className="px-4 py-2 bg-primary/25 border border-primary text-white font-bold rounded-xl text-xs hover:bg-primary/35 transition-colors"
                             >
                                 ➕ Dołącz zestawienie Pre/Post do notatek raportu
                             </button>

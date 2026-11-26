@@ -590,7 +590,7 @@ const TherapistDashboard = () => {
 
                       return (
                         <tr key={result.id} className="border-b border-border/50 hover:bg-background/80 transition-colors">
-                          <td className="p-4 font-mono">{result.clientIdentifier}</td>
+                          <td className="p-4 font-mono whitespace-nowrap">{result.clientIdentifier}</td>
                           <td className="p-4">{result.testTitle} <span className="text-xs opacity-50">(v{result.testVersion})</span></td>
                           <td className="p-4">{new Date(result.completedAt).toLocaleDateString()}</td>
                           <td className="p-4 font-medium">{deletionDateStr}</td>

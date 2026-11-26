@@ -21,7 +21,7 @@ const TherapistDocumentationPage: React.FC = () => {
 
       <DocSection title="Krok 1: Generowanie Kodów (Pojedynczo lub w Serii) oraz Bezpośrednich Linków">
         <ol className="list-decimal pl-5 space-y-2.5">
-          <li>Przejdź do zakładki <strong>Wyniki i Kody</strong> (Panel Główny).</li>
+          <li>Przejdź do zakładki <strong>Panel Główny</strong> (lub <strong>Kody dostępu</strong> / <strong>Wyniki Testów</strong>).</li>
           <li>W sekcji generatora wybierz z listy opublikowany test psychologiczny (np. <em>Wielka Piątka</em> lub <em>DASS-42</em>).</li>
           <li>Ustaw datę ważności kodu (domyślnie 7 dni) oraz wpisz w polu <strong>Liczba kodów</strong> dokładnie taką liczbę kodów, jakiej potrzebujesz (np. 1, 4, 7 — od <strong>1 do 50 kodów jednocześnie</strong>, bez tworzenia nadmiarowych kodów).</li>
           <li>Kliknij <strong>„Generuj kod”</strong> (lub <strong>„Generuj (N)”</strong> przy serii).</li>
@@ -30,7 +30,7 @@ const TherapistDocumentationPage: React.FC = () => {
             <strong>„Kopiuj wszystkie kody”</strong> lub <strong>„Kopiuj wszystkie linki”</strong>.
           </li>
           <li>
-            Na liście aktywnych kodów przy każdym kodzie masz do dyspozycji trzy przyciski:
+            Na liście aktywnych kodów przy każdym kodzie masz do dyspozycji cztery przyciski akcji:
             <ul className="list-disc pl-5 mt-1.5 space-y-1">
               <li>
                 <strong>„Kopiuj kod”</strong> — kopiuje sam jednorazowy kod dostępu, który klient może wpisać na stronie głównej.
@@ -40,6 +40,9 @@ const TherapistDocumentationPage: React.FC = () => {
               </li>
               <li>
                 <strong>„📱 Kod QR” (W gabinecie)</strong> — wyświetla na ekranie czytelny kod QR, który klient może zeskanować aparatem swojego telefonu bezpośrednio w gabinecie, aby natychmiast otworzyć badanie.
+              </li>
+              <li>
+                <strong>„Unieważnij”</strong> — trwale usuwa niewykorzystany kod dostępu z bazy danych, jeśli został wygenerowany omyłkowo lub nie ma być już użyty.
               </li>
             </ul>
           </li>
