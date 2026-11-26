@@ -132,6 +132,10 @@ export async function fetchPublicTestForClient(testId: string, clientCode: strin
     const trimmedCode = (clientCode || '').trim().toUpperCase();
     if (!trimmedCode) return null;
 
+    if (!isDass42EnsuredInMemory()) {
+        await ensureDass42TestExists(prisma);
+    }
+
     const accessCode = await prisma.accessCode.findUnique({
         where: { code: trimmedCode }
     });

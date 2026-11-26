@@ -46,7 +46,7 @@ export const DEFAULT_TERMS_OF_TESTING_CONTENT = `<h3>1. Postanowienia ogólne i 
 <ul>
   <li>wypełnianie kwestionariusza <strong>samodzielnie</strong>, w spokojnym miejscu i w chwili wolnej od pośpiechu oraz czynników rozpraszających,</li>
   <li>odpowiadanie <strong>szczerze i spontanicznie</strong>, zgodnie z pierwszym odczuciem oraz stanem faktycznym (w kwestionariuszach psychologicznych nie ma odpowiedzi „dobrych” ani „złych”),</li>
-  <li>uważne przeczytanie instrukcji danego kwestionariusza (np. czy pytania dotyczą ostatniego tygodnia, czy ogólnego sposobu funkcjonowania).</li>
+  <li>uważne przeczytanie instrukcji danego kwestionariusza (np. czy pytania dotyczą okresu ostatnich 2 tygodni, czy ogólnego sposobu funkcjonowania).</li>
 </ul>
 
 <h3>5. Wyłączenie interwencji kryzysowej i bezpieczeństwo</h3>

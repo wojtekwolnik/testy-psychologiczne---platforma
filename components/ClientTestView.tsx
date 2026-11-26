@@ -557,6 +557,20 @@ export default function ClientTestView(props: ClientTestViewProps) {
                                 </div>
                             </div>
                         )}
+
+                        {test.instructions && (
+                            <div className="mt-4 p-3.5 rounded-xl bg-surface/90 border border-primary/30 text-xs sm:text-sm text-text leading-relaxed">
+                                <span className="font-bold text-primary uppercase tracking-wider text-[11px] block mb-1">
+                                    📋 Instrukcja wypełniania badania:
+                                </span>
+                                <div
+                                    className="text-text-muted whitespace-pre-line"
+                                    dangerouslySetInnerHTML={{
+                                        __html: DOMPurify.sanitize(test.instructions.split('\n\n')[0]),
+                                    }}
+                                />
+                            </div>
+                        )}
                     </header>
 
                     <form onSubmit={handleSubmit} className="p-6 sm:p-8">

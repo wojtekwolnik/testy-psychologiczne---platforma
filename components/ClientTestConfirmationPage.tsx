@@ -132,9 +132,22 @@ const ClientTestConfirmationPage: React.FC = () => {
         <h1 className="text-3xl font-extrabold mb-4" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(branding.clientConfirmationTitle) }}></h1>
         <div className="text-text-muted text-lg leading-relaxed mb-6" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(parsedMessage) }}></div>
 
-        <div className="bg-background/60 border border-border rounded-xl p-5 my-6 backdrop-blur-sm shadow-inner">
-          <p className="text-lg font-medium">Test: <span className="text-primary font-bold">{test.title}</span></p>
-          <p className="text-text-muted mt-1.5">Liczba pytań: <span className="font-semibold text-text">{questionCount}</span></p>
+        <div className="bg-background/60 border border-border rounded-xl p-5 my-6 backdrop-blur-sm shadow-inner text-left">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-lg font-medium">Test: <span className="text-primary font-bold">{test.title}</span></p>
+            <p className="text-text-muted text-sm">Liczba pytań: <span className="font-semibold text-text">{questionCount}</span></p>
+          </div>
+          {test.instructions && (
+            <div className="mt-4 pt-3.5 border-t border-border/70">
+              <p className="text-xs font-bold uppercase tracking-wider text-primary mb-1.5">
+                Instrukcja badania
+              </p>
+              <div
+                className="text-xs sm:text-sm text-text leading-relaxed whitespace-pre-line"
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(test.instructions) }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Terms of Testing Summary Box */}
