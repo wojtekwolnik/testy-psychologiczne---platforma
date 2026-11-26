@@ -8,6 +8,7 @@ import { requireAuth } from './authActions';
 import { getNormalizedBigFiveScaleData } from '@/lib/interpretationBuilder';
 import { ensureBigFiveTestUpgraded } from '@/lib/bigFiveSync';
 import { ensureDass42TestExists, isDass42EnsuredInMemory } from '@/lib/dass42Sync';
+import { remapTestEntityIds } from '@/lib/testUtils';
 
 // Helper to parse JSON fields from Prisma to Frontend Types
 const serializeTest = (prismaTest: any): Test => {
@@ -64,58 +65,6 @@ const serializeTest = (prismaTest: any): Test => {
         })),
     };
 };
-
-/**
- * Remaps scale, section, and question IDs so a cloned test version or imported JSON test
- * never collides with primary keys of existing Scale/Section/Question rows in PostgreSQL,
- * while preserving all formula and scoring references.
- */
-function remapTestEntityIds(scales: Scale[], sections: Section[]): { remappedScales: Scale[]; remappedSections: Section[] } {
-    const scaleIdMap = new Map<string, string>();
-    for (const s of scales) {
-        const suffix = crypto.randomBytes(4).toString('hex');
-        scaleIdMap.set(s.id, `s-${suffix}`);
-    }
-
-    const remappedScales: Scale[] = scales.map(s => {
-        const newId = scaleIdMap.get(s.id) || s.id;
-        let newFormula = s.formula;
-        if (newFormula) {
-            newFormula = newFormula.replace(/\{([a-zA-Z0-9_-]+)\}/g, (_m, refId) => {
-                const mapped = scaleIdMap.get(refId) || refId;
-                return `{${mapped}}`;
-            });
-        }
-        return {
-            ...s,
-            id: newId,
-            formula: newFormula,
-        };
-    });
-
-    const remappedSections: Section[] = sections.map(sec => ({
-        ...sec,
-        id: `sec-${crypto.randomBytes(4).toString('hex')}`,
-        questions: sec.questions.map(q => {
-            const newScoring: Record<string, any[]> = {};
-            for (const [optId, rules] of Object.entries(q.scoring || {})) {
-                if (Array.isArray(rules)) {
-                    newScoring[optId] = rules.map(r => ({
-                        ...r,
-                        scaleId: scaleIdMap.get(r.scaleId) || r.scaleId,
-                    }));
-                }
-            }
-            return {
-                ...q,
-                id: `q-${crypto.randomBytes(4).toString('hex')}`,
-                scoring: newScoring,
-            };
-        }),
-    }));
-
-    return { remappedScales, remappedSections };
-}
 
 export async function fetchTests(): Promise<Test[]> {
     await requireAuth();

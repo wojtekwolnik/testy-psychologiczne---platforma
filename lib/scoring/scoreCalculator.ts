@@ -20,8 +20,7 @@ export function evaluateFormula(
             return 0;
         }
         return result;
-    } catch (error) {
-        console.error(`[Formula Error] Could not evaluate: "${populatedFormula}"`, error);
+    } catch {
         return 0;
     }
 }

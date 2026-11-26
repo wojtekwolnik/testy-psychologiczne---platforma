@@ -12,6 +12,7 @@ import ActionConfirmModal from './common/ActionConfirmModal';
 import AccessCodeQrModal from './common/AccessCodeQrModal';
 import ResultComparisonModal from './report/ResultComparisonModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { buildCsvContent } from '@/lib/testUtils';
 
 const InfoTooltip: React.FC<{ id: string, label: string, text: string, activeId: string | null, setActiveId: (id: string | null) => void }> = ({ id, label, text, activeId, setActiveId }) => {
   const isOpen = activeId === id;
@@ -236,11 +237,6 @@ const TherapistDashboard = () => {
       });
     });
 
-    const escapeCsvCell = (val: unknown): string => {
-      const str = val === null || val === undefined ? '' : String(val);
-      return `"${str.replace(/"/g, '""')}"`;
-    };
-
     const headers = [
       'Identyfikator Klienta (Kod)',
       'Tytuł Testu',
@@ -252,15 +248,15 @@ const TherapistDashboard = () => {
     const rows = filteredResults.map(r => {
       const completedStr = new Date(r.completedAt).toLocaleString('pl-PL');
       return [
-        escapeCsvCell(r.clientIdentifier),
-        escapeCsvCell(r.testTitle),
-        escapeCsvCell(`v${r.testVersion}`),
-        escapeCsvCell(completedStr),
-        ...scaleIds.map(sid => escapeCsvCell(r.scores?.[sid] ?? '')),
-      ].join(';');
+        r.clientIdentifier,
+        r.testTitle,
+        `v${r.testVersion}`,
+        completedStr,
+        ...scaleIds.map(sid => r.scores?.[sid] ?? ''),
+      ];
     });
 
-    const csvContent = '\uFEFF' + [headers.map(escapeCsvCell).join(';'), ...rows].join('\r\n');
+    const csvContent = buildCsvContent(headers, rows);
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);

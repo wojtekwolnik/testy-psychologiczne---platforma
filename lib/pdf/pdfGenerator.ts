@@ -38,7 +38,7 @@ class PdfContext {
     }
 
     checkNewPage(neededHeight: number) {
-        if (this.y - neededHeight < 50) {
+        if (this.y - neededHeight < 55) {
             this.page = this.pdfDoc.addPage();
             this.y = this.height - 50;
         }
@@ -1006,7 +1006,7 @@ export async function generateComparisonPdf(
     }
 
     ctx.moveDown(12);
-    ctx.checkNewPage(40);
+    ctx.checkNewPage(45);
     await drawRichText(ctx, {
         id: 'comp-summary',
         type: 'RichText',
@@ -1019,8 +1019,8 @@ export async function generateComparisonPdf(
         const disclaimerHtml =
             branding.reportDisclaimerText ||
             'Informacja metodologiczna: Wyniki niniejszego kwestionariusza mają charakter pomocniczy, przesiewowy i orientacyjny. Stanowią one materiał wspierający pracę ze specjalistą i nie zastępują pełnej diagnozy klinicznej ani lekarskiej.';
-        ctx.checkNewPage(55);
-        ctx.moveDown(10);
+        ctx.checkNewPage(75);
+        ctx.moveDown(6);
         await drawRichText(ctx, {
             id: 'comp-disclaimer',
             type: 'RichText',
